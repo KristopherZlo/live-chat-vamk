@@ -1,0 +1,56 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+class Question extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'room_id',
+        'message_id',
+        'participant_id',
+        'user_id',
+        'content',
+        'status',
+        'answered_at',
+        'ignored_at',
+        'deleted_by_participant_at',
+        'deleted_by_owner_at',
+    ];
+
+    protected $casts = [
+        'answered_at' => 'datetime',
+        'ignored_at' => 'datetime',
+        'deleted_by_participant_at' => 'datetime',
+        'deleted_by_owner_at' => 'datetime',
+    ];
+
+    public function room()
+    {
+        return $this->belongsTo(Room::class);
+    }
+
+    public function message()
+    {
+        return $this->belongsTo(Message::class);
+    }
+
+    public function participant()
+    {
+        return $this->belongsTo(Participant::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function ratings()
+    {
+        return $this->hasMany(QuestionRating::class);
+    }
+}

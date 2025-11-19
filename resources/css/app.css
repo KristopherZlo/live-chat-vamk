@@ -1,0 +1,6 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/forms";
+
+/* Где искать шаблоны для генерации классов: */
+@source "../views";
+@source "../js";
