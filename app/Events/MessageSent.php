@@ -27,6 +27,11 @@ class MessageSent implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
+        \Log::info('MessageSent broadcastWith', [
+            'id' => $this->message->id,
+            'room_id' => $this->message->room_id,
+        ]);
+
         return [
             'id'         => $this->message->id,
             'room_id'    => $this->message->room_id,
