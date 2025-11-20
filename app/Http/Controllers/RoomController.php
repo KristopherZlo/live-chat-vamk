@@ -155,4 +155,38 @@ class RoomController extends Controller
 
         return $participant;
     }
+
+    public function questionsPanel(Room $room)
+    {
+        $user = auth()->user();
+        $isOwner = $user && $user->id === $room->user_id;
+
+        if (! $isOwner) {
+            abort(403);
+        }
+
+        // та же логика, что ты используешь в showPublic для правой панели
+        $queueQuestions = $room->questions()
+            ->whereIn('status', ['new', 'later'])
+            ->whereNull('deleted_by_owner_at')
+            ->whereNull('deleted_by_participant_at')
+            ->orderBy('created_at')
+            ->get();
+
+        $historyQuestions = $room->questions()
+            ->whereNull('deleted_by_participant_at')
+            ->where(function ($q) {
+                $q->whereNotIn('status', ['new', 'later'])
+                ->orWhereNotNull('deleted_by_owner_at');
+            })
+            ->orderByDesc('created_at')
+            ->get();
+
+        return view('rooms.partials.questions_panel', [
+            'room'            => $room,
+            'queueQuestions'  => $queueQuestions,
+            'historyQuestions'=> $historyQuestions,
+            'isOwner'         => $isOwner,
+        ]);
+    }
 }

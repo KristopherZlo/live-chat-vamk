@@ -1,0 +1,2176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Lecture Live Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Modern font -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+  <!-- Lucide icons -->
+  <script src="https://unpkg.com/lucide@latest" defer></script>
+  <style>
+    :root {
+      --bg: #f4f4f5;
+      --bg-elevated: #ffffff;
+      --bg-soft: #e5e7eb;
+      --border-subtle: #e5e7eb;
+      --border-strong: #d4d4d8;
+      --text-primary: #111827;
+      --text-secondary: #4b5563;
+      --accent: #2563eb;
+      --accent-soft: #dbeafe;
+      --accent-strong: #1d4ed8;
+      --danger: #dc2626;
+      --muted: #9ca3af;
+      --message-in: #ffffff;
+      --message-out: #dbeafe;
+      --scroll-track: transparent;
+      --scroll-thumb: #d4d4d8;
+      --notify: #f97316;
+      --ok: #16a34a;
+      --bad: #dc2626;
+    }
+
+    [data-theme="dark"] {
+      --bg: #020617;
+      --bg-elevated: #020617;
+      --bg-soft: #020617;
+      --border-subtle: #111827;
+      --border-strong: #1f2933;
+      --text-primary: #e5e7eb;
+      --text-secondary: #9ca3af;
+      --accent: #3b82f6;
+      --accent-soft: #172554;
+      --accent-strong: #2563eb;
+      --danger: #f97373;
+      --muted: #6b7280;
+      --message-in: #020617;
+      --message-out: #1d4ed8;
+      --scroll-track: transparent;
+      --scroll-thumb: #4b5563;
+      --notify: #fb923c;
+      --ok: #22c55e;
+      --bad: #f97373;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+    }
+
+    .app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .app-header {
+      padding: 0.75rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--bg-elevated);
+    }
+
+    .app-title {
+      font-weight: 600;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .app-title span.badge {
+      font-size: 0.75rem;
+      padding: 0.1rem 0.4rem;
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+    }
+
+    .app-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.85rem;
+    }
+
+    .room-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.1rem;
+      text-align: right;
+    }
+
+    .room-name {
+      font-weight: 500;
+    }
+
+    .room-code {
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+    }
+
+    .btn,
+    .icon-btn {
+      border: 1px solid var(--border-subtle);
+      background: transparent;
+      color: var(--text-primary);
+      font-size: 0.8rem;
+      padding: 0.4rem 0.7rem;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #f9fafb;
+    }
+
+    .btn-ghost {
+      background: transparent;
+    }
+
+    .btn-danger {
+      border-color: var(--danger);
+      color: var(--danger);
+      background: transparent;
+    }
+
+    .btn-sm {
+      padding: 0.25rem 0.6rem;
+      font-size: 0.75rem;
+      border-radius: 999px;
+    }
+
+    .btn-group {
+      display: inline-flex;
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      overflow: hidden;
+    }
+
+    .btn-group button {
+      border: none;
+      border-right: 1px solid var(--border-subtle);
+      background: transparent;
+      color: var(--text-secondary);
+      padding: 0.3rem 0.7rem;
+      font-size: 0.78rem;
+      cursor: pointer;
+    }
+
+    .btn-group button:last-child {
+      border-right: none;
+    }
+
+    .btn-group button.active {
+      background: var(--accent);
+      color: #f9fafb;
+    }
+
+    .icon-btn {
+      width: 2.2rem;
+      height: 2.2rem;
+      justify-content: center;
+      border-radius: 999px;
+    }
+
+    .icon-btn svg {
+      width: 1.2rem;
+      height: 1.2rem;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 0.75rem 1.25rem 1rem;
+      gap: 0.75rem;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 2fr 1.2fr;
+      gap: 0.75rem;
+      height: calc(100vh - 110px);
+      max-height: 720px;
+    }
+
+    .layout.teacher {
+      grid-template-columns: 1.75fr 1.1fr 1.1fr;
+    }
+
+    .layout.teacher.history-hidden {
+      grid-template-columns: 1.75fr 1.4fr;
+    }
+
+    .panel {
+      border: 1px solid var(--border-subtle);
+      border-radius: 0.75rem;
+      background: var(--bg-elevated);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 0.55rem 0.75rem;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.8rem;
+    }
+
+    .panel-title {
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .panel-title svg {
+      width: 1rem;
+      height: 1rem;
+    }
+
+    .panel-subtitle {
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+    }
+
+    .panel-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-footer {
+      padding: 0.5rem 0.75rem;
+      border-top: 1px solid var(--border-subtle);
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .chat-messages {
+      list-style: none;
+      margin: 0;
+      padding: 0.75rem;
+      flex: 1;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+    }
+
+    .chat-messages::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .chat-messages::-webkit-scrollbar-track {
+      background: var(--scroll-track);
+    }
+
+    .chat-messages::-webkit-scrollbar-thumb {
+      background: var(--scroll-thumb);
+      border-radius: 999px;
+    }
+
+    .message {
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.4rem;
+      opacity: 0;
+      transform: translateY(6px);
+      animation: message-in 0.15s ease-out forwards;
+    }
+
+    .message--outgoing {
+      justify-content: flex-end;
+    }
+
+    .message-avatar {
+      width: 1.7rem;
+      height: 1.7rem;
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+
+    .message-body {
+      max-width: 70%;
+      padding: 0.4rem 0.55rem;
+      border-radius: 0.65rem;
+      border: 1px solid var(--border-subtle);
+      background: var(--message-in);
+      font-size: 0.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.18rem;
+      position: relative;
+    }
+
+    .message--outgoing .message-body {
+      background: var(--message-out);
+      border-color: transparent;
+    }
+
+    .message-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.5rem;
+    }
+
+    .message-author {
+      font-weight: 500;
+      font-size: 0.78rem;
+    }
+
+    .message-meta {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      display: flex;
+      gap: 0.35rem;
+      align-items: center;
+    }
+
+    .message-text {
+      font-size: 0.8rem;
+      line-height: 1.3;
+      color: var(--text-primary);
+    }
+
+    .message-badge {
+      font-size: 0.7rem;
+      padding: 0.05rem 0.3rem;
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+    }
+
+    .message-badge-teacher {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #f9fafb;
+    }
+
+    .message-actions {
+      margin-top: 0.15rem;
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.25rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.1s ease-out;
+      font-size: 0.75rem;
+    }
+
+    .message:hover .message-actions {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .msg-action {
+      border: none;
+      background: transparent;
+      border-radius: 999px;
+      padding: 0.1rem 0.35rem;
+      font-size: 0.7rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      cursor: pointer;
+      color: var(--text-secondary);
+    }
+
+    .msg-action svg {
+      width: 0.9rem;
+      height: 0.9rem;
+    }
+
+    @keyframes message-in {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+.chat-input {
+  border-top: 1px solid var(--border-subtle);
+  padding: 0.55rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.chat-input-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.45rem;
+  align-items: stretch;
+}
+
+.chat-textarea {
+  width: 100%;
+  border-radius: 0.6rem;
+  border: 1px solid var(--border-subtle);
+  padding: 0.55rem 0.8rem;
+  font-size: 0.85rem;
+  resize: none;
+  min-height: 3rem;
+  max-height: 8rem;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  outline: none;
+  line-height: 1.4;
+}
+
+.chat-textarea::placeholder {
+  color: var(--muted);
+}
+
+.send-btn {
+  border-radius: 0.6rem;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #f9fafb;
+  padding: 0 0.9rem;
+  min-width: 3.2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.send-btn .send-label {
+  display: inline-block;
+}
+
+.send-btn svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  transition: transform 0.15s ease-out;
+}
+
+.send-btn.sending svg {
+  transform: translateX(4px);
+}
+
+    .chat-input-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+    }
+
+    .switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      cursor: pointer;
+      font-size: 0.78rem;
+    }
+
+    .switch input {
+      display: none;
+    }
+
+    .switch-track {
+      width: 2.4rem;
+      height: 1.4rem;
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-soft);
+      position: relative;
+      padding: 0 0.15rem;
+      display: flex;
+      align-items: center;
+    }
+
+    .switch-thumb {
+      width: 1rem;
+      height: 1rem;
+      border-radius: 999px;
+      background: var(--muted);
+      position: absolute;
+      left: 0.15rem;
+      transition: transform 0.18s ease-out, background 0.18s;
+    }
+
+    .switch input:checked + .switch-track .switch-thumb {
+      transform: translateX(1rem);
+      background: var(--accent);
+    }
+
+    .switch-label {
+      color: var(--text-secondary);
+    }
+
+    .role-student-only {
+      display: none;
+    }
+
+    .role-student .role-student-only {
+      display: inline-flex;
+    }
+
+    .role-teacher-only {
+      display: none;
+    }
+
+    .role-teacher .role-teacher-only {
+      display: inline-flex;
+    }
+
+    .questions-list,
+    .queue-list,
+    .history-list {
+      list-style: none;
+      margin: 0;
+      padding: 0.4rem 0.55rem 0.55rem;
+      flex: 1;
+      overflow-y: auto;
+      font-size: 0.8rem;
+    }
+
+    .questions-list::-webkit-scrollbar,
+    .queue-list::-webkit-scrollbar,
+    .history-list::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .questions-list::-webkit-scrollbar-thumb,
+    .queue-list::-webkit-scrollbar-thumb,
+    .history-list::-webkit-scrollbar-thumb {
+      background: var(--scroll-thumb);
+      border-radius: 999px;
+    }
+
+    .question-item,
+    .queue-item,
+    .history-item {
+      border-radius: 0.6rem;
+      border: 1px solid var(--border-subtle);
+      padding: 0.4rem 0.45rem;
+      margin-bottom: 0.35rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      background: var(--bg-soft);
+    }
+
+    .queue-item {
+      cursor: default;
+      transition: transform 0.15s ease-out, border-color 0.15s ease-out;
+    }
+
+    .queue-item.queue-item-new {
+      cursor: pointer;
+      animation: queue-pulse 1.2s ease-in-out infinite;
+    }
+
+    .queue-item.queue-item-new:hover {
+      transform: translateY(-1px);
+    }
+
+    @keyframes queue-pulse {
+      0% {
+        transform: translateY(0);
+        border-color: var(--border-subtle);
+      }
+      50% {
+        transform: translateY(-2px);
+        border-color: var(--accent);
+      }
+      100% {
+        transform: translateY(0);
+        border-color: var(--border-subtle);
+      }
+    }
+
+    .question-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.4rem;
+      align-items: center;
+      font-size: 0.75rem;
+    }
+
+    .question-meta {
+      display: flex;
+      gap: 0.3rem;
+      align-items: center;
+      color: var(--text-secondary);
+    }
+
+    .status-pill {
+      border-radius: 999px;
+      font-size: 0.7rem;
+      padding: 0.05rem 0.4rem;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .status-later {
+      border-color: #f97316;
+      color: #ea580c;
+    }
+
+    .status-answered {
+      border-color: #16a34a;
+      color: #15803d;
+    }
+
+    .status-ignored {
+      border-color: #6b7280;
+      color: #6b7280;
+    }
+
+    .status-hidden {
+      border-color: #64748b;
+      color: #64748b;
+    }
+
+    [data-theme="dark"] .status-later {
+      border-color: #fbbf24;
+      color: #facc15;
+    }
+
+    [data-theme="dark"] .status-answered {
+      border-color: #22c55e;
+      color: #4ade80;
+    }
+
+    .question-text {
+      font-size: 0.8rem;
+      line-height: 1.3;
+    }
+
+    .question-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.35rem;
+      margin-top: 0.15rem;
+      flex-wrap: wrap;
+    }
+
+    .rating {
+      display: inline-flex;
+      gap: 0.3rem;
+      align-items: center;
+      font-size: 0.75rem;
+    }
+
+    .rating-label {
+      color: var(--text-secondary);
+    }
+
+    .rating-options {
+      display: inline-flex;
+      gap: 0.25rem;
+    }
+
+    .rating-pill {
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-elevated);
+      padding: 0.1rem 0.5rem;
+      font-size: 0.72rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      color: var(--text-secondary);
+    }
+
+    .rating-pill-ok {
+      border-color: var(--ok);
+      color: var(--ok);
+    }
+
+    .rating-pill-bad {
+      border-color: var(--bad);
+      color: var(--bad);
+    }
+
+    .rating-pill.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent-strong);
+    }
+
+    .rating-disabled {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    .queue-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+      justify-content: flex-end;
+    }
+
+    .queue-action {
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-elevated);
+      padding: 0.12rem 0.55rem;
+      font-size: 0.72rem;
+      cursor: pointer;
+      color: var(--text-secondary);
+    }
+
+    .queue-action-answered {
+      border-color: var(--ok);
+      color: var(--ok);
+    }
+
+    .queue-action-later {
+      border-color: var(--notify);
+      color: var(--notify);
+    }
+
+    .queue-action-ignored {
+      border-color: #6b7280;
+      color: #6b7280;
+    }
+
+    .queue-action-hide {
+      border-color: #64748b;
+      color: #64748b;
+    }
+
+    .queue-meta {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      display: flex;
+      gap: 0.35rem;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 0.2rem;
+      flex-wrap: wrap;
+    }
+
+    .queue-info {
+      font-size: 0.72rem;
+    }
+
+    .order-toggle {
+      display: inline-flex;
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      overflow: hidden;
+      font-size: 0.72rem;
+    }
+
+    .order-toggle button {
+      border: none;
+      background: transparent;
+      padding: 0.12rem 0.6rem;
+      cursor: pointer;
+      color: var(--text-secondary);
+    }
+
+    .order-toggle button.active {
+      background: var(--bg-soft);
+      color: var(--text-primary);
+    }
+
+    .queue-header-extra {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      justify-content: flex-end;
+      font-size: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .queue-new-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      font-size: 0.72rem;
+      padding: 0.05rem 0.45rem;
+      border-radius: 999px;
+      background: var(--notify);
+      color: #f9fafb;
+    }
+
+    .question-feedback {
+      font-size: 0.72rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      color: var(--text-secondary);
+    }
+
+    .feedback-pill {
+      border-radius: 999px;
+      padding: 0.05rem 0.45rem;
+      border: 1px solid var(--border-subtle);
+      font-size: 0.7rem;
+    }
+
+    .feedback-pill-ok {
+      border-color: var(--ok);
+      color: var(--ok);
+    }
+
+    .feedback-pill-bad {
+      border-color: var(--bad);
+      color: var(--bad);
+    }
+
+    .queue-panel.notify {
+      border-color: var(--notify);
+    }
+
+    .history-panel.hidden {
+      display: none !important;
+    }
+
+    .history-open-btn.active {
+      border-color: var(--accent);
+      color: var(--accent-strong);
+    }
+
+    .qr-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 40;
+    }
+
+    .qr-overlay.show {
+      display: flex;
+    }
+
+    .qr-card {
+      background: var(--bg-elevated);
+      border-radius: 0.9rem;
+      border: 1px solid var(--border-strong);
+      padding: 1rem 1.1rem;
+      max-width: 320px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      font-size: 0.85rem;
+    }
+
+    .qr-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .qr-title {
+      font-weight: 500;
+    }
+
+    .qr-body {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .qr-box {
+      width: 140px;
+      height: 140px;
+      border-radius: 0.4rem;
+      border: 1px dashed var(--border-strong);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+
+    .qr-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .qr-link {
+      font-size: 0.8rem;
+      word-break: break-all;
+      color: var(--accent);
+    }
+
+    .qr-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.4rem;
+      margin-top: 0.35rem;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 1024px) {
+      .layout {
+        grid-template-columns: 1.7fr 1.3fr;
+        height: auto;
+        max-height: none;
+      }
+
+      .layout.teacher {
+        grid-template-columns: 1.7fr 1.3fr;
+        grid-template-rows: auto auto;
+      }
+
+      .layout.teacher .panel.history-panel {
+        grid-column: 1 / -1;
+        max-height: 240px;
+      }
+    }
+
+    @media (max-width: 800px) {
+      main {
+        padding-inline: 0.75rem;
+      }
+      .layout,
+      .layout.teacher {
+        grid-template-columns: 1fr;
+        grid-auto-rows: minmax(0, auto);
+        height: auto;
+      }
+      .panel {
+        max-height: 320px;
+      }
+      .app-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.4rem;
+      }
+      .app-controls {
+        width: 100%;
+        justify-content: space-between;
+        flex-wrap: wrap;
+      }
+      .room-info {
+        text-align: left;
+      }
+    }
+
+    @media (max-width: 1024px) {
+        .layout.teacher.history-hidden {
+            grid-template-columns: 1.7fr 1.3fr;
+        }
+    }
+  </style>
+</head>
+<body class="app role-student" data-theme="light">
+  <header class="app-header">
+    <div class="app-title">
+      <span>Lecture Live Chat</span>
+      <span class="badge">beta</span>
+    </div>
+    <div class="app-controls">
+      <div class="room-info">
+        <span class="room-name">Room: Intro to Algorithms</span>
+        <span class="room-code">Code: ALGO-101</span>
+      </div>
+
+      <button class="btn btn-ghost role-teacher-only" id="dashboardBtn">
+        <i data-lucide="layout-dashboard"></i>
+        <span>Dashboard</span>
+      </button>
+
+      <button id="qrButton" class="btn btn-ghost role-teacher-only">
+        <i data-lucide="qr-code"></i>
+        <span>Show QR code</span>
+      </button>
+
+      <button id="endChatBtn" class="btn btn-danger role-teacher-only">
+        <i data-lucide="power"></i>
+        <span>End chat</span>
+      </button>
+
+      <div class="btn-group" id="roleToggle">
+        <button data-role="student" class="active">Student</button>
+        <button data-role="teacher">Teacher</button>
+      </div>
+      <button id="themeToggle" class="icon-btn" title="Toggle theme">
+        <i data-lucide="moon"></i>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <section class="layout" id="layoutRoot">
+      <!-- Chat panel (shared) -->
+      <section class="panel chat-panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">
+              <i data-lucide="messages-square"></i>
+              <span>Live chat</span>
+            </div>
+            <div class="panel-subtitle">Active during the lecture</div>
+          </div>
+          <div class="panel-subtitle">
+            Nickname: <strong id="nickname">user82314</strong>
+          </div>
+        </div>
+        <div class="panel-body">
+          <ul class="chat-messages" id="chatMessages"></ul>
+        </div>
+        <div class="chat-input">
+          <div class="chat-input-row">
+            <textarea
+                id="chatInput"
+                class="chat-textarea"
+                placeholder="Type your message..."
+                rows="1"
+            ></textarea>
+            <button id="sendButton" class="send-btn" title="Send message">
+                <i data-lucide="send"></i>
+            </button>
+            </div>
+          <div class="chat-input-meta">
+            <label class="switch role-student-only" id="sendToTeacherSwitch">
+              <input type="checkbox" id="sendToTeacher" />
+              <span class="switch-track">
+                <span class="switch-thumb"></span>
+              </span>
+              <span class="switch-label">Send to teacher</span>
+            </label>
+            <span class="panel-subtitle">Press Enter to send, Shift+Enter for a new line</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Student: My questions -->
+      <section class="panel student-panel" id="studentPanel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">
+              <i data-lucide="help-circle"></i>
+              <span>My questions</span>
+            </div>
+            <div class="panel-subtitle">Questions sent to the teacher</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <ul class="questions-list" id="myQuestions"></ul>
+        </div>
+        <div class="panel-footer">
+          <span>Only you can see this list.</span>
+          <span id="myQuestionsCounter">0 questions</span>
+        </div>
+      </section>
+
+      <!-- Teacher: queue -->
+      <section class="panel queue-panel hidden" id="queuePanel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">
+              <i data-lucide="list-ordered"></i>
+              <span>Question queue</span>
+            </div>
+            <div class="panel-subtitle">New questions from students</div>
+          </div>
+          <div class="queue-header-extra">
+            <button class="btn btn-ghost btn-sm history-open-btn" id="historyOpenBtn">
+              <i data-lucide="clock"></i>
+              <span>History</span>
+            </button>
+            <div class="order-toggle" id="queueOrderToggle">
+              <button data-order="newest" class="active">Newest first</button>
+              <button data-order="oldest">Oldest first</button>
+            </div>
+            <span id="queueNewBadge" class="queue-new-badge hidden">
+              <span>New</span>
+            </span>
+          </div>
+        </div>
+        <div class="panel-body">
+          <ul class="queue-list" id="queueList"></ul>
+        </div>
+        <div class="panel-footer">
+          <span id="queueCounter">0 open questions</span>
+          <span class="panel-subtitle">Set status to move to history</span>
+        </div>
+      </section>
+
+      <!-- Teacher: history (fully hidden until opened) -->
+      <section class="panel history-panel hidden" id="historyPanel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">
+              <i data-lucide="archive-restore"></i>
+              <span>Question history</span>
+            </div>
+            <div class="panel-subtitle">All questions for this room</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <ul class="history-list" id="historyList"></ul>
+        </div>
+        <div class="panel-footer">
+          <span id="historyCounter">0 total questions</span>
+          <span class="panel-subtitle">Restore to queue if needed</span>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <!-- QR modal -->
+  <div class="qr-overlay" id="qrOverlay">
+    <div class="qr-card">
+      <div class="qr-header">
+        <div>
+          <div class="qr-title">Join this room</div>
+          <div class="panel-subtitle">Scan the QR or use the link</div>
+        </div>
+        <button class="icon-btn" id="qrClose">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="qr-body">
+        <div class="qr-box">
+          <span>QR preview</span>
+        </div>
+        <div class="qr-info">
+          <div><strong>Room:</strong> Intro to Algorithms</div>
+          <div><strong>Description:</strong> Live chat for lecture Q&amp;A.</div>
+          <div>
+            <strong>Link:</strong>
+            <div class="qr-link">https://example.edu/live/ALGO-101</div>
+          </div>
+        </div>
+      </div>
+      <div class="qr-footer">
+        <button class="btn btn-ghost btn-sm" id="copyLink">
+          <i data-lucide="copy"></i>
+          <span>Copy link</span>
+        </button>
+        <button class="btn btn-primary btn-sm" id="downloadQR">
+          <i data-lucide="download"></i>
+          <span>Download QR</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ----- State -----
+    const nickname = "user82314";
+    const chatMessagesEl = document.getElementById("chatMessages");
+    const chatInputEl = document.getElementById("chatInput");
+    const sendButtonEl = document.getElementById("sendButton");
+    const sendToTeacherEl = document.getElementById("sendToTeacher");
+    const myQuestionsEl = document.getElementById("myQuestions");
+    const myQuestionsCounterEl = document.getElementById("myQuestionsCounter");
+    const queueListEl = document.getElementById("queueList");
+    const historyListEl = document.getElementById("historyList");
+    const queueCounterEl = document.getElementById("queueCounter");
+    const historyCounterEl = document.getElementById("historyCounter");
+    const roleToggleEl = document.getElementById("roleToggle");
+    const layoutRootEl = document.getElementById("layoutRoot");
+    const studentPanelEl = document.getElementById("studentPanel");
+    const queuePanelEl = document.getElementById("queuePanel");
+    const historyPanelEl = document.getElementById("historyPanel");
+    const nicknameEl = document.getElementById("nickname");
+
+    const qrButtonEl = document.getElementById("qrButton");
+    const qrOverlayEl = document.getElementById("qrOverlay");
+    const qrCloseEl = document.getElementById("qrClose");
+    const themeToggleEl = document.getElementById("themeToggle");
+    const queueOrderToggleEl = document.getElementById("queueOrderToggle");
+    const queueNewBadgeEl = document.getElementById("queueNewBadge");
+    const historyOpenBtnEl = document.getElementById("historyOpenBtn");
+    const dashboardBtnEl = document.getElementById("dashboardBtn");
+    const endChatBtnEl = document.getElementById("endChatBtn");
+
+    const questions = {};
+    let questionCounter = 0;
+    let queueOrder = "newest";
+    let historyVisible = false;
+
+    const randomUsers = [
+      "user40218",
+      "user99172",
+      "user50311",
+      "user77403",
+      "user28944",
+      "user62015",
+    ];
+
+    const randomMessages = [
+      "Does anyone have the slides link?",
+      "Can you repeat the last formula?",
+      "Is this going to be on the exam?",
+      "I still do not get the recursion example.",
+      "Audio is a bit low for me.",
+      "Can you zoom in on the code?",
+      "Is there a recording of this lecture?",
+      "Where can we find the assignment?",
+    ];
+
+    const sampleQueue = [
+      {
+        text: "Could you explain again how binary search works?",
+        author: "user40218",
+      },
+      {
+        text: "What is the time complexity of merge sort?",
+        author: "user99172",
+      },
+      {
+        text: "How is this topic related to the next assignment?",
+        author: "user50311",
+      },
+    ];
+
+    const sampleHistory = [
+      {
+        text: "Will we use dynamic programming in the project?",
+        author: "user28944",
+        status: "answered",
+      },
+      {
+        text: "Can you share more examples on Big-O?",
+        author: "user62015",
+        status: "later",
+      },
+      {
+        text: "Is it okay to use Python for this course?",
+        author: "user77403",
+        status: "ignored",
+      },
+    ];
+
+    // ----- Lucide init helper -----
+    function refreshIcons() {
+      if (window.lucide) {
+        window.lucide.createIcons();
+      }
+    }
+
+    // ----- Theme -----
+    function setTheme(theme) {
+      document.body.setAttribute("data-theme", theme);
+      try {
+        window.localStorage.setItem("liveChatTheme", theme);
+      } catch (e) {}
+      const iconName = theme === "dark" ? "sun-medium" : "moon";
+      themeToggleEl.innerHTML = `<i data-lucide="${iconName}"></i>`;
+      refreshIcons();
+    }
+
+    function initTheme() {
+      let stored = null;
+      try {
+        stored = window.localStorage.getItem("liveChatTheme");
+      } catch (e) {}
+      const prefersDark =
+        window.matchMedia &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const theme = stored || (prefersDark ? "dark" : "light");
+      setTheme(theme);
+    }
+
+    themeToggleEl.addEventListener("click", () => {
+      const current = document.body.getAttribute("data-theme") || "light";
+      setTheme(current === "light" ? "dark" : "light");
+    });
+
+    // ----- History visibility -----
+    function setHistoryVisible(visible) {
+    historyVisible = visible;
+
+    if (visible) {
+        historyPanelEl.classList.remove("hidden");
+        historyOpenBtnEl.classList.add("active");
+        historyOpenBtnEl.querySelector("span").textContent = "Hide history";
+        layoutRootEl.classList.remove("history-hidden");
+    } else {
+        historyPanelEl.classList.add("hidden");
+        historyOpenBtnEl.classList.remove("active");
+        historyOpenBtnEl.querySelector("span").textContent = "History";
+        layoutRootEl.classList.add("history-hidden");
+    }
+
+    refreshIcons();
+    }
+
+    historyOpenBtnEl.addEventListener("click", () => {
+      setHistoryVisible(!historyVisible);
+    });
+
+    // ----- Roles -----
+    function setRole(role) {
+      document.body.classList.remove("role-student", "role-teacher");
+      document.body.classList.add(`role-${role}`);
+      Array.from(roleToggleEl.querySelectorAll("button")).forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.role === role);
+      });
+
+      if (role === "teacher") {
+        layoutRootEl.classList.add("teacher");
+        studentPanelEl.classList.add("hidden");
+        queuePanelEl.classList.remove("hidden");
+        setHistoryVisible(false); // history hidden by default
+      } else {
+        layoutRootEl.classList.remove("teacher");
+        studentPanelEl.classList.remove("hidden");
+        queuePanelEl.classList.add("hidden");
+        setHistoryVisible(false);
+      }
+    }
+
+    roleToggleEl.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-role]");
+      if (!btn) return;
+      setRole(btn.dataset.role);
+    });
+
+    // ----- Chat messages -----
+    function createMessageElement({ author, text, fromCurrentUser, isTeacher, replyTo }) {
+      const li = document.createElement("li");
+      li.className = "message" + (fromCurrentUser ? " message--outgoing" : "");
+
+      const avatar = document.createElement("div");
+      avatar.className = "message-avatar";
+      avatar.textContent = author[0].toUpperCase();
+
+      const body = document.createElement("div");
+      body.className = "message-body";
+
+      const header = document.createElement("div");
+      header.className = "message-header";
+
+      const authorSpan = document.createElement("span");
+      authorSpan.className = "message-author";
+      authorSpan.textContent = author;
+
+      const meta = document.createElement("div");
+      meta.className = "message-meta";
+      const now = new Date();
+      const time = now.toTimeString().slice(0, 5);
+      const timeSpan = document.createElement("span");
+      timeSpan.textContent = time;
+      meta.appendChild(timeSpan);
+
+      if (isTeacher) {
+        const badge = document.createElement("span");
+        badge.className = "message-badge message-badge-teacher";
+        badge.textContent = "Teacher";
+        meta.appendChild(badge);
+      }
+
+      header.appendChild(authorSpan);
+      header.appendChild(meta);
+
+      const textDiv = document.createElement("div");
+      textDiv.className = "message-text";
+      if (replyTo) {
+        const replyPrefix = document.createElement("div");
+        replyPrefix.style.fontSize = "0.72rem";
+        replyPrefix.style.color = "var(--text-secondary)";
+        replyPrefix.style.marginBottom = "0.15rem";
+        replyPrefix.textContent = `Replying to ${replyTo.author}: "${replyTo.text.slice(
+          0,
+          60
+        )}${replyTo.text.length > 60 ? "..." : ""}"`;
+        textDiv.appendChild(replyPrefix);
+      }
+      const span = document.createElement("span");
+      span.textContent = text;
+      textDiv.appendChild(span);
+
+      const actions = document.createElement("div");
+      actions.className = "message-actions";
+
+      const replyBtn = document.createElement("button");
+      replyBtn.className = "msg-action";
+      replyBtn.innerHTML = `<i data-lucide="corner-up-right"></i><span>Reply</span>`;
+      replyBtn.addEventListener("click", () => {
+        chatInputEl.focus();
+        chatInputEl.value = `@${author}: `;
+        chatInputEl.dataset.replyToAuthor = author;
+        chatInputEl.dataset.replyToText = text;
+      });
+
+      actions.appendChild(replyBtn);
+
+      body.appendChild(header);
+      body.appendChild(textDiv);
+      body.appendChild(actions);
+
+      li.appendChild(fromCurrentUser ? body : avatar);
+      li.appendChild(fromCurrentUser ? avatar : body);
+      return li;
+    }
+
+    function addChatMessage(options) {
+      const el = createMessageElement(options);
+      chatMessagesEl.appendChild(el);
+      chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+      refreshIcons();
+    }
+
+    // ----- Counters -----
+    function updateCounters() {
+      const myCount = myQuestionsEl.children.length;
+      myQuestionsCounterEl.textContent =
+        myCount + (myCount === 1 ? " question" : " questions");
+
+      const queueCount = queueListEl.children.length;
+      queueCounterEl.textContent =
+        queueCount + (queueCount === 1 ? " open question" : " open questions");
+
+      const historyCount = historyListEl.children.length;
+      historyCounterEl.textContent =
+        historyCount + (historyCount === 1 ? " total question" : " total questions");
+    }
+
+    // ----- Rating (Clear / Unclear) -----
+    function createRatingElement(qid, status) {
+      const wrapper = document.createElement("div");
+      wrapper.className =
+        "rating" + (status === "answered" ? "" : " rating-disabled");
+      wrapper.dataset.qid = qid;
+
+      const label = document.createElement("span");
+      label.className = "rating-label";
+      label.textContent = "Rate answer:";
+      wrapper.appendChild(label);
+
+      const options = document.createElement("div");
+      options.className = "rating-options";
+
+      const clearBtn = document.createElement("button");
+      clearBtn.type = "button";
+      clearBtn.className = "rating-pill rating-pill-ok";
+      clearBtn.dataset.value = "clear";
+      clearBtn.textContent = "Clear";
+
+      const unclearBtn = document.createElement("button");
+      unclearBtn.type = "button";
+      unclearBtn.className = "rating-pill rating-pill-bad";
+      unclearBtn.dataset.value = "unclear";
+      unclearBtn.textContent = "Unclear";
+
+      clearBtn.addEventListener("click", () => setRating(qid, "clear", wrapper));
+      unclearBtn.addEventListener("click", () => setRating(qid, "unclear", wrapper));
+
+      options.appendChild(clearBtn);
+      options.appendChild(unclearBtn);
+      wrapper.appendChild(options);
+
+      const current = questions[qid] && questions[qid].rating;
+      if (current) {
+        setRatingVisual(wrapper, current);
+      }
+
+      return wrapper;
+    }
+
+    function setRatingVisual(wrapper, value) {
+      const pills = wrapper.querySelectorAll(".rating-pill");
+      pills.forEach((p) => {
+        p.classList.toggle("active", p.dataset.value === value);
+      });
+    }
+
+    function setRating(qid, value, wrapper) {
+      const q = questions[qid];
+      if (!q) return;
+      q.rating = value;
+      setRatingVisual(wrapper, value);
+      updateTeacherFeedbackView(qid);
+    }
+
+    function updateTeacherFeedbackView(qid) {
+      const q = questions[qid];
+      if (!q) return;
+      const feedbackEls = historyListEl.querySelectorAll(
+        `.question-feedback[data-qid="${qid}"]`
+      );
+      feedbackEls.forEach((el) => {
+        let pill = el.querySelector(".feedback-pill");
+        if (!pill) {
+          pill = document.createElement("span");
+          pill.className = "feedback-pill";
+          el.appendChild(pill);
+        }
+        pill.className = "feedback-pill";
+        if (q.rating === "clear") {
+          pill.classList.add("feedback-pill-ok");
+          pill.textContent = "Clear";
+        } else if (q.rating === "unclear") {
+          pill.classList.add("feedback-pill-bad");
+          pill.textContent = "Unclear";
+        } else {
+          pill.textContent = "No feedback";
+        }
+      });
+    }
+
+    function getStatusClass(status) {
+      switch (status) {
+        case "later":
+          return "status-later";
+        case "answered":
+          return "status-answered";
+        case "ignored":
+          return "status-ignored";
+        case "hidden":
+          return "status-hidden";
+        default:
+          return "";
+      }
+    }
+
+    // ----- Student question item -----
+    function createStudentQuestionItem(q) {
+      const li = document.createElement("li");
+      li.className = "question-item";
+      li.dataset.qid = q.id;
+
+      const header = document.createElement("div");
+      header.className = "question-header";
+
+      const metaLeft = document.createElement("div");
+      metaLeft.className = "question-meta";
+      const meLabel = document.createElement("span");
+      meLabel.textContent = "You";
+      const timeSpan = document.createElement("span");
+      timeSpan.textContent = q.time;
+      metaLeft.appendChild(meLabel);
+      metaLeft.appendChild(timeSpan);
+
+      const metaRight = document.createElement("div");
+      metaRight.className = "question-meta";
+
+      const statusSpan = document.createElement("span");
+      statusSpan.className =
+        "status-pill " + getStatusClass(q.status || "pending");
+      statusSpan.dataset.statusLabel = "true";
+      statusSpan.textContent =
+        q.status === "later"
+          ? "Later"
+          : q.status === "ignored"
+          ? "Ignored"
+          : q.status === "answered"
+          ? "Answered"
+          : q.status === "hidden"
+          ? "Hidden"
+          : "Pending";
+
+      metaRight.appendChild(statusSpan);
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "btn btn-danger btn-sm";
+      deleteBtn.innerHTML = `<i data-lucide="trash-2"></i><span>Delete</span>`;
+      deleteBtn.addEventListener("click", () => {
+        li.remove();
+        if (questions[q.id]) {
+          questions[q.id].deletedByStudent = true;
+        }
+        updateCounters();
+      });
+
+      metaRight.appendChild(deleteBtn);
+
+      header.appendChild(metaLeft);
+      header.appendChild(metaRight);
+
+      const textDiv = document.createElement("div");
+      textDiv.className = "question-text";
+      textDiv.textContent = q.text;
+
+      const actions = document.createElement("div");
+      actions.className = "question-actions";
+
+      const ratingEl = createRatingElement(q.id, q.status);
+      actions.appendChild(ratingEl);
+
+      li.appendChild(header);
+      li.appendChild(textDiv);
+      li.appendChild(actions);
+      return li;
+    }
+
+    // ----- Queue item (teacher) -----
+    function createQueueItem(q) {
+      const li = document.createElement("li");
+      li.className = "queue-item";
+      li.dataset.qid = q.id;
+      if (q.unread) {
+        li.classList.add("queue-item-new");
+      }
+
+      const header = document.createElement("div");
+      header.className = "question-header";
+
+      const metaLeft = document.createElement("div");
+      metaLeft.className = "question-meta";
+      const authorSpan = document.createElement("span");
+      authorSpan.textContent = q.author;
+      const timeSpan = document.createElement("span");
+      timeSpan.textContent = q.time;
+      metaLeft.appendChild(authorSpan);
+      metaLeft.appendChild(timeSpan);
+
+      const metaRight = document.createElement("div");
+      metaRight.className = "question-meta";
+      const statusSpan = document.createElement("span");
+      statusSpan.className =
+        "status-pill " + getStatusClass(q.status || "pending");
+      statusSpan.dataset.statusLabel = "true";
+      statusSpan.textContent =
+        q.status === "later"
+          ? "Later"
+          : q.status === "ignored"
+          ? "Ignored"
+          : q.status === "answered"
+          ? "Answered"
+          : q.status === "hidden"
+          ? "Hidden"
+          : "New";
+      metaRight.appendChild(statusSpan);
+
+      header.appendChild(metaLeft);
+      header.appendChild(metaRight);
+
+      const textDiv = document.createElement("div");
+      textDiv.className = "question-text";
+      textDiv.textContent = q.text;
+
+      const controls = document.createElement("div");
+      controls.className = "queue-controls";
+
+      const laterBtn = document.createElement("button");
+      laterBtn.className = "queue-action queue-action-later";
+      laterBtn.textContent = "Later";
+      laterBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        setQuestionStatus(q.id, "later");
+      });
+
+      const answeredBtn = document.createElement("button");
+      answeredBtn.className = "queue-action queue-action-answered";
+      answeredBtn.textContent = "Answered";
+      answeredBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        setQuestionStatus(q.id, "answered");
+      });
+
+      const ignoredBtn = document.createElement("button");
+      ignoredBtn.className = "queue-action queue-action-ignored";
+      ignoredBtn.textContent = "Ignored";
+      ignoredBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        setQuestionStatus(q.id, "ignored");
+      });
+
+      const hideBtn = document.createElement("button");
+      hideBtn.className = "queue-action queue-action-hide";
+      hideBtn.textContent = "Hide";
+      hideBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        setQuestionStatus(q.id, "hidden");
+      });
+
+      controls.appendChild(answeredBtn);
+      controls.appendChild(laterBtn);
+      controls.appendChild(ignoredBtn);
+      controls.appendChild(hideBtn);
+
+      const queueMeta = document.createElement("div");
+      queueMeta.className = "queue-meta";
+
+      const infoSpan = document.createElement("span");
+      infoSpan.className = "queue-info";
+      infoSpan.textContent = "Pick a status and the question will move to history.";
+
+      queueMeta.appendChild(infoSpan);
+      queueMeta.appendChild(controls);
+
+      li.appendChild(header);
+      li.appendChild(textDiv);
+      li.appendChild(queueMeta);
+
+      // mark as read on click (not on buttons)
+      li.addEventListener("click", () => {
+        markQuestionRead(q.id);
+      });
+
+      return li;
+    }
+
+    // ----- History item (teacher) -----
+    function createHistoryItem(q) {
+      const li = document.createElement("li");
+      li.className = "history-item";
+      li.dataset.qid = q.id;
+
+      const header = document.createElement("div");
+      header.className = "question-header";
+
+      const metaLeft = document.createElement("div");
+      metaLeft.className = "question-meta";
+      const authorSpan = document.createElement("span");
+      authorSpan.textContent = q.author;
+      const timeSpan = document.createElement("span");
+      timeSpan.textContent = q.time;
+      metaLeft.appendChild(authorSpan);
+      metaLeft.appendChild(timeSpan);
+
+      const metaRight = document.createElement("div");
+      metaRight.className = "question-meta";
+      const statusSpan = document.createElement("span");
+      statusSpan.className =
+        "status-pill " + getStatusClass(q.status || "pending");
+      statusSpan.textContent =
+        q.status === "later"
+          ? "Later"
+          : q.status === "ignored"
+          ? "Ignored"
+          : q.status === "answered"
+          ? "Answered"
+          : q.status === "hidden"
+          ? "Hidden"
+          : "Pending";
+      metaRight.appendChild(statusSpan);
+
+      header.appendChild(metaLeft);
+      header.appendChild(metaRight);
+
+      const textDiv = document.createElement("div");
+      textDiv.className = "question-text";
+      textDiv.textContent = q.text;
+
+      const actions = document.createElement("div");
+      actions.className = "question-actions";
+
+      const feedback = document.createElement("div");
+      feedback.className = "question-feedback";
+      feedback.dataset.qid = q.id;
+      const feedbackLabel = document.createElement("span");
+      feedbackLabel.textContent = "Student feedback:";
+      feedback.appendChild(feedbackLabel);
+
+      const pill = document.createElement("span");
+      pill.className = "feedback-pill";
+      if (q.rating === "clear") {
+        pill.classList.add("feedback-pill-ok");
+        pill.textContent = "Clear";
+      } else if (q.rating === "unclear") {
+        pill.classList.add("feedback-pill-bad");
+        pill.textContent = "Unclear";
+      } else {
+        pill.textContent = "No feedback";
+      }
+      feedback.appendChild(pill);
+
+      const restoreBtn = document.createElement("button");
+      restoreBtn.className = "btn btn-ghost btn-sm";
+      restoreBtn.innerHTML = `<i data-lucide="rotate-ccw"></i><span>Restore to queue</span>`;
+      restoreBtn.addEventListener("click", () => {
+        restoreQuestionToQueue(q.id);
+      });
+
+      actions.appendChild(feedback);
+      actions.appendChild(restoreBtn);
+
+      li.appendChild(header);
+      li.appendChild(textDiv);
+      li.appendChild(actions);
+      return li;
+    }
+
+    // ----- New question notification badge -----
+    function updateQueueNotification() {
+      const unread = Object.values(questions).filter(
+        (q) => q.status === "pending" && q.unread
+      ).length;
+      if (unread > 0) {
+        queuePanelEl.classList.add("notify");
+        queueNewBadgeEl.classList.remove("hidden");
+      } else {
+        queuePanelEl.classList.remove("notify");
+        queueNewBadgeEl.classList.add("hidden");
+      }
+    }
+
+    function markQuestionRead(id) {
+      const q = questions[id];
+      if (!q || !q.unread) return;
+      q.unread = false;
+      const item = queueListEl.querySelector(`.queue-item[data-qid="${id}"]`);
+      if (item) {
+        item.classList.remove("queue-item-new");
+      }
+      updateQueueNotification();
+    }
+
+    // ----- Status change -----
+    function setQuestionStatus(id, status) {
+      const q = questions[id];
+      if (!q) return;
+      q.status = status;
+      q.unread = false;
+
+      // student side
+      const studentItem = myQuestionsEl.querySelector(
+        `.question-item[data-qid="${id}"]`
+      );
+      if (studentItem) {
+        const statusSpan = studentItem.querySelector("[data-status-label]");
+        if (statusSpan) {
+          statusSpan.className =
+            "status-pill " + getStatusClass(status || "pending");
+          statusSpan.textContent =
+            status === "later"
+              ? "Later"
+              : status === "ignored"
+              ? "Ignored"
+              : status === "answered"
+              ? "Answered"
+              : status === "hidden"
+              ? "Hidden"
+              : "Pending";
+        }
+        const ratingEl = studentItem.querySelector(".rating");
+        if (ratingEl) {
+          if (status === "answered") {
+            ratingEl.classList.remove("rating-disabled");
+          } else {
+            ratingEl.classList.add("rating-disabled");
+          }
+        }
+      }
+
+      // move from queue to history
+      const queueItem = queueListEl.querySelector(
+        `.queue-item[data-qid="${id}"]`
+      );
+      if (queueItem) {
+        queueItem.remove();
+        const historyItem = createHistoryItem(q);
+        historyListEl.prepend(historyItem);
+      }
+
+      updateCounters();
+      updateQueueNotification();
+      refreshIcons();
+    }
+
+    function restoreQuestionToQueue(id) {
+      const q = questions[id];
+      if (!q) return;
+      const historyItem = historyListEl.querySelector(
+        `.history-item[data-qid="${id}"]`
+      );
+      if (historyItem) {
+        historyItem.remove();
+      }
+      q.status = "pending";
+      q.unread = true;
+
+      renderQueue(); // re-render for order and new flag
+
+      // student view
+      const studentItem = myQuestionsEl.querySelector(
+        `.question-item[data-qid="${id}"]`
+      );
+      if (studentItem) {
+        const statusSpan = studentItem.querySelector("[data-status-label]");
+        if (statusSpan) {
+          statusSpan.className = "status-pill";
+          statusSpan.textContent = "Pending";
+        }
+        const ratingEl = studentItem.querySelector(".rating");
+        if (ratingEl) {
+          ratingEl.classList.add("rating-disabled");
+        }
+      }
+
+      updateCounters();
+      updateQueueNotification();
+      refreshIcons();
+    }
+
+    // ----- Queue order / sorting -----
+    function renderQueue() {
+      const items = Object.values(questions).filter(
+        (q) => q.status === "pending"
+      );
+      items.sort((a, b) => {
+        if (queueOrder === "newest") {
+          return b.createdAt - a.createdAt;
+        }
+        return a.createdAt - b.createdAt;
+      });
+      queueListEl.innerHTML = "";
+      items.forEach((q) => {
+        const el = createQueueItem(q);
+        queueListEl.appendChild(el);
+      });
+      updateCounters();
+      updateQueueNotification();
+      refreshIcons();
+    }
+
+    queueOrderToggleEl.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-order]");
+      if (!btn) return;
+      queueOrder = btn.dataset.order;
+      Array.from(queueOrderToggleEl.querySelectorAll("button")).forEach((b) =>
+        b.classList.toggle("active", b.dataset.order === queueOrder)
+      );
+      renderQueue();
+    });
+
+    // ----- Add question from student -----
+    function addQuestionFromStudent(text) {
+      questionCounter += 1;
+      const id = "q" + questionCounter;
+      const now = new Date();
+      const time = now.toTimeString().slice(0, 5);
+      const qData = {
+        id,
+        text,
+        author: nickname,
+        time,
+        status: "pending",
+        rating: null,
+        createdAt: now.getTime(),
+        unread: true,
+      };
+      questions[id] = qData;
+
+      const studentItem = createStudentQuestionItem(qData);
+      myQuestionsEl.prepend(studentItem);
+
+      renderQueue();
+    }
+
+    function addSampleQueue() {
+      sampleQueue.forEach((item, idx) => {
+        questionCounter += 1;
+        const id = "q" + questionCounter;
+        const now = new Date(Date.now() - (sampleQueue.length - idx) * 600000);
+        const time = now.toTimeString().slice(0, 5);
+        const qData = {
+          id,
+          text: item.text,
+          author: item.author,
+          time,
+          status: "pending",
+          rating: null,
+          createdAt: now.getTime(),
+          unread: false, // стартовые вопросы не считаем новыми
+        };
+        questions[id] = qData;
+      });
+      renderQueue();
+    }
+
+    function addSampleHistory() {
+      sampleHistory.forEach((item, idx) => {
+        questionCounter += 1;
+        const id = "q" + questionCounter;
+        const now = new Date(Date.now() - (idx + 1) * 900000);
+        const time = now.toTimeString().slice(0, 5);
+        const qData = {
+          id,
+          text: item.text,
+          author: item.author,
+          time,
+          status: item.status,
+          rating: null,
+          createdAt: now.getTime(),
+          unread: false,
+        };
+        questions[id] = qData;
+        const historyItem = createHistoryItem(qData);
+        historyListEl.appendChild(historyItem);
+      });
+    }
+
+    // ----- Reply context -----
+    function getReplyContext() {
+      const author = chatInputEl.dataset.replyToAuthor;
+      const text = chatInputEl.dataset.replyToText;
+      if (!author || !text) return null;
+      return { author, text };
+    }
+
+    function clearReplyContext() {
+      delete chatInputEl.dataset.replyToAuthor;
+      delete chatInputEl.dataset.replyToText;
+    }
+
+    // ----- Sending messages -----
+    function sendMessage() {
+      const raw = chatInputEl.value;
+      const trimmed = raw.trim();
+      if (!trimmed) return;
+
+      const replyTo = getReplyContext();
+      addChatMessage({
+        author: nickname,
+        text: trimmed,
+        fromCurrentUser: true,
+        isTeacher: false,
+        replyTo,
+      });
+      clearReplyContext();
+
+      if (sendToTeacherEl && sendToTeacherEl.checked) {
+        addQuestionFromStudent(trimmed);
+      }
+
+      chatInputEl.value = "";
+      chatInputEl.style.height = "auto";
+
+      sendButtonEl.classList.add("sending");
+      setTimeout(() => sendButtonEl.classList.remove("sending"), 150);
+    }
+
+    chatInputEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    chatInputEl.addEventListener("input", () => {
+      chatInputEl.style.height = "auto";
+      chatInputEl.style.height = chatInputEl.scrollHeight + "px";
+    });
+
+    sendButtonEl.addEventListener("click", () => {
+      sendMessage();
+    });
+
+    // ----- Random chat activity -----
+    function addRandomMessage(initial = false) {
+      const text =
+        randomMessages[
+          Math.floor(Math.random() * randomMessages.length)
+        ];
+      const author =
+        randomUsers[Math.floor(Math.random() * randomUsers.length)];
+      addChatMessage({
+        author,
+        text,
+        fromCurrentUser: false,
+        isTeacher: false,
+      });
+      if (!initial) {
+        if (Math.random() < 0.35) {
+          setTimeout(() => {
+            addChatMessage({
+              author: "teacher1",
+              text: "Good question, I will cover this in a minute.",
+              fromCurrentUser: false,
+              isTeacher: true,
+            });
+          }, 2000);
+        }
+      }
+    }
+
+    function seedRandomChat() {
+      for (let i = 0; i < 5; i++) {
+        addRandomMessage(true);
+      }
+      setInterval(() => {
+        addRandomMessage(false);
+      }, 10000 + Math.random() * 10000);
+    }
+
+    // ----- QR overlay -----
+    qrButtonEl.addEventListener("click", () => {
+      qrOverlayEl.classList.add("show");
+    });
+
+    qrCloseEl.addEventListener("click", () => {
+      qrOverlayEl.classList.remove("show");
+    });
+
+    qrOverlayEl.addEventListener("click", (e) => {
+      if (e.target === qrOverlayEl) {
+        qrOverlayEl.classList.remove("show");
+      }
+    });
+
+    document.getElementById("copyLink").addEventListener("click", () => {
+      const link =
+        "https://example.edu/live/ALGO-101";
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(link).catch(() => {});
+      }
+    });
+
+    document.getElementById("downloadQR").addEventListener("click", () => {
+      alert("QR download is a stub in this prototype.");
+    });
+
+    // ----- Dashboard / End chat -----
+    dashboardBtnEl.addEventListener("click", () => {
+      window.location.href = "#/teacher/dashboard";
+    });
+
+    endChatBtnEl.addEventListener("click", () => {
+      const ok = confirm("End chat for this room? Students will no longer be able to send messages.");
+      if (!ok) return;
+      chatInputEl.disabled = true;
+      sendButtonEl.disabled = true;
+      sendButtonEl.style.opacity = "0.6";
+    });
+
+    // ----- Init -----
+    window.addEventListener("DOMContentLoaded", () => {
+      nicknameEl.textContent = nickname;
+      initTheme();
+      setRole("student");
+      seedRandomChat();
+      addSampleQueue();
+      addSampleHistory();
+      updateCounters();
+      refreshIcons();
+    });
+  </script>
+</body>
+</html>
