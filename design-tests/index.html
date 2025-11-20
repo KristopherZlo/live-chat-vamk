@@ -940,6 +940,209 @@
       display: none !important;
     }
 
+    .btn {
+      transition: background-color 0.15s ease-out,
+                  border-color 0.15s ease-out,
+                  color 0.15s ease-out;
+    }
+
+    .btn-ghost.btn-sm {
+      background: var(--bg-elevated);
+      border-radius: 999px;
+      padding-inline: 0.65rem;
+    }
+
+    .btn-ghost.btn-sm:hover {
+      background: var(--bg-soft);
+      border-color: var(--accent);
+      color: var(--accent-strong);
+    }
+
+    .btn:hover {
+      border-color: var(--accent);
+      color: var(--accent-strong);
+      background-color: var(--bg-soft);
+    }
+
+    .btn-primary:hover {
+      background-color: var(--accent-strong);
+      border-color: var(--accent-strong);
+    }
+
+    .btn-danger:hover {
+      background-color: rgba(220, 38, 38, 0.06);
+    }
+
+    .icon-btn {
+      transition: background-color 0.15s ease-out,
+                  border-color 0.15s ease-out,
+                  color 0.15s ease-out;
+    }
+
+    .icon-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent-strong);
+      background-color: var(--bg-soft);
+    }
+
+    .queue-action {
+      transition: background-color 0.15s ease-out,
+                  border-color 0.15s ease-out,
+                  color 0.15s ease-out;
+    }
+
+    .queue-action:hover {
+      background-color: var(--bg-soft);
+    }
+
+    .app-footer {
+  border-top: 1px solid var(--border-subtle);
+  padding: 0.6rem 1.25rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--bg-elevated);
+}
+
+.app-footer-left,
+.app-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.app-footer-left a {
+  text-decoration: none;
+  color: var(--text-secondary);
+}
+
+.app-footer-left a:hover {
+  color: var(--accent-strong);
+}
+
+.footer-label {
+  color: var(--text-secondary);
+}
+
+.footer-lang {
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: background-color 0.15s ease-out,
+              border-color 0.15s ease-out,
+              color 0.15s ease-out;
+}
+
+.footer-lang:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+  background: var(--bg-soft);
+}
+
+.footer-lang.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+@media (max-width: 640px) {
+  .app-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.chat-textarea {
+  font-family: inherit;
+}
+
+.message-to-teacher .message-body {
+  border-color: var(--accent);
+}
+
+.account-controls {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.account-btn {
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  padding: 0.25rem 0.6rem;
+  font-size: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+}
+
+.account-btn i {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.account-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.account-menu {
+  position: absolute;
+  right: 0;
+  top: 130%;
+  min-width: 140px;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.18);
+  padding: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  z-index: 20;
+}
+
+.account-menu button {
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  border-radius: 0.35rem;
+}
+
+.account-menu button:hover {
+  background: var(--bg-soft);
+  color: var(--accent-strong);
+}
+
+.app-header {
+  padding: 0.75rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  gap: 0.75rem;
+}
+
+.app-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+
     @media (max-width: 1024px) {
       .layout {
         grid-template-columns: 1.7fr 1.3fr;
@@ -994,21 +1197,22 @@
   </style>
 </head>
 <body class="app role-student" data-theme="light">
-  <header class="app-header">
+<header class="app-header">
+  <div class="app-header-left">
     <div class="app-title">
       <span>Lecture Live Chat</span>
       <span class="badge">beta</span>
     </div>
+    <button class="btn btn-ghost role-teacher-only" id="dashboardBtn">
+      <i data-lucide="layout-dashboard"></i>
+      <span>Dashboard</span>
+    </button>
+  </div>
     <div class="app-controls">
       <div class="room-info">
         <span class="room-name">Room: Intro to Algorithms</span>
         <span class="room-code">Code: ALGO-101</span>
       </div>
-
-      <button class="btn btn-ghost role-teacher-only" id="dashboardBtn">
-        <i data-lucide="layout-dashboard"></i>
-        <span>Dashboard</span>
-      </button>
 
       <button id="qrButton" class="btn btn-ghost role-teacher-only">
         <i data-lucide="qr-code"></i>
@@ -1024,10 +1228,22 @@
         <button data-role="student" class="active">Student</button>
         <button data-role="teacher">Teacher</button>
       </div>
+      <div class="account-controls">
+  <button id="loginBtn" class="btn btn-primary btn-sm">Log in</button>
+  <div id="accountBtn" class="account-btn hidden">
+    <span id="accountName">user82314</span>
+    <i data-lucide="chevron-down"></i>
+  </div>
+  <div id="accountMenu" class="account-menu hidden">
+    <button data-action="settings">Settings</button>
+    <button data-action="logout">Logout</button>
+  </div>
+</div>
       <button id="themeToggle" class="icon-btn" title="Toggle theme">
         <i data-lucide="moon"></i>
       </button>
     </div>
+</header>
   </header>
 
   <main>
@@ -1040,7 +1256,9 @@
               <i data-lucide="messages-square"></i>
               <span>Live chat</span>
             </div>
-            <div class="panel-subtitle">Active during the lecture</div>
+            <div class="panel-subtitle">
+              Ask questions and chat during the lecture. Messages are anonymous for students.
+            </div>
           </div>
           <div class="panel-subtitle">
             Nickname: <strong id="nickname">user82314</strong>
@@ -1179,13 +1397,22 @@
           <i data-lucide="copy"></i>
           <span>Copy link</span>
         </button>
-        <button class="btn btn-primary btn-sm" id="downloadQR">
-          <i data-lucide="download"></i>
-          <span>Download QR</span>
-        </button>
       </div>
     </div>
   </div>
+
+  <footer class="app-footer">
+    <div class="app-footer-left">
+      <a href="#gdpr">GDPR</a>
+      <a href="#contact">Contact</a>
+    </div>
+    <div class="app-footer-right">
+      <span class="footer-label">Language:</span>
+      <button class="footer-lang active" data-lang="fi">FI</button>
+      <button class="footer-lang" data-lang="ru">RU</button>
+      <button class="footer-lang" data-lang="en">EN</button>
+    </div>
+  </footer>
 
   <script>
     // ----- State -----
@@ -1361,9 +1588,12 @@
     });
 
     // ----- Chat messages -----
-    function createMessageElement({ author, text, fromCurrentUser, isTeacher, replyTo }) {
+    function createMessageElement({ author, text, fromCurrentUser, isTeacher, replyTo , sentToTeacher}) {
       const li = document.createElement("li");
       li.className = "message" + (fromCurrentUser ? " message--outgoing" : "");
+      if (sentToTeacher) {
+        li.classList.add("message-to-teacher");
+      }
 
       const avatar = document.createElement("div");
       avatar.className = "message-avatar";
@@ -1950,6 +2180,67 @@
       refreshIcons();
     }
 
+    let isLoggedIn = false;
+
+const loginBtnEl = document.getElementById("loginBtn");
+const accountBtnEl = document.getElementById("accountBtn");
+const accountMenuEl = document.getElementById("accountMenu");
+const accountNameEl = document.getElementById("accountName");
+
+function updateAuthUI() {
+  if (isLoggedIn) {
+    loginBtnEl.classList.add("hidden");
+    accountBtnEl.classList.remove("hidden");
+  } else {
+    loginBtnEl.classList.remove("hidden");
+    accountBtnEl.classList.add("hidden");
+    accountMenuEl.classList.add("hidden");
+  }
+}
+
+loginBtnEl.addEventListener("click", () => {
+  // заглушка: просто считаем, что юзер вошёл
+  isLoggedIn = true;
+  accountNameEl.textContent = nickname; // или другой ник
+  updateAuthUI();
+});
+
+accountBtnEl.addEventListener("click", () => {
+  accountMenuEl.classList.toggle("hidden");
+});
+
+accountMenuEl.addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-action]");
+  if (!btn) return;
+  const action = btn.dataset.action;
+  if (action === "logout") {
+    isLoggedIn = false;
+    updateAuthUI();
+  }
+  if (action === "settings") {
+    // заглушка под настройки
+    alert("Settings will be available later.");
+  }
+  accountMenuEl.classList.add("hidden");
+});
+
+document.addEventListener("click", (e) => {
+  if (!accountControlsContains(e.target)) {
+    accountMenuEl.classList.add("hidden");
+  }
+});
+
+function accountControlsContains(node) {
+  return (
+    node === accountMenuEl ||
+    node === accountBtnEl ||
+    node === loginBtnEl ||
+    accountMenuEl.contains(node) ||
+    accountBtnEl.contains(node)
+  );
+}
+
+
     queueOrderToggleEl.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-order]");
       if (!btn) return;
@@ -2047,12 +2338,13 @@
       if (!trimmed) return;
 
       const replyTo = getReplyContext();
-      addChatMessage({
+        addChatMessage({
         author: nickname,
         text: trimmed,
         fromCurrentUser: true,
         isTeacher: false,
         replyTo,
+        sentToTeacher: sendToTeacherEl && sendToTeacherEl.checked
       });
       clearReplyContext();
 
@@ -2141,10 +2433,6 @@
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(link).catch(() => {});
       }
-    });
-
-    document.getElementById("downloadQR").addEventListener("click", () => {
-      alert("QR download is a stub in this prototype.");
     });
 
     // ----- Dashboard / End chat -----
