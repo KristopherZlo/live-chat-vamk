@@ -6,6 +6,7 @@ use App\Models\Question;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\QuestionRating;
+use App\Events\QuestionUpdated;
 
 class QuestionController extends Controller
 {
@@ -23,9 +24,9 @@ class QuestionController extends Controller
         ]);
 
         $status = $data['status'];
-
         $question->status = $status;
 
+        // отметки времени под статус
         if ($status === 'answered') {
             $question->answered_at = now();
             $question->ignored_at = null;
@@ -46,6 +47,8 @@ class QuestionController extends Controller
 
         $question->save();
 
+        event(new QuestionUpdated($question));
+
         return back();
     }
 
@@ -60,6 +63,8 @@ class QuestionController extends Controller
 
         $question->deleted_by_owner_at = now();
         $question->save();
+
+        event(new QuestionUpdated($question));
 
         return back();
     }
@@ -79,9 +84,12 @@ class QuestionController extends Controller
         $question->deleted_by_participant_at = now();
         $question->save();
 
+        event(new QuestionUpdated($question));
+
         return back();
     }
 
+    // Оценка ответа (лайк / дизлайк)
     public function rate(Request $request, Question $question)
     {
         $room = $question->room;
@@ -113,9 +121,12 @@ class QuestionController extends Controller
             ]
         );
 
+        event(new QuestionUpdated($question));
+
         return back();
     }
 
+    // Полное удаление вопроса (только владелец)
     public function destroy(Request $request, Question $question)
     {
         $room = $question->room;
@@ -125,6 +136,8 @@ class QuestionController extends Controller
         }
 
         $question->delete();
+
+        event(new QuestionUpdated($question));
 
         return back();
     }

@@ -18,9 +18,10 @@
                 </div>
             </div>
 
-            <!-- Settings / Auth -->
-            @auth
-                <div class="hidden sm:flex sm:items-center sm:ms-6">
+            <!-- Settings Dropdown -->
+            {{-- Правый блок навигации --}}
+            <div class="hidden sm:flex sm:items-center sm:ms-6">
+                @auth
                     <x-dropdown align="right" width="48">
                         <x-slot name="trigger">
                             <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
@@ -36,26 +37,27 @@
 
                         <x-slot name="content">
                             <x-dropdown-link :href="route('profile.edit')">
-                                Профиль
+                                {{ __('Profile') }}
                             </x-dropdown-link>
 
                             <!-- Authentication -->
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
                                 <x-dropdown-link :href="route('logout')"
-                                    onclick="event.preventDefault(); this.closest('form').submit();">
-                                    Выйти
+                                                onclick="event.preventDefault(); this.closest('form').submit();">
+                                    {{ __('Log Out') }}
                                 </x-dropdown-link>
                             </form>
                         </x-slot>
                     </x-dropdown>
-                </div>
-            @else
-                <div class="hidden sm:flex sm:items-center sm:ms-6">
-                    <a href="{{ route('login') }}" class="text-sm text-gray-700 underline">Войти</a>
-                    <a href="{{ route('register') }}" class="ml-4 text-sm text-gray-700 underline">Регистрация</a>
-                </div>
-            @endauth
+                @else
+                    <a href="{{ route('login') }}"
+                    class="text-sm text-gray-600 hover:text-gray-900">
+                        Войти
+                    </a>
+                @endauth
+            </div>
+
 
             <!-- Hamburger -->
             <div class="-me-2 flex items-center sm:hidden">
@@ -78,16 +80,20 @@
         </div>
 
         <!-- Responsive Settings Options -->
-         @auth
-    <div class="pt-4 pb-1 border-t border-gray-200">
+<div class="pt-4 pb-1 border-t border-gray-200">
+    @auth
         <div class="px-4">
-            <div class="font-medium text-base text-gray-800">{{ Auth::user()->name }}</div>
-            <div class="font-medium text-sm text-gray-500">{{ Auth::user()->email }}</div>
+            <div class="font-medium text-base text-gray-800">
+                {{ Auth::user()->name }}
+            </div>
+            <div class="font-medium text-sm text-gray-500">
+                {{ Auth::user()->email }}
+            </div>
         </div>
 
         <div class="mt-3 space-y-1">
             <x-responsive-nav-link :href="route('profile.edit')">
-                Профиль
+                {{ __('Profile') }}
             </x-responsive-nav-link>
 
             <!-- Authentication -->
@@ -96,14 +102,12 @@
 
                 <x-responsive-nav-link :href="route('logout')"
                         onclick="event.preventDefault(); this.closest('form').submit();">
-                    Выйти
+                    {{ __('Log Out') }}
                 </x-responsive-nav-link>
             </form>
         </div>
-    </div>
-@else
-    <div class="pt-4 pb-1 border-t border-gray-200">
-        <div class="mt-3 space-y-1">
+    @else
+        <div class="px-4">
             <x-responsive-nav-link :href="route('login')">
                 Войти
             </x-responsive-nav-link>
@@ -111,7 +115,8 @@
                 Регистрация
             </x-responsive-nav-link>
         </div>
-    </div>
-@endauth
+    @endauth
+</div>
+
     </div>
 </nav>

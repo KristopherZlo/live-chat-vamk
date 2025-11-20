@@ -60,4 +60,8 @@ Route::post('/questions/{question}/rating', [QuestionController::class, 'rate'])
 Route::delete('/questions/{question}', [QuestionController::class, 'destroy'])
     ->name('questions.destroy');
 
+Route::get('/rooms/{room}/questions-panel', [RoomController::class, 'questionsPanel'])
+    ->name('rooms.questionsPanel')
+    ->middleware('auth'); // только владелец заходит в админскую часть
+
 require __DIR__.'/auth.php';
