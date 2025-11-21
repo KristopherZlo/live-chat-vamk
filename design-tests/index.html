@@ -192,6 +192,14 @@
       height: 1.2rem;
     }
 
+    .mobile-menu-btn {
+      display: none;
+    }
+
+    .mobile-menu-overlay {
+      display: none;
+    }
+
     main {
       flex: 1;
       display: flex;
@@ -214,6 +222,10 @@
 
     .layout.teacher.history-hidden {
       grid-template-columns: 1.75fr 1.4fr;
+    }
+
+    .mobile-tabs {
+      display: none;
     }
 
     .panel {
@@ -376,23 +388,23 @@
       color: #f9fafb;
     }
 
-    .message-actions {
-      margin-top: 0.15rem;
-      display: flex;
-      justify-content: flex-end;
-      gap: 0.25rem;
+.message-actions {
+  margin-top: 0.15rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.25rem;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.1s ease-out;
-      font-size: 0.75rem;
-    }
+  transition: opacity 0.1s ease-out;
+  font-size: 0.75rem;
+}
 
-    .message:hover .message-actions {
-      opacity: 1;
-      pointer-events: auto;
-    }
+.message:hover .message-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
 
-    .msg-action {
+.msg-action {
       border: none;
       background: transparent;
       border-radius: 999px;
@@ -425,6 +437,13 @@
   gap: 0.45rem;
 }
 
+.chat-send-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+}
+
 .chat-input-row {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -439,7 +458,7 @@
   padding: 0.55rem 0.8rem;
   font-size: 0.85rem;
   resize: none;
-  min-height: 3rem;
+  min-height: 3.6rem;
   max-height: 8rem;
   background: var(--bg-elevated);
   color: var(--text-primary);
@@ -452,18 +471,20 @@
 }
 
 .send-btn {
-  border-radius: 0.6rem;
+  border-radius: 0.75rem;
   border: 1px solid var(--accent);
   background: var(--accent);
   color: #f9fafb;
-  padding: 0 0.9rem;
-  min-width: 3.2rem;
+  width: 3rem;
+  height: 3rem;
+  min-width: 3rem;
+  min-height: 3rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.35rem;
   cursor: pointer;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   white-space: nowrap;
 }
 
@@ -1280,6 +1301,14 @@
     height: 1.1rem;
   }
 
+  .send-btn {
+    width: 3rem;
+    height: 3rem;
+    min-width: 3rem;
+    min-height: 3rem;
+    border-radius: 0.75rem;
+  }
+
   .message-body {
     max-width: 85%;
   }
@@ -1367,6 +1396,449 @@
             grid-template-columns: 1.7fr 1.3fr;
         }
     }
+
+    /* Mobile layout overhaul (keeps desktop untouched) */
+    @media (max-width: 768px) {
+      :root {
+        --mobile-tab-bar-height: 76px;
+      }
+
+      html,
+      body {
+        height: 100%;
+        overflow: hidden;
+        background: linear-gradient(180deg, var(--bg) 0%, var(--bg-soft) 100%);
+      }
+
+      body {
+        display: flex;
+      }
+
+      .app {
+        width: 100%;
+        min-height: 100vh;
+        background: var(--bg);
+        display: grid;
+        grid-template-rows: auto 1fr;
+      }
+
+      main {
+        padding: 0.65rem 0.85rem calc(var(--mobile-tab-bar-height) + 1.5rem);
+        height: 100%;
+        min-height: 0;
+        overflow: hidden;
+      }
+
+      .layout {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        overflow: hidden;
+      }
+
+      .panel {
+        border-radius: 1rem;
+        border: 1px solid var(--border-subtle);
+        background: linear-gradient(180deg, var(--bg-elevated) 0%, rgba(255, 255, 255, 0.88) 100%);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+      }
+
+      /* Header: sticky, compact, mobile-friendly */
+      .app-header {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        border: none;
+        background: linear-gradient(135deg, var(--accent-soft), #eef2ff);
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.1);
+        padding: 0.9rem 1rem 0.7rem;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.65rem;
+      }
+
+      .app-header-left {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.6rem;
+      }
+
+      .app-title {
+        font-size: 1.05rem;
+        letter-spacing: -0.01em;
+      }
+
+      .app-title .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
+        padding: 0.18rem 0.55rem;
+        border: none;
+        background: rgba(255, 255, 255, 0.92);
+        color: var(--accent-strong);
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
+      }
+
+      .app-controls {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 0.5rem 0.35rem;
+        align-items: center;
+      }
+
+      .app-controls .account-controls,
+      .app-controls #themeToggle {
+        display: none;
+      }
+
+      .room-info {
+        grid-column: 1 / -1;
+        width: 100%;
+        padding: 0.45rem 0.65rem;
+        border-radius: 0.8rem;
+        background: rgba(255, 255, 255, 0.7);
+        border: 1px solid var(--border-subtle);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+        text-align: left;
+        font-size: 0.88rem;
+      }
+
+      .btn-group {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .btn,
+      .icon-btn {
+        height: 42px;
+        border-radius: 0.9rem;
+      }
+
+      .mobile-menu-btn {
+        display: inline-flex;
+        margin-left: auto;
+        background: rgba(255, 255, 255, 0.9);
+      }
+
+      .account-controls {
+        justify-content: flex-end;
+      }
+
+      .account-btn {
+        width: auto;
+      }
+
+      /* Mobile tabs */
+      .mobile-tabs {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+        gap: 0.35rem;
+        padding: 0.45rem 0.75rem;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.9) 100%);
+        border-top: 1px solid var(--border-subtle);
+        box-shadow: 0 -10px 28px rgba(0, 0, 0, 0.08);
+        z-index: 45;
+        min-height: var(--mobile-tab-bar-height);
+      }
+
+      .mobile-tab-btn {
+        border-radius: 0.85rem;
+        border: 1px solid var(--border-subtle);
+        background: rgba(255, 255, 255, 0.94);
+        padding: 0.55rem 0.35rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.3rem;
+        cursor: pointer;
+        transition: all 0.15s ease-out;
+      }
+
+      .role-student .mobile-tab-btn[data-tab-target="queue"],
+      .role-student .mobile-tab-btn[data-tab-target="history"] {
+        display: none;
+      }
+
+      .mobile-tab-btn.active {
+        color: var(--text-primary);
+        border-color: var(--accent);
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+        background: var(--accent-soft);
+      }
+
+      /* Panel switching */
+      .mobile-panel {
+        display: none;
+        min-height: 0;
+      }
+
+      .mobile-panel.mobile-active {
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 auto;
+      }
+
+      /* Chat: keeps content inside its own scroll */
+      .chat-panel {
+        flex: 1;
+        min-height: 0;
+        padding: 0.65rem 0.75rem 0;
+        gap: 0.2rem;
+      }
+
+      .chat-panel .panel-header {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        padding: 0.3rem 0.25rem 0.4rem;
+        background: inherit;
+      }
+
+      .chat-panel .panel-body {
+        flex: 1;
+        min-height: 0;
+      }
+
+      .chat-messages {
+        padding: 0.4rem 0.2rem 1rem;
+        height: 100%;
+      }
+
+      .chat-input {
+        position: sticky;
+        bottom: 0;
+        background: inherit;
+        border-top: 1px solid var(--border-subtle);
+        margin: 0 -0.75rem -0.05rem;
+        padding: 0.55rem 0.75rem 0.7rem;
+        border-radius: 0 0 1rem 1rem;
+        box-shadow: 0 -12px 30px rgba(0, 0, 0, 0.06);
+      }
+
+      .chat-input-row {
+        align-items: center;
+      }
+
+      .chat-textarea {
+        max-height: 30vh;
+        min-height: 3.8rem;
+      }
+
+      .send-btn {
+        width: 3rem;
+        height: 3rem;
+        min-width: 3rem;
+        min-height: 3rem;
+        border-radius: 0.75rem;
+      }
+
+      .chat-send-options {
+        padding-inline: 0.05rem;
+        justify-content: flex-start;
+      }
+
+      .panel:not(.chat-panel) {
+        padding: 0.55rem 0.7rem 0.6rem;
+      }
+
+      .panel-body,
+      .panel-footer {
+        min-height: 0;
+      }
+
+      .app-footer {
+        display: none;
+      }
+
+      /* Always show message actions on touch */
+      .message .message-actions {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      /* Mobile menu sheet */
+      .mobile-menu-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.35);
+        display: none;
+        align-items: flex-end;
+        justify-content: center;
+        z-index: 50;
+        padding: 0.5rem;
+      }
+
+      .mobile-menu-overlay.show {
+        display: flex;
+      }
+
+      .mobile-menu-card {
+        width: 100%;
+        max-width: 520px;
+        background: var(--bg-elevated);
+        border-radius: 1rem;
+        border: 1px solid var(--border-subtle);
+        box-shadow: 0 -16px 36px rgba(0, 0, 0, 0.12);
+        padding: 0.9rem 1rem 1rem;
+        display: grid;
+        gap: 0.75rem;
+      }
+
+      .mobile-menu-row {
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+      }
+
+      .mobile-menu-row .btn,
+      .mobile-menu-row .icon-btn {
+        flex: 1 1 0;
+        justify-content: center;
+      }
+
+      .mobile-menu-links {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+
+      .mobile-menu-links a {
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-size: 0.9rem;
+      }
+
+      .mobile-menu-links a:hover {
+        color: var(--accent-strong);
+      }
+    }
+
+    @media (max-width: 520px) {
+      main {
+        padding: 0.55rem 0.75rem calc(var(--mobile-tab-bar-height) + 1.1rem);
+      }
+
+      .app-header {
+        padding: 0.8rem 0.85rem 0.6rem;
+        gap: 0.5rem;
+      }
+
+      .app-controls {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+      }
+
+      .room-info {
+        order: -1;
+      }
+
+      .btn,
+      .icon-btn {
+        width: 100%;
+      }
+
+      .mobile-tabs {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .chat-panel {
+        padding: 0.6rem 0.7rem 0;
+      }
+
+      .chat-input {
+        margin: 0 -0.7rem -0.05rem;
+      }
+    }
+
+    /* Dark theme tune specifically for mobile */
+    @media (max-width: 768px) {
+      [data-theme="dark"] body {
+        background: radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.12), transparent 30%),
+                    radial-gradient(circle at 80% 10%, rgba(14, 165, 233, 0.12), transparent 28%),
+                    #0b1021;
+      }
+
+      [data-theme="dark"] .app {
+        background: #0b1021;
+      }
+
+      [data-theme="dark"] .app-header {
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.18), rgba(99, 102, 241, 0.22));
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+      }
+
+      [data-theme="dark"] .mobile-tabs {
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(10, 12, 25, 0.92) 100%);
+        border-color: #111827;
+        box-shadow: 0 -12px 30px rgba(0, 0, 0, 0.4);
+      }
+
+      [data-theme="dark"] .panel {
+        background: linear-gradient(180deg, rgba(12, 15, 28, 0.95) 0%, rgba(12, 16, 30, 0.9) 100%);
+        border-color: #111827;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+      }
+
+      [data-theme="dark"] .mobile-tab-btn {
+        background: rgba(15, 23, 42, 0.9);
+        border-color: #111827;
+        color: #cbd5f5;
+      }
+
+      [data-theme="dark"] .mobile-tab-btn.active {
+        background: rgba(59, 130, 246, 0.12);
+        border-color: #3b82f6;
+        color: #e5e7eb;
+        box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
+      }
+
+      [data-theme="dark"] .chat-input {
+        background: rgba(12, 16, 30, 0.96);
+        border-color: #111827;
+        box-shadow: 0 -12px 30px rgba(0, 0, 0, 0.32);
+      }
+
+      [data-theme="dark"] .room-info {
+        background: rgba(15, 23, 42, 0.9);
+        border-color: #111827;
+        color: #cbd5f5;
+      }
+
+      [data-theme="dark"] .mobile-menu-btn {
+        background: rgba(15, 23, 42, 0.85);
+        color: #e5e7eb;
+        border-color: #111827;
+      }
+
+      [data-theme="dark"] .mobile-menu-card {
+        background: linear-gradient(180deg, rgba(12, 16, 30, 0.96) 0%, rgba(12, 14, 26, 0.92) 100%);
+        border-color: #111827;
+        box-shadow: 0 -16px 36px rgba(0, 0, 0, 0.45);
+      }
+
+      [data-theme="dark"] .mobile-menu-overlay {
+        background: rgba(0, 0, 0, 0.55);
+      }
+
+      [data-theme="dark"] .mobile-menu-links a {
+        color: #cbd5f5;
+      }
+
+      [data-theme="dark"] .mobile-menu-links a:hover {
+        color: #93c5fd;
+      }
+    }
   </style>
 </head>
 <body class="app role-student" data-theme="light">
@@ -1407,22 +1879,63 @@
     <span id="accountName">user82314</span>
     <i data-lucide="chevron-down"></i>
   </div>
-  <div id="accountMenu" class="account-menu hidden">
-    <button data-action="settings">Settings</button>
-    <button data-action="logout">Logout</button>
-  </div>
-</div>
+      <div id="accountMenu" class="account-menu hidden">
+        <button data-action="settings">Settings</button>
+        <button data-action="logout">Logout</button>
+      </div>
+    </div>
       <button id="themeToggle" class="icon-btn" title="Toggle theme">
         <i data-lucide="moon"></i>
       </button>
+      <button id="mobileMenuBtn" class="icon-btn mobile-menu-btn" aria-expanded="false" title="Menu">
+        <i data-lucide="menu"></i>
+      </button>
     </div>
 </header>
-  </header>
+
+<div class="mobile-menu-overlay" id="mobileMenu">
+  <div class="mobile-menu-card">
+    <div class="mobile-menu-row">
+      <button id="mobileLoginBtn" class="btn btn-primary btn-sm">Log in</button>
+      <button id="mobileLogoutBtn" class="btn btn-ghost btn-sm hidden">Logout</button>
+      <button id="mobileThemeBtn" class="btn btn-ghost btn-sm">
+        <i data-lucide="moon"></i><span>Theme</span>
+      </button>
+    </div>
+    <div class="mobile-menu-row">
+      <button class="footer-lang active" data-lang="fi">FI</button>
+      <button class="footer-lang" data-lang="ru">RU</button>
+      <button class="footer-lang" data-lang="en">EN</button>
+    </div>
+    <div class="mobile-menu-links">
+      <a href="#gdpr">GDPR</a>
+      <a href="#contact">Contact</a>
+    </div>
+  </div>
+</div>
 
   <main>
+    <nav class="mobile-tabs" id="mobileTabs" aria-label="Mobile sections">
+      <button class="mobile-tab-btn active" data-tab-target="chat">
+        <i data-lucide="messages-square"></i>
+        <span>Chat</span>
+      </button>
+      <button class="mobile-tab-btn" data-tab-target="questions">
+        <i data-lucide="help-circle"></i>
+        <span>My Qs</span>
+      </button>
+      <button class="mobile-tab-btn" data-tab-target="queue">
+        <i data-lucide="list-ordered"></i>
+        <span>Queue</span>
+      </button>
+      <button class="mobile-tab-btn" data-tab-target="history">
+        <i data-lucide="clock-3"></i>
+        <span>History</span>
+      </button>
+    </nav>
     <section class="layout" id="layoutRoot">
       <!-- Chat panel (shared) -->
-      <section class="panel chat-panel">
+      <section class="panel chat-panel mobile-panel mobile-active" data-mobile-panel="chat">
         <div class="panel-header">
           <div>
             <div class="panel-title">
@@ -1441,6 +1954,15 @@
           <ul class="chat-messages" id="chatMessages"></ul>
         </div>
         <div class="chat-input">
+          <div class="chat-send-options">
+            <label class="switch role-student-only" id="sendToTeacherSwitch">
+              <input type="checkbox" id="sendToTeacher" />
+              <span class="switch-track">
+                <span class="switch-thumb"></span>
+              </span>
+              <span class="switch-label">Send to teacher</span>
+            </label>
+          </div>
           <div class="chat-input-row">
             <textarea
                 id="chatInput"
@@ -1453,20 +1975,13 @@
             </button>
             </div>
           <div class="chat-input-meta">
-            <label class="switch role-student-only" id="sendToTeacherSwitch">
-              <input type="checkbox" id="sendToTeacher" />
-              <span class="switch-track">
-                <span class="switch-thumb"></span>
-              </span>
-              <span class="switch-label">Send to teacher</span>
-            </label>
             <span class="panel-subtitle">Press Enter to send, Shift+Enter for a new line</span>
           </div>
         </div>
       </section>
 
       <!-- Student: My questions -->
-      <section class="panel student-panel" id="studentPanel">
+      <section class="panel student-panel mobile-panel" id="studentPanel" data-mobile-panel="questions">
         <div class="panel-header">
           <div>
             <div class="panel-title">
@@ -1486,7 +2001,7 @@
       </section>
 
       <!-- Teacher: queue -->
-      <section class="panel queue-panel hidden" id="queuePanel">
+      <section class="panel queue-panel hidden mobile-panel" id="queuePanel" data-mobile-panel="queue">
         <div class="panel-header">
           <div>
             <div class="panel-title">
@@ -1519,7 +2034,7 @@
       </section>
 
       <!-- Teacher: history (fully hidden until opened) -->
-      <section class="panel history-panel hidden" id="historyPanel">
+      <section class="panel history-panel hidden mobile-panel" id="historyPanel" data-mobile-panel="history">
         <div class="panel-header">
           <div>
             <div class="panel-title">
@@ -1616,6 +2131,11 @@
     const historyOpenBtnEl = document.getElementById("historyOpenBtn");
     const dashboardBtnEl = document.getElementById("dashboardBtn");
     const endChatBtnEl = document.getElementById("endChatBtn");
+    const mobileMenuBtn = document.getElementById("mobileMenuBtn");
+    const mobileMenuOverlay = document.getElementById("mobileMenu");
+    const mobileLoginBtn = document.getElementById("mobileLoginBtn");
+    const mobileLogoutBtn = document.getElementById("mobileLogoutBtn");
+    const mobileThemeBtn = document.getElementById("mobileThemeBtn");
 
     const questions = {};
     let questionCounter = 0;
@@ -2364,10 +2884,18 @@ function updateAuthUI() {
   if (isLoggedIn) {
     loginBtnEl.classList.add("hidden");
     accountBtnEl.classList.remove("hidden");
+    if (mobileLoginBtn && mobileLogoutBtn) {
+      mobileLoginBtn.classList.add("hidden");
+      mobileLogoutBtn.classList.remove("hidden");
+    }
   } else {
     loginBtnEl.classList.remove("hidden");
     accountBtnEl.classList.add("hidden");
     accountMenuEl.classList.add("hidden");
+    if (mobileLoginBtn && mobileLogoutBtn) {
+      mobileLoginBtn.classList.remove("hidden");
+      mobileLogoutBtn.classList.add("hidden");
+    }
   }
 }
 
@@ -2411,6 +2939,47 @@ function accountControlsContains(node) {
     accountMenuEl.contains(node) ||
     accountBtnEl.contains(node)
   );
+}
+
+function setMobileMenuOpen(open) {
+  if (!mobileMenuOverlay || !mobileMenuBtn) return;
+  mobileMenuOverlay.classList.toggle("show", open);
+  mobileMenuBtn.setAttribute("aria-expanded", open ? "true" : "false");
+}
+
+if (mobileMenuBtn && mobileMenuOverlay) {
+  mobileMenuBtn.addEventListener("click", () => {
+    const isOpen = mobileMenuOverlay.classList.contains("show");
+    setMobileMenuOpen(!isOpen);
+  });
+
+  mobileMenuOverlay.addEventListener("click", (e) => {
+    if (e.target === mobileMenuOverlay) {
+      setMobileMenuOpen(false);
+    }
+  });
+}
+
+if (mobileThemeBtn && themeToggleEl) {
+  mobileThemeBtn.addEventListener("click", () => {
+    themeToggleEl.click();
+    setMobileMenuOpen(false);
+  });
+}
+
+if (mobileLoginBtn) {
+  mobileLoginBtn.addEventListener("click", () => {
+    loginBtnEl.click();
+    setMobileMenuOpen(false);
+  });
+}
+
+if (mobileLogoutBtn) {
+  mobileLogoutBtn.addEventListener("click", () => {
+    isLoggedIn = false;
+    updateAuthUI();
+    setMobileMenuOpen(false);
+  });
 }
 
 
@@ -2631,6 +3200,48 @@ function accountControlsContains(node) {
       addSampleHistory();
       updateCounters();
       refreshIcons();
+
+      const mobileTabsEl = document.getElementById("mobileTabs");
+      const mobileTabButtons = mobileTabsEl ? mobileTabsEl.querySelectorAll("[data-tab-target]") : [];
+      const mobilePanels = document.querySelectorAll(".mobile-panel");
+      let mobileActiveTab = "chat";
+
+      function applyMobileTab(name) {
+        mobileActiveTab = name;
+        mobilePanels.forEach((panel) => {
+          const isActive = panel.dataset.mobilePanel === name;
+          panel.classList.toggle("mobile-active", isActive);
+          panel.hidden = window.innerWidth <= 768 ? !isActive : false;
+        });
+        mobileTabButtons.forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.tabTarget === name);
+        });
+        refreshIcons();
+      }
+
+      function syncMobilePanels() {
+        if (window.innerWidth <= 768) {
+          applyMobileTab(mobileActiveTab);
+        } else {
+          mobilePanels.forEach((panel) => {
+            panel.classList.add("mobile-active");
+            panel.hidden = false;
+          });
+          mobileTabButtons.forEach((btn) => btn.classList.remove("active"));
+          setMobileMenuOpen(false);
+        }
+      }
+
+      if (mobileTabsEl) {
+        mobileTabsEl.addEventListener("click", (e) => {
+          const btn = e.target.closest("[data-tab-target]");
+          if (!btn) return;
+          applyMobileTab(btn.dataset.tabTarget);
+        });
+      }
+
+      syncMobilePanels();
+      window.addEventListener("resize", syncMobilePanels);
     });
   </script>
 </body>
