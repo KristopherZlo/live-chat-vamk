@@ -1869,10 +1869,6 @@
         <span>End chat</span>
       </button>
 
-      <div class="btn-group" id="roleToggle">
-        <button data-role="student" class="active">Student</button>
-        <button data-role="teacher">Teacher</button>
-      </div>
       <div class="account-controls">
   <button id="loginBtn" class="btn btn-primary btn-sm">Log in</button>
   <div id="accountBtn" class="account-btn hidden">
@@ -2115,7 +2111,6 @@
     const historyListEl = document.getElementById("historyList");
     const queueCounterEl = document.getElementById("queueCounter");
     const historyCounterEl = document.getElementById("historyCounter");
-    const roleToggleEl = document.getElementById("roleToggle");
     const layoutRootEl = document.getElementById("layoutRoot");
     const studentPanelEl = document.getElementById("studentPanel");
     const queuePanelEl = document.getElementById("queuePanel");
@@ -2257,9 +2252,6 @@
     function setRole(role) {
       document.body.classList.remove("role-student", "role-teacher");
       document.body.classList.add(`role-${role}`);
-      Array.from(roleToggleEl.querySelectorAll("button")).forEach((btn) => {
-        btn.classList.toggle("active", btn.dataset.role === role);
-      });
 
       if (role === "teacher") {
         layoutRootEl.classList.add("teacher");
@@ -2273,12 +2265,6 @@
         setHistoryVisible(false);
       }
     }
-
-    roleToggleEl.addEventListener("click", (e) => {
-      const btn = e.target.closest("button[data-role]");
-      if (!btn) return;
-      setRole(btn.dataset.role);
-    });
 
     // ----- Chat messages -----
     function createMessageElement({ author, text, fromCurrentUser, isTeacher, replyTo , sentToTeacher}) {
