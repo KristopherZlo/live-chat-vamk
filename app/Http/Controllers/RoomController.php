@@ -16,7 +16,8 @@ class RoomController extends Controller
     {
         $rooms = $request->user()
             ->rooms()
-            ->latest()
+            ->withCount(['messages', 'questions'])
+            ->latest('updated_at')
             ->get();
 
         return view('dashboard', compact('rooms'));
