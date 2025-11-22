@@ -218,10 +218,10 @@ function markQueueHasNew() {
   const queuePanel = document.getElementById('queuePanel');
   if (queuePanel) {
     queuePanel.classList.add('has-new');
-    const firstItem = queuePanel.querySelector('.queue-item');
-    if (firstItem) {
-      firstItem.classList.add('queue-item-new');
-    }
+    const newItems = queuePanel.querySelectorAll('.queue-item[data-status="new"]');
+    newItems.forEach((item) => {
+      item.classList.add('queue-item-new');
+    });
     if (!document.getElementById('queueNewBadge')) {
       const badge = document.createElement('span');
       badge.id = 'queueNewBadge';

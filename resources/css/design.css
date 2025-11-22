@@ -319,7 +319,7 @@
       flex-shrink: 0;
     }
 
-    .message-body {
+.message-body {
       max-width: 70%;
       padding: 0.4rem 0.55rem;
       border-radius: 0.65rem;
@@ -332,9 +332,14 @@
       position: relative;
     }
 
-    .message--outgoing .message-body {
+.message--outgoing .message-body {
       background: var(--message-out);
       border-color: transparent;
+    }
+
+.message--question .message-body {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent-soft);
     }
 
     .message-header {
@@ -375,6 +380,12 @@
       background: var(--accent);
       border-color: var(--accent);
       color: #f9fafb;
+    }
+
+.message-badge-question {
+      border-color: var(--accent);
+      color: var(--accent-strong);
+      background: var(--accent-soft);
     }
 
 .message-actions {

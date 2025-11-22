@@ -63,7 +63,7 @@ class RoomController extends Controller
         $participant = $this->getOrCreateParticipant($request, $room);
 
         $messages = $room->messages()
-            ->with(['participant', 'user'])
+            ->with(['participant', 'user', 'question'])
             ->orderBy('created_at')
             ->get();
 
@@ -71,10 +71,8 @@ class RoomController extends Controller
 
         $queueQuestions = collect();
         $historyQuestions = collect();
-        $myQuestions = collect();
 
         if ($isOwner) {
-            // 1) Очередь: только активные new/later, не скрытые и не удалённые участником
             $queueQuestions = $room->questions()
                 ->with('participant')
                 ->whereIn('status', ['new', 'later'])
@@ -83,10 +81,6 @@ class RoomController extends Controller
                 ->orderBy('created_at')
                 ->get();
 
-            // 2) История:
-            //    - не удалён участником
-            //    - либо статус НЕ new/later (answered/ignored),
-            //    - либо скрыто из очереди владельцем (deleted_by_owner_at not null)
             $historyQuestions = $room->questions()
                 ->with(['participant', 'ratings'])
                 ->whereNull('deleted_by_participant_at')
@@ -96,18 +90,19 @@ class RoomController extends Controller
                 })
                 ->orderBy('created_at', 'desc')
                 ->get();
-        } else {
-            // мои вопросы для текущего участника
-            if ($participant && $participant->id) {
-                $myQuestions = $room->questions()
-                    ->where('participant_id', $participant->id)
-                    ->whereNull('deleted_by_participant_at')
-                    ->with(['ratings' => function ($query) use ($participant) {
-                        $query->where('participant_id', $participant->id);
-                    }])
-                    ->orderBy('created_at', 'desc')
-                    ->get();
-            }
+        }
+
+        $myQuestions = collect();
+
+        if (! $isOwner && $participant && $participant->id) {
+            $myQuestions = $room->questions()
+                ->where('participant_id', $participant->id)
+                ->whereNull('deleted_by_participant_at')
+                ->with(['ratings' => function ($query) use ($participant) {
+                    $query->where('participant_id', $participant->id);
+                }])
+                ->orderBy('created_at', 'desc')
+                ->get();
         }
 
         return view('rooms.show', [
@@ -162,12 +157,9 @@ class RoomController extends Controller
         $user = auth()->user();
         $isOwner = $user && $user->id === $room->user_id;
 
-        if (! $isOwner) {
-            abort(403);
-        }
-
-        // та же логика, что ты используешь в showPublic для правой панели
+                // та же логика, что ты используешь в showPublic для правой панели
         $queueQuestions = $room->questions()
+            ->with('participant')
             ->whereIn('status', ['new', 'later'])
             ->whereNull('deleted_by_owner_at')
             ->whereNull('deleted_by_participant_at')
@@ -175,6 +167,7 @@ class RoomController extends Controller
             ->get();
 
         $historyQuestions = $room->questions()
+            ->with(['participant', 'ratings'])
             ->whereNull('deleted_by_participant_at')
             ->where(function ($q) {
                 $q->whereNotIn('status', ['new', 'later'])
@@ -188,6 +181,33 @@ class RoomController extends Controller
             'queueQuestions'  => $queueQuestions,
             'historyQuestions'=> $historyQuestions,
             'isOwner'         => $isOwner,
+        ]);
+    }
+
+    public function myQuestionsPanel(Request $request, Room $room)
+    {
+        if ($request->user() && $request->user()->id === $room->user_id) {
+            abort(403);
+        }
+
+        $participant = $this->getOrCreateParticipant($request, $room);
+
+        if (!$participant || !$participant->id) {
+            abort(403);
+        }
+
+        $myQuestions = $room->questions()
+            ->where('participant_id', $participant->id)
+            ->whereNull('deleted_by_participant_at')
+            ->with(['ratings' => function ($query) use ($participant) {
+                $query->where('participant_id', $participant->id);
+            }])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return view('rooms.partials.my_questions_panel', [
+            'room' => $room,
+            'myQuestions' => $myQuestions,
         ]);
     }
 }
