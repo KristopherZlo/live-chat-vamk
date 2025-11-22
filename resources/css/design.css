@@ -2179,6 +2179,52 @@ main {
   height: 1.1rem;
 }
 
+/* Desktop: stretch the room panels to full height */
+@media (min-width: 801px) {
+  .role-teacher,
+  .role-student {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .role-teacher .room-header,
+  .role-student .room-header {
+    margin-bottom: 0;
+    flex-shrink: 0;
+  }
+
+  #layoutRoot {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  #layoutRoot .panel,
+  #layoutRoot .teacher-panels,
+  #layoutRoot .teacher-panels .panel {
+    height: 100%;
+    min-height: 0;
+  }
+}
+
+/* Mobile: keep chat input clear of the bottom tab bar */
+@media (max-width: 768px) {
+  .mobile-panel.mobile-active {
+    padding-bottom: calc(var(--mobile-tab-bar-height, 104px) + 0.75rem);
+  }
+
+  .chat-panel {
+    padding-bottom: calc(var(--mobile-tab-bar-height, 104px) + 0.75rem);
+  }
+
+  .chat-input {
+    bottom: calc(var(--mobile-tab-bar-height, 104px) + 0.25rem);
+    z-index: 46;
+  }
+}
+
 .user-menu {
   position: relative;
   display: inline-flex;
