@@ -27,15 +27,13 @@
     @else
       <ul class="queue-list">
         @foreach($queueQuestions as $question)
-          <li class="queue-item" data-status="{{ $question->status }}">
+          <li class="queue-item" data-status="{{ $question->status }}" data-question-id="{{ $question->id }}">
             <div class="question-header">
               <div class="question-meta">
                 <span class="message-author">{{ $question->participant?->display_name ?? 'Anonymous' }}</span>
                 <span class="message-meta">{{ $question->created_at->format('H:i') }}</span>
               </div>
-              @if($question->status !== 'new')
-                  <span class="status-pill status-{{ $question->status }}">{{ ucfirst($question->status) }}</span>
-              @endif
+              <span class="status-pill status-{{ $question->status }}">{{ ucfirst($question->status) }}</span>
             </div>
             <div class="question-text">{{ $question->content }}</div>
             <div class="question-actions">
@@ -99,6 +97,17 @@
           @php
               $likes = $question->ratings->where('rating', 1)->count();
               $dislikes = $question->ratings->where('rating', -1)->count();
+              $feedbackClass = 'rating-pill-neutral';
+              $feedbackLabel = 'No feedback yet';
+              if ($likes > 0 || $dislikes > 0) {
+                  if ($likes >= $dislikes) {
+                      $feedbackClass = 'rating-pill-ok';
+                      $feedbackLabel = 'clear';
+                  } else {
+                      $feedbackClass = 'rating-pill-bad';
+                      $feedbackLabel = 'unclear';
+                  }
+              }
           @endphp
           <li class="history-item">
             <div class="question-header">
@@ -113,8 +122,7 @@
             @if($question->status === 'answered')
               <div class="rating">
                 <span class="rating-label">Students feedback:</span>
-                <span class="rating-pill rating-pill-ok">clear {{ $likes }}</span>
-                <span class="rating-pill rating-pill-bad">unclear {{ $dislikes }}</span>
+                <span class="rating-pill {{ $feedbackClass }}">{{ $feedbackLabel }}</span>
               </div>
             @endif
 

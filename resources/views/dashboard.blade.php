@@ -1,9 +1,6 @@
 <x-app-layout>
     @php
         $user = Auth::user();
-        $activeCount = $rooms->where('status', 'active')->count();
-        $finishedCount = $rooms->where('status', 'finished')->count();
-        $archivedCount = $rooms->where('status', 'archived')->count();
         $latestRoom = $rooms->first();
         $totalMessages = $rooms->sum('messages_count');
         $totalQuestions = $rooms->sum('questions_count');
@@ -12,7 +9,9 @@
     <section class="panel dashboard-hero">
         <div class="dashboard-hero__content">
             <div class="eyebrow">Dashboard</div>
-            <h1 class="dashboard-hero__title">Welcome back, {{ $user->name }}</h1>
+            <h1 class="dashboard-hero__title" id="dashboardGreeting" data-username="{{ $user->name }}">
+                Welcome back, {{ $user->name }}
+            </h1>
             <p class="panel-subtitle">Run live rooms in the same sleek style as your chats.</p>
             <div class="dashboard-hero__actions">
                 <a href="{{ route('rooms.create') }}" class="btn btn-primary">Create room</a>
@@ -24,36 +23,26 @@
                 @endif
             </div>
         </div>
-        <div class="dashboard-hero__stats">
-            <div class="hero-stat">
-                <div class="hero-icon">
-                    <i data-lucide="radio"></i>
-                </div>
-                <div>
-                    <div class="hero-stat-label">Active</div>
-                    <div class="hero-stat-value">{{ $activeCount }}</div>
-                </div>
-            </div>
-            <div class="hero-stat">
-                <div class="hero-icon success">
-                    <i data-lucide="check-circle-2"></i>
-                </div>
-                <div>
-                    <div class="hero-stat-label">Finished</div>
-                    <div class="hero-stat-value">{{ $finishedCount }}</div>
-                </div>
-            </div>
-            <div class="hero-stat">
-                <div class="hero-icon muted">
-                    <i data-lucide="archive"></i>
-                </div>
-                <div>
-                    <div class="hero-stat-label">Archived</div>
-                    <div class="hero-stat-value">{{ $archivedCount }}</div>
-                </div>
-            </div>
-        </div>
     </section>
+
+    @if (session('status'))
+        <div class="flash flash-success" data-flash>
+            <span>{{ session('status') }}</span>
+            <button class="icon-btn flash-close" type="button" data-flash-close aria-label="Close">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+    @endif
+
+    @if ($errors->any())
+        <div class="form-alert">
+            <ul>
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
 
     <section class="panel rooms-panel">
         <div class="panel-header">
@@ -84,7 +73,27 @@
                         <article class="room-card panel">
                             <div class="room-card-header">
                                 <div class="room-card-title">
-                                    <span>{{ $room->title }}</span>
+                                    <div class="inline-editable" data-inline-edit>
+                                        <div class="inline-edit-display room-card-title-text">{{ $room->title }}</div>
+                                        <button class="icon-btn inline-edit-trigger" type="button" aria-label="Edit title" data-inline-trigger>
+                                            <i data-lucide="pencil"></i>
+                                        </button>
+                                        <form class="inline-edit-form" method="POST" action="{{ route('rooms.update', $room) }}" hidden>
+                                            @csrf
+                                            @method('PATCH')
+                                            <input
+                                                type="text"
+                                                name="title"
+                                                class="field-control inline-edit-input"
+                                                value="{{ $room->title }}"
+                                                required
+                                            >
+                                            <div class="inline-edit-actions">
+                                                <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                                                <button type="button" class="btn btn-sm btn-ghost" data-inline-cancel>Cancel</button>
+                                            </div>
+                                        </form>
+                                    </div>
                                     <span class="status-pill status-{{ $room->status }}">{{ ucfirst($room->status) }}</span>
                                 </div>
                                 <button class="icon-btn room-copy" type="button" data-copy="{{ $publicLink }}" title="Copy public link">
@@ -96,11 +105,28 @@
                                 <span class="dot-separator">&bull;</span>
                                 <span class="message-meta">Updated {{ $room->updated_at->format('d.m H:i') }}</span>
                             </div>
-                            @if($room->description)
-                                <p class="room-card-desc">{{ \Illuminate\Support\Str::limit($room->description, 140) }}</p>
-                            @else
-                                <p class="room-card-desc text-muted">No description yet.</p>
-                            @endif
+                            <div class="inline-editable" data-inline-edit>
+                                <p class="inline-edit-display room-card-desc">
+                                    {{ $room->description ? \Illuminate\Support\Str::limit($room->description, 140) : 'Add a description' }}
+                                </p>
+                                <button class="icon-btn inline-edit-trigger" type="button" aria-label="Edit description" data-inline-trigger>
+                                    <i data-lucide="pencil"></i>
+                                </button>
+                                <form class="inline-edit-form" method="POST" action="{{ route('rooms.update', $room) }}" hidden>
+                                    @csrf
+                                    @method('PATCH')
+                                    <textarea
+                                        name="description"
+                                        rows="2"
+                                        class="field-control inline-edit-input"
+                                        placeholder="Add a short agenda or note"
+                                    >{{ $room->description }}</textarea>
+                                    <div class="inline-edit-actions">
+                                        <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                                        <button type="button" class="btn btn-sm btn-ghost" data-inline-cancel>Cancel</button>
+                                    </div>
+                                </form>
+                            </div>
 
                             <div class="room-card-stats">
                                 <div class="room-stat">
@@ -133,6 +159,15 @@
                             </div>
 
                             <div class="room-card-actions">
+                                <form method="POST" action="{{ route('rooms.update', $room) }}" class="inline-status-form">
+                                    @csrf
+                                    @method('PATCH')
+                                    <input type="hidden" name="status" value="{{ $room->status === 'active' ? 'finished' : 'active' }}">
+                                    <button type="submit" class="btn btn-sm {{ $room->status === 'active' ? 'btn-danger' : 'btn-primary' }}">
+                                        <i data-lucide="{{ $room->status === 'active' ? 'lock' : 'refresh-cw' }}"></i>
+                                        <span>{{ $room->status === 'active' ? 'Close room' : 'Reopen room' }}</span>
+                                    </button>
+                                </form>
                                 <a href="{{ $publicLink }}" class="btn btn-sm btn-ghost" target="_blank" rel="noreferrer">
                                     <i data-lucide="external-link"></i>
                                     <span>Public view</span>
@@ -149,3 +184,20 @@
         </div>
     </section>
 </x-app-layout>
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const greetingEl = document.getElementById('dashboardGreeting');
+            if (!greetingEl) return;
+            const name = greetingEl.dataset.username || '';
+            const hour = new Date().getHours();
+            let greeting = 'Good day';
+            if (hour >= 5 && hour < 12) greeting = 'Good morning';
+            else if (hour >= 12 && hour < 17) greeting = 'Good afternoon';
+            else if (hour >= 17 && hour < 22) greeting = 'Good evening';
+            else greeting = 'Good night';
+            greetingEl.textContent = name ? `${greeting}, ${name}` : greeting;
+        });
+    </script>
+@endpush

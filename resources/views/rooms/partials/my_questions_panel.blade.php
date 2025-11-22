@@ -55,7 +55,9 @@
             @endforeach
         </ul>
     @else
-        <p class="text-muted">You have not asked any questions yet.</p>
+        <div class="empty-state">
+            You have not asked any questions yet.
+        </div>
     @endif
 </div>
 <div class="panel-footer">

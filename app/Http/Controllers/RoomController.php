@@ -11,6 +11,13 @@ use Illuminate\Support\Facades\Auth;
 
 class RoomController extends Controller
 {
+    protected function ensureOwner(Room $room): void
+    {
+        if (!Auth::check() || Auth::id() !== $room->user_id) {
+            abort(403);
+        }
+    }
+
     // Список комнат владельца
     public function dashboard(Request $request)
     {
@@ -51,7 +58,49 @@ class RoomController extends Controller
             ->with('status', 'Комната создана');
     }
 
-    // Публичная страница комнаты /r/{slug}
+    // Update room details and status
+    public function update(Request $request, Room $room)
+    {
+        $this->ensureOwner($room);
+
+        $data = $request->validate([
+            'title' => ['sometimes', 'required', 'string', 'max:255'],
+            'description' => ['sometimes', 'nullable', 'string'],
+            'status' => ['sometimes', 'in:active,finished'],
+        ]);
+
+        $changes = [];
+
+        if (array_key_exists('title', $data)) {
+            $changes['title'] = $data['title'];
+        }
+
+        if (array_key_exists('description', $data)) {
+            $changes['description'] = $data['description'] ?? null;
+        }
+
+        if (array_key_exists('status', $data) && $data['status'] !== $room->status) {
+            $changes['status'] = $data['status'];
+            $changes['finished_at'] = $data['status'] === 'finished' ? now() : null;
+        }
+
+        if (empty($changes)) {
+            return back()->with('status', 'No changes applied.');
+        }
+
+        $room->update($changes);
+
+        $statusMessage = 'Room updated.';
+
+        if (array_key_exists('status', $changes)) {
+            $statusMessage = $changes['status'] === 'finished'
+                ? 'Room closed for participants.'
+                : 'Room reopened for participants.';
+        }
+
+        return back()->with('status', $statusMessage);
+    }
+
     public function showPublic(Request $request, $slug)
     {
         $room = Room::where('slug', $slug)->firstOrFail();
@@ -118,12 +167,14 @@ class RoomController extends Controller
 
     protected function getOrCreateParticipant(Request $request, Room $room): Participant
     {
+        $user = $request->user();
+
         // если пользователь — владелец комнаты, участник не нужен
-        if ($request->user() && $request->user()->id === $room->user_id) {
+        if ($user && $user->id === $room->user_id) {
             return new Participant([
                 'room_id' => $room->id,
                 'session_token' => '',
-                'display_name' => $request->user()->name,
+                'display_name' => $user->name,
             ]);
         }
 
@@ -134,6 +185,11 @@ class RoomController extends Controller
         if ($participantId) {
             $participant = Participant::find($participantId);
             if ($participant) {
+                if ($user && $user->is_dev && $participant->display_name !== $user->name) {
+                    $participant->display_name = $user->name;
+                    $participant->save();
+                }
+
                 return $participant;
             }
         }
@@ -144,7 +200,7 @@ class RoomController extends Controller
         $participant = Participant::create([
             'room_id' => $room->id,
             'session_token' => $token,
-            'display_name' => 'User' . random_int(1000, 9999),
+            'display_name' => $user && $user->is_dev ? $user->name : 'User' . random_int(1000, 9999),
         ]);
 
         $request->session()->put($sessionKey, $participant->id);
@@ -211,3 +267,4 @@ class RoomController extends Controller
         ]);
     }
 }
+
