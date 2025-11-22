@@ -1,175 +1,191 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            Комната: {{ $room->title }}
-        </h2>
-    </x-slot>
+﻿<x-app-layout>
+    @php
+        $publicLink = route('rooms.public', $room->slug);
+        $isFinished = $room->status === 'finished';
+    @endphp
 
-    <div class="py-6">
-        <div class="max-w-5xl mx-auto sm:px-6 lg:px-8">
-
-            @if (session('status'))
-                <div class="mb-4 text-green-600">
-                    {{ session('status') }}
-                </div>
-            @endif
-
-            @if ($errors->any())
-                <div class="mb-4 text-red-600">
-                    <ul class="list-disc pl-5">
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {{-- Чат --}}
-                <div class="md:col-span-2 bg-white shadow-sm rounded-lg p-4 flex flex-col h-[70vh]">
-                    <div class="flex-1 overflow-y-auto mb-4 border-b pb-2 messages-container">
-                        @forelse($messages as $message)
-                            <div class="mb-2">
-                                <div class="text-sm text-gray-500">
-                                    @if($message->user && $message->user_id === $room->user_id)
-                                        <span class="font-semibold text-blue-700">
-                                            {{ $message->user->name }} (host)
-                                        </span>
-                                    @elseif($message->participant)
-                                        <span class="font-semibold">
-                                            {{ $message->participant->display_name }}
-                                        </span>
-                                    @else
-                                        <span class="italic text-gray-400">Система</span>
-                                    @endif
-
-                                    <span class="ml-2 text-xs text-gray-400">
-                                        {{ $message->created_at->format('H:i') }}
-                                    </span>
-                                </div>
-                                <div>{{ $message->content }}</div>
-                            </div>
-                        @empty
-                            <p class="text-gray-500">Пока нет сообщений.</p>
-                        @endforelse
+    <div class="{{ $isOwner ? 'role-teacher' : 'role-student' }}">
+        <div class="panel room-header">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <i data-lucide="messages-square"></i>
+                    <div>
+                        <div class="room-name">{{ $room->title }}</div>
+                        <div class="room-code">Room code: {{ $room->slug }}</div>
+                        @if($room->description)
+                            <div class="panel-subtitle">{{ $room->description }}</div>
+                        @endif
                     </div>
+                    <span class="status-pill status-{{ $room->status }}">{{ ucfirst($room->status) }}</span>
+                </div>
+                <div class="panel-actions">
+                    <button class="btn btn-sm btn-ghost" type="button" data-copy="{{ $publicLink }}">Copy link</button>
+                </div>
+            </div>
+        </div>
 
-                    @if($room->status !== 'finished')
+    <nav class="mobile-tabs" id="mobileTabs" aria-label="Sections">
+      <button class="mobile-tab-btn active" data-tab-target="chat">Chat</button>
+      @if($isOwner)
+        <button class="mobile-tab-btn" data-tab-target="queue">Queue</button>
+        <button class="mobile-tab-btn" data-tab-target="history">History</button>
+      @else
+        <button class="mobile-tab-btn" data-tab-target="questions">Questions</button>
+      @endif
+      <button class="mobile-tab-btn mobile-tab-more" type="button" id="mobileMenuTabsBtn">
+        <i data-lucide="more-horizontal"></i>
+        <span>More</span>
+      </button>
+    </nav>
+
+        <div id="layoutRoot" class="layout {{ $isOwner ? 'teacher history-hidden' : '' }}">
+            <section class="panel chat-panel mobile-panel mobile-active" data-mobile-panel="chat">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <i data-lucide="message-circle"></i>
+                        <span>Live chat</span>
+                    </div>
+                    <div class="panel-subtitle">Ask and discuss during the lecture.</div>
+                </div>
+
+                <ol class="chat-messages messages-container" id="chatMessages">
+                    @forelse($messages as $message)
+                        @php
+                            $isOwnerMessage = $message->user && $message->user_id === $room->user_id;
+                            $authorName = $message->user?->name ?? $message->participant?->display_name ?? 'Guest';
+                            $initials = \Illuminate\Support\Str::of($authorName)->substr(0, 2)->upper();
+                            $isOutgoing = $isOwner ? $isOwnerMessage : ($participant && $message->participant && $message->participant->id === $participant->id);
+                        @endphp
+                        <li class="message {{ $isOutgoing ? 'message--outgoing' : '' }}">
+                            <div class="message-avatar">{{ $initials }}</div>
+                            <div class="message-body">
+                                <div class="message-header">
+                                    <span class="message-author">{{ $authorName }}</span>
+                                    <div class="message-meta">
+                                        <span>{{ $message->created_at->format('H:i') }}</span>
+                                        @if($isOwnerMessage)
+                                            <span class="message-badge message-badge-teacher">Host</span>
+                                        @endif
+                                    </div>
+                                </div>
+                                <div class="message-text">{{ $message->content }}</div>
+                            </div>
+                        </li>
+                    @empty
+                        <li class="message">
+                            <div class="message-body">
+                                <div class="message-text">No messages yet.</div>
+                            </div>
+                        </li>
+                    @endforelse
+                </ol>
+
+                @if(!$isFinished)
+                    <div class="chat-input">
                         <form id="chat-form" method="POST" action="{{ route('rooms.messages.store', $room) }}">
                             @csrf
-                            <div class="mb-2">
-                                <textarea name="content"
-                                          class="w-full border-gray-300 rounded"
-                                          rows="3"
-                                          placeholder="Напиши сообщение..."
-                                          required></textarea>
+                            <div class="chat-send-options">
+                                @unless($isOwner)
+                                    <label class="switch" id="sendToTeacherSwitch">
+                                        <input type="checkbox" name="as_question" value="1" id="sendToTeacher">
+                                        <span class="switch-track">
+                                          <span class="switch-thumb"></span>
+                                        </span>
+                                        <span class="switch-label">Send to host</span>
+                                    </label>
+                                @endunless
+                                <span class="panel-subtitle">Press Enter to send, Shift+Enter for a new line</span>
                             </div>
-                            <div class="flex items-center justify-between">
-                                <label class="flex items-center">
-                                    <input type="checkbox" name="as_question" value="1" class="mr-2">
-                                    <span>Также отправить как вопрос создателю</span>
-                                </label>
-                                <button type="submit"
-                                        class="px-4 py-2 bg-blue-600 text-white rounded">
-                                    Отправить
+                            <div class="chat-input-row">
+                                <textarea
+                                    name="content"
+                                    id="chatInput"
+                                    class="chat-textarea"
+                                    placeholder="Type your message..."
+                                    rows="1"
+                                    required
+                                ></textarea>
+                                <button type="submit" class="send-btn" id="sendButton" title="Send message">
+                                    <i data-lucide="send"></i>
                                 </button>
                             </div>
                         </form>
-                    @else
-                        <p class="text-gray-500 mt-2">
-                            Чат завершён. Новые сообщения отправить нельзя.
-                        </p>
-                    @endif
+                    </div>
+                @else
+                    <div class="panel-footer">
+                        This room is finished. Messages are read-only.
+                    </div>
+                @endif
+            </section>
 
-                    {{-- Мои вопросы (только для гостя) --}}
-                    @if(!$isOwner && isset($myQuestions) && $myQuestions->isNotEmpty())
-                        <div class="mt-4 border-t pt-2">
-                            <h3 class="font-semibold text-sm mb-2">Мои вопросы</h3>
-                            <ul class="space-y-2 text-sm">
+            @if($isOwner)
+                <div id="questions-panel" class="teacher-panels">
+                    @include('rooms.partials.questions_panel')
+                </div>
+            @else
+                <section class="panel student-panel mobile-panel" data-mobile-panel="questions">
+                    <div class="panel-header">
+                        <div>
+                            <div class="panel-title">
+                                <i data-lucide="help-circle"></i>
+                                <span>My questions</span>
+                            </div>
+                            <div class="panel-subtitle">Questions sent to the host</div>
+                        </div>
+                        <span class="queue-action">{{ isset($myQuestions) ? $myQuestions->count() : 0 }}</span>
+                    </div>
+                    <div class="panel-body">
+                        @if(isset($myQuestions) && $myQuestions->isNotEmpty())
+                            <ul class="questions-list">
                                 @foreach($myQuestions as $question)
                                     @php
                                         $myRating = optional($question->ratings->first())->rating;
                                     @endphp
-
-                                    <li class="border rounded p-2">
-                                        <div class="text-xs text-gray-500 mb-1">
-                                            {{ $question->created_at->format('H:i') }}
-                                            <span class="ml-2 text-gray-400">
-                                                статус: {{ $question->status }}
-                                            </span>
-                                        </div>
-                                        <div class="mb-2">
-                                            {{ $question->content }}
-                                        </div>
-
-                                        <div class="flex items-center gap-2 flex-wrap">
-
+                                    <li class="question-item">
+                                        <div class="question-header">
+                                            <div class="question-meta">
+                                                <span class="message-meta">{{ $question->created_at->format('H:i') }}</span>
+                                                <span class="status-pill status-{{ $question->status }}">{{ ucfirst($question->status) }}</span>
+                                            </div>
                                             @if($room->status !== 'finished')
-                                                {{-- удалить вопрос --}}
-                                                <form method="POST"
-                                                      action="{{ route('questions.participantDelete', $question) }}"
-                                                      onsubmit="return confirm('Удалить этот вопрос?');">
+                                                <form method="POST" action="{{ route('questions.participantDelete', $question) }}" onsubmit="return confirm('Delete this question?');">
                                                     @csrf
                                                     @method('DELETE')
-                                                    <button type="submit"
-                                                            class="px-2 py-1 bg-red-600 text-white rounded text-xs">
-                                                        Удалить
-                                                    </button>
-                                                </form>
-                                            @endif
-
-                                            {{-- лайк/дизлайк ответа, если вопрос отвечён --}}
-                                            @if($question->status === 'answered')
-                                                <span class="text-xs text-gray-500 ml-2">
-                                                    Оцени ответ:
-                                                </span>
-
-                                                <form method="POST" action="{{ route('questions.rate', $question) }}">
-                                                    @csrf
-                                                    <input type="hidden" name="rating" value="1">
-                                                    <button type="submit"
-                                                            class="px-2 py-1 rounded text-xs
-                                                                {{ $myRating === 1 ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-800' }}">
-                                                        👍
-                                                    </button>
-                                                </form>
-
-                                                <form method="POST" action="{{ route('questions.rate', $question) }}">
-                                                    @csrf
-                                                    <input type="hidden" name="rating" value="-1">
-                                                    <button type="submit"
-                                                            class="px-2 py-1 rounded text-xs
-                                                                {{ $myRating === -1 ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-800' }}">
-                                                        👎
-                                                    </button>
+                                                    <button class="btn btn-sm btn-danger" type="submit">Delete</button>
                                                 </form>
                                             @endif
                                         </div>
+                                        <div class="question-text">{{ $question->content }}</div>
+                                        @if($question->status === 'answered')
+                                            <div class="rating">
+                                                <span class="rating-label">Was this useful?</span>
+                                                <div class="rating-options">
+                                                    <form method="POST" action="{{ route('questions.rate', $question) }}">
+                                                        @csrf
+                                                        <input type="hidden" name="rating" value="1">
+                                                        <button class="rating-pill rating-pill-ok {{ $myRating === 1 ? 'active' : '' }}" type="submit">Yes</button>
+                                                    </form>
+                                                    <form method="POST" action="{{ route('questions.rate', $question) }}">
+                                                        @csrf
+                                                        <input type="hidden" name="rating" value="-1">
+                                                        <button class="rating-pill rating-pill-bad {{ $myRating === -1 ? 'active' : '' }}" type="submit">No</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        @endif
                                     </li>
                                 @endforeach
                             </ul>
-                        </div>
-                    @endif
-                </div>
-
-                {{-- Правая панель владельца / инфо --}}
-                <div id="questions-panel" class="bg-white shadow-sm rounded-lg p-4">
-                    @if($isOwner)
-                        @include('rooms.partials.questions_panel')
-                    @else
-                        <h3 class="font-semibold mb-2">Информация</h3>
-                        <p class="text-sm text-gray-600">
-                            Ты пишешь как анонимный участник:
-                            @if($participant && $participant->display_name)
-                                <span class="font-semibold">{{ $participant->display_name }}</span>
-                            @else
-                                <span class="italic text-gray-500">гость</span>
-                            @endif
-                        </p>
-                    @endif
-                </div>
-            </div>
-
+                        @else
+                            <p class="text-muted">You have not asked any questions yet.</p>
+                        @endif
+                    </div>
+                    <div class="panel-footer">
+                        <span>Only you can see these.</span>
+                        <span class="panel-subtitle">{{ isset($myQuestions) ? $myQuestions->count() : 0 }} total</span>
+                    </div>
+                </section>
+            @endif
         </div>
     </div>
 
@@ -179,8 +195,15 @@
                 const roomId = {{ $room->id }};
                 const questionsPanel = document.getElementById('questions-panel');
                 const questionsPanelUrl = @json($isOwner ? route('rooms.questionsPanel', $room) : null);
+                let queueNeedsNew = false;
 
-                // === helper: перезагрузка правой панели вопросов ===
+                function bindQueueInteractions(scope = document) {
+                    if (typeof window.rebindQueuePanels === 'function') {
+                        window.rebindQueuePanels(scope);
+                    }
+                }
+                bindQueueInteractions();
+
                 async function reloadQuestionsPanel() {
                     if (!questionsPanel || !questionsPanelUrl) return;
 
@@ -192,66 +215,60 @@
                         });
 
                         if (!response.ok) {
-                            console.error('Не удалось обновить панель вопросов', response.status);
+                            console.error('Failed to refresh questions panel', response.status);
                             return;
                         }
 
                         const html = await response.text();
                         questionsPanel.innerHTML = html;
+                        bindQueueInteractions(questionsPanel);
+                        if (queueNeedsNew && typeof window.markQueueHasNew === 'function') {
+                            window.markQueueHasNew();
+                            queueNeedsNew = false;
+                        }
                     } catch (e) {
-                        console.error('Ошибка сети при обновлении панели вопросов', e);
+                        console.error('Refresh questions panel error', e);
                     }
                 }
 
-                // === Подписка на канал комнаты ===
                 if (window.Echo) {
                     const channelName = 'room.' + roomId;
-                    console.log('Подписываюсь на канал', channelName);
-
                     window.Echo.channel(channelName)
                         .listen('MessageSent', (e) => {
-                            console.log('MessageSent EVENT', e);
-
                             const container = document.querySelector('.messages-container');
                             if (!container) return;
 
-                            const wrapper = document.createElement('div');
-                            wrapper.classList.add('mb-2');
-
-                            const isOwner = e.author.type === 'owner';
-                            const time = new Date(e.created_at).toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                            });
+                            const wrapper = document.createElement('li');
+                            wrapper.classList.add('message');
+                            const isOwnerAuthor = e.author.type === 'owner';
+                            const time = new Date(e.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
                             wrapper.innerHTML = `
-                                <div class="text-sm text-gray-500">
-                                    <span class="font-semibold ${isOwner ? 'text-blue-700' : ''}">
-                                        ${e.author.name}${isOwner ? ' (host)' : ''}
-                                    </span>
-                                    <span class="ml-2 text-xs text-gray-400">
-                                        ${time}
-                                    </span>
-                                </div>
-                                <div>${e.content}</div>
-                            `;
+                                <div class="message-avatar">${(e.author.name || '??').slice(0,2).toUpperCase()}</div>
+                                <div class="message-body">
+                                    <div class="message-header">
+                                        <span class="message-author">${e.author.name}</span>
+                                        <div class="message-meta">
+                                            <span>${time}</span>
+                                            ${isOwnerAuthor ? '<span class="message-badge message-badge-teacher">Host</span>' : ''}
+                                        </div>
+                                    </div>
+                                    <div class="message-text">${e.content}</div>
+                                </div>`;
 
                             container.appendChild(wrapper);
                             container.scrollTop = container.scrollHeight;
+                            if (window.refreshLucideIcons) {
+                                window.refreshLucideIcons();
+                            }
                         })
-                        .listen('QuestionCreated', (e) => {
-                            console.log('QuestionCreated EVENT', e);
+                        .listen('QuestionCreated', () => {
+                            queueNeedsNew = true;
                             reloadQuestionsPanel();
                         })
-                        .listen('QuestionUpdated', (e) => {
-                            console.log('QuestionUpdated EVENT', e);
-                            reloadQuestionsPanel();
-                        });
-                } else {
-                    console.warn('window.Echo не инициализирован');
+                        .listen('QuestionUpdated', reloadQuestionsPanel);
                 }
 
-                // === Отправка формы без перезагрузки ===
                 const chatForm = document.getElementById('chat-form');
                 if (chatForm) {
                     chatForm.addEventListener('submit', async (event) => {
@@ -271,22 +288,21 @@
                             });
 
                             if (!response.ok) {
-                                console.error('Ошибка при отправке сообщения', response.status);
+                                console.error('Send message failed', response.status);
                                 return;
                             }
 
                             const textarea = chatForm.querySelector('textarea[name="content"]');
                             if (textarea) {
                                 textarea.value = '';
+                                textarea.style.height = 'auto';
                             }
                             const questionCheckbox = chatForm.querySelector('input[name="as_question"]');
                             if (questionCheckbox) {
                                 questionCheckbox.checked = false;
                             }
-
-                            // само сообщение прилетит через MessageSent
                         } catch (e) {
-                            console.error('Ошибка сети при отправке сообщения', e);
+                            console.error('Send message error', e);
                         }
                     });
                 }

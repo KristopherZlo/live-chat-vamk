@@ -1,37 +1,48 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="csrf-token" content="{{ csrf_token() }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>{{ config('app.name', 'Laravel') }}</title>
+    <title>{{ config('app.name', 'Live Chat') }}</title>
 
-        <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+    <script src="https://unpkg.com/lucide@latest" defer></script>
 
-        <!-- Scripts -->
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    </head>
-    <body class="font-sans antialiased">
-        <div class="min-h-screen bg-gray-100">
-            @include('layouts.navigation')
+    @vite(['resources/css/app.css', 'resources/css/design.css', 'resources/js/app.js', 'resources/js/design.js'])
+</head>
+<body class="app" data-theme="light">
+<div class="app-shell">
+    @include('layouts.navigation')
 
-            <!-- Page Heading -->
-            @isset($header)
-                <header class="bg-white shadow">
-                    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+    <main>
+        @isset($header)
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title">
                         {{ $header }}
                     </div>
-                </header>
-            @endisset
+                </div>
+            </div>
+        @endisset
 
-            <!-- Page Content -->
-            <main>
-                {{ $slot }}
-            </main>
+        {{ $slot }}
+    </main>
+
+    <footer class="app-footer">
+        <div class="app-footer-left">
+            <a href="#">GDPR</a>
+            <a href="#">Contact</a>
         </div>
-    @stack('scripts')
+        <div class="app-footer-right">
+            <span class="footer-label">Language:</span>
+            <button class="footer-lang active" type="button">FI</button>
+            <button class="footer-lang" type="button">RU</button>
+            <button class="footer-lang" type="button">EN</button>
+        </div>
+    </footer>
+</div>
+@stack('scripts')
 </body>
 </html>
