@@ -885,17 +885,17 @@
       display: flex;
     }
 
-    .qr-card {
-      background: var(--bg-elevated);
-      border-radius: 0.9rem;
-      border: 1px solid var(--border-strong);
-      padding: 1rem 1.1rem;
-      max-width: 320px;
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      gap: 0.6rem;
-      font-size: 0.85rem;
+.qr-card {
+  background: var(--bg-elevated);
+  border-radius: 0.9rem;
+  border: 1px solid var(--border-strong);
+  padding: 1.35rem 1.4rem;
+  max-width: 760px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  font-size: 0.85rem;
     }
 
     .qr-header {
@@ -909,23 +909,46 @@
       font-weight: 500;
     }
 
-    .qr-body {
-      display: flex;
-      gap: 0.75rem;
-      align-items: center;
-    }
+.qr-body {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
 
-    .qr-box {
-      width: 140px;
-      height: 140px;
-      border-radius: 0.4rem;
-      border: 1px dashed var(--border-strong);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.7rem;
-      color: var(--muted);
-    }
+.qr-box {
+  width: 360px;
+  height: 360px;
+  border-radius: 0.4rem;
+  border: 1px dashed var(--border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.qr-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+@media (max-width: 520px) {
+  .qr-card {
+    max-width: 100%;
+    padding: 1.1rem 1.15rem;
+  }
+
+  .qr-body {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .qr-box {
+    width: 260px;
+    height: 260px;
+  }
+}
 
     .qr-info {
       display: flex;
@@ -2448,16 +2471,222 @@ main {
   color: var(--text-secondary);
 }
 
-.hero-stat-value {
-  font-size: 1.1rem;
-  font-weight: 700;
-}
+    .hero-stat-value {
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
 
-.rooms-panel .panel-body {
-  padding: 0.95rem 1.05rem 1.1rem;
-  gap: 0.85rem;
-  overflow: visible;
-}
+    .create-hero {
+      background: var(--bg-elevated);
+      border-color: var(--border-subtle);
+      gap: 0;
+      padding: 0;
+    }
+
+    .create-hero-body {
+      padding: 0.85rem 0.95rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .create-hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .create-hero-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+
+    .create-hero-tags span {
+      padding: 0.25rem 0.55rem;
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-soft);
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+    }
+
+    .create-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr);
+      gap: 0.85rem;
+      align-items: start;
+    }
+
+    .create-form-card,
+    .create-preview {
+      overflow: visible;
+    }
+
+    .create-form-body {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      padding: 0.95rem 1.05rem 1.1rem;
+    }
+
+    .form-alert {
+      border: 1px solid #f97316;
+      background: rgba(249, 115, 22, 0.08);
+      border-radius: 0.75rem;
+      padding: 0.65rem 0.75rem;
+      color: #9a3412;
+    }
+
+    [data-theme="dark"] .form-alert {
+      background: rgba(249, 115, 22, 0.12);
+      color: #fdba74;
+      border-color: #fb923c;
+    }
+
+    .form-alert ul {
+      margin: 0.2rem 0 0;
+      padding-left: 1rem;
+      display: grid;
+      gap: 0.25rem;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .input-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      padding: 0.65rem 0.7rem;
+      border: 1px solid var(--border-subtle);
+      border-radius: 0.8rem;
+      background: var(--bg-elevated);
+    }
+
+    .input-label {
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .field-control {
+      width: 100%;
+      border: 1px solid var(--border-strong);
+      border-radius: 0.65rem;
+      background: var(--bg-elevated);
+      padding: 0.6rem 0.65rem;
+      color: var(--text-primary);
+      font-size: 0.95rem;
+      transition: border 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+
+    [data-theme="dark"] .field-control {
+      background: var(--bg);
+      border-color: var(--border-subtle);
+    }
+
+    .field-control:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
+      background: var(--bg-elevated);
+    }
+
+    .field-control::placeholder {
+      color: var(--text-secondary);
+    }
+
+    .input-hint {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+
+    .form-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-top: 0.35rem;
+    }
+
+    .form-footnote {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: var(--text-secondary);
+      font-size: 0.86rem;
+    }
+
+    .create-switch .switch-track {
+      box-shadow: 0 0 0 1px var(--border-subtle);
+    }
+
+    .create-preview {
+      background: var(--bg-elevated);
+    }
+
+    .create-preview-body {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      padding: 0.9rem 1rem 1rem;
+    }
+
+    .preview-room-card {
+      pointer-events: none;
+    }
+
+    .preview-room-card .room-card-actions .btn {
+      cursor: default;
+    }
+
+    .create-tips {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 0.5rem;
+    }
+
+    .create-tip {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 0.7rem;
+      border-radius: 0.75rem;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-soft);
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    .create-tip i {
+      width: 1rem;
+      height: 1rem;
+      color: var(--accent-strong);
+    }
+
+    @media (max-width: 960px) {
+      .create-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .form-footer {
+        align-items: stretch;
+      }
+    }
+
+    .rooms-panel .panel-body {
+      padding: 0.95rem 1.05rem 1.1rem;
+      gap: 0.85rem;
+      overflow: visible;
+    }
 
 .rooms-grid {
   display: grid;

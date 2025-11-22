@@ -20,6 +20,10 @@
                 </div>
                 <div class="panel-actions">
                     <button class="btn btn-sm btn-ghost" type="button" data-copy="{{ $publicLink }}">Copy link</button>
+                    <button class="btn btn-sm btn-ghost" type="button" id="qrButton">
+                        <i data-lucide="qr-code"></i>
+                        <span>Show QR-code</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -189,13 +193,86 @@
         </div>
     </div>
 
+    <div class="qr-overlay" id="qrOverlay" aria-hidden="true">
+        <div class="qr-card" role="dialog" aria-modal="true" aria-labelledby="qrTitle">
+            <div class="qr-header">
+                <div>
+                    <div class="qr-title" id="qrTitle">Join this room</div>
+                    <div class="panel-subtitle">Scan or copy the public link</div>
+                </div>
+                <button class="icon-btn" type="button" id="qrClose">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="qr-body">
+                <div class="qr-box">
+                    <img id="qrImage" alt="QR code" width="140" height="140" loading="lazy">
+                </div>
+                <div class="qr-info">
+                    <div class="panel-subtitle">Public link</div>
+                    <a href="{{ $publicLink }}" class="qr-link" target="_blank" rel="noreferrer">{{ $publicLink }}</a>
+                    <div class="qr-footer">
+                        <button class="btn btn-sm btn-ghost" type="button" data-copy="{{ $publicLink }}">Copy link</button>
+                        <a class="btn btn-sm btn-primary" id="qrDownload" href="#" download="room-{{ $room->slug }}-qr.png">Download</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     @push('scripts')
         <script>
             document.addEventListener('DOMContentLoaded', () => {
                 const roomId = {{ $room->id }};
+                const publicLink = @json($publicLink);
                 const questionsPanel = document.getElementById('questions-panel');
                 const questionsPanelUrl = @json($isOwner ? route('rooms.questionsPanel', $room) : null);
                 let queueNeedsNew = false;
+                const qrButton = document.getElementById('qrButton');
+                const qrOverlay = document.getElementById('qrOverlay');
+                const qrClose = document.getElementById('qrClose');
+                const qrImage = document.getElementById('qrImage');
+                const qrDownload = document.getElementById('qrDownload');
+
+                const buildQrUrl = (link) => 'https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=' + encodeURIComponent(link);
+
+                function openQr() {
+                    if (!qrOverlay) return;
+                    qrOverlay.classList.add('show');
+                    qrOverlay.setAttribute('aria-hidden', 'false');
+                    if (qrImage && !qrImage.src) {
+                        const qrUrl = buildQrUrl(publicLink);
+                        qrImage.src = qrUrl;
+                        if (qrDownload) {
+                            qrDownload.href = qrUrl;
+                        }
+                    }
+                }
+
+                function closeQr() {
+                    if (!qrOverlay) return;
+                    qrOverlay.classList.remove('show');
+                    qrOverlay.setAttribute('aria-hidden', 'true');
+                }
+
+                if (qrButton) {
+                    qrButton.addEventListener('click', openQr);
+                }
+                if (qrClose) {
+                    qrClose.addEventListener('click', closeQr);
+                }
+                if (qrOverlay) {
+                    qrOverlay.addEventListener('click', (event) => {
+                        if (event.target === qrOverlay) {
+                            closeQr();
+                        }
+                    });
+                }
+                document.addEventListener('keydown', (event) => {
+                    if (event.key === 'Escape') {
+                        closeQr();
+                    }
+                });
 
                 function bindQueueInteractions(scope = document) {
                     if (typeof window.rebindQueuePanels === 'function') {
