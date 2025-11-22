@@ -3,6 +3,14 @@
         $publicLink = route('rooms.public', $room->slug);
         $isFinished = $room->status === 'finished';
     @endphp
+    @php
+        $avatarPalette = ['#2563eb', '#0ea5e9', '#6366f1', '#8b5cf6', '#14b8a6', '#f97316', '#f59e0b', '#10b981', '#ef4444'];
+        $avatarColor = function (string $name = 'Guest') use ($avatarPalette) {
+            $hash = crc32($name);
+            $index = abs((int) $hash) % count($avatarPalette);
+            return $avatarPalette[$index];
+        };
+    @endphp
 
     <div class="{{ $isOwner ? 'role-teacher' : 'role-student' }}">
         <div class="panel room-header">
@@ -61,9 +69,10 @@
                             $isOutgoing = $isOwner ? $isOwnerMessage : ($participant && $message->participant && $message->participant->id === $participant->id);
                             $isQuestionMessage = (bool) $message->question;
                             $replyTo = $message->replyTo;
+                            $avatarBg = $avatarColor($authorName);
                         @endphp
                         <li class="message {{ $isOutgoing ? 'message--outgoing' : '' }} {{ $isQuestionMessage ? 'message--question' : '' }}">
-                            <div class="message-avatar">{{ $initials }}</div>
+                            <div class="message-avatar colorized" style="background: {{ $avatarBg }}; color: #fff; border-color: transparent;">{{ $initials }}</div>
                             <div class="message-body">
                                 <div class="message-header">
                                     <span class="message-author">{{ $authorName }}</span>
@@ -228,6 +237,7 @@
                 const replyPreviewAuthor = document.getElementById('replyPreviewAuthor');
                 const replyPreviewText = document.getElementById('replyPreviewText');
                 const replyPreviewCancel = document.getElementById('replyPreviewCancel');
+                const avatarPalette = ['#2563eb', '#0ea5e9', '#6366f1', '#8b5cf6', '#14b8a6', '#f97316', '#f59e0b', '#10b981', '#ef4444'];
 
                 const buildQrUrl = (link) => 'https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=' + encodeURIComponent(link);
 
@@ -305,6 +315,17 @@
                     } catch (err) {
                         console.error('Remote form error', err);
                     }
+                };
+
+                const avatarColorFromName = (name = 'Guest') => {
+                    const str = String(name || 'Guest');
+                    let hash = 0;
+                    for (let i = 0; i < str.length; i += 1) {
+                        hash = ((hash << 5) - hash) + str.charCodeAt(i);
+                        hash |= 0;
+                    }
+                    const idx = Math.abs(hash) % avatarPalette.length;
+                    return avatarPalette[idx];
                 };
 
                 const setReplyContext = (author, text, id) => {
@@ -429,6 +450,7 @@
 
                             const isOutgoing = (currentUserId && e.author.user_id && Number(currentUserId) === Number(e.author.user_id))
                                 || (currentParticipantId && e.author.participant_id && Number(currentParticipantId) === Number(e.author.participant_id));
+                            const avatarColor = avatarColorFromName(e.author.name);
                             const wrapper = document.createElement('li');
                             wrapper.classList.add('message');
                             if (isOutgoing) {
@@ -442,7 +464,7 @@
                             const replyHtml = e.reply_to ? `<div class="message-reply"><span class="reply-author">${e.reply_to.author || 'Guest'}</span><span class="reply-text">${e.reply_to.content || ''}</span></div>` : '';
 
                             wrapper.innerHTML = `
-                                <div class="message-avatar">${(e.author.name || '??').slice(0,2).toUpperCase()}</div>
+                                <div class="message-avatar colorized" style="background:${avatarColor}; color:#fff; border-color:transparent;">${(e.author.name || '??').slice(0,2).toUpperCase()}</div>
                                 <div class="message-body">
                                     <div class="message-header">
                                         <span class="message-author">${e.author.name}</span>
