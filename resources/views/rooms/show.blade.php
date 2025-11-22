@@ -60,6 +60,7 @@
                             $initials = \Illuminate\Support\Str::of($authorName)->substr(0, 2)->upper();
                             $isOutgoing = $isOwner ? $isOwnerMessage : ($participant && $message->participant && $message->participant->id === $participant->id);
                             $isQuestionMessage = (bool) $message->question;
+                            $replyTo = $message->replyTo;
                         @endphp
                         <li class="message {{ $isOutgoing ? 'message--outgoing' : '' }} {{ $isQuestionMessage ? 'message--question' : '' }}">
                             <div class="message-avatar">{{ $initials }}</div>
@@ -74,9 +75,33 @@
                                         @if($isQuestionMessage)
                                             <span class="message-badge message-badge-question">To host</span>
                                         @endif
+                                        @if($replyTo)
+                                            <span class="message-badge">Reply</span>
+                                        @endif
                                     </div>
                                 </div>
+                                @if($replyTo)
+                                    @php
+                                        $replyAuthor = $replyTo->user?->name ?? $replyTo->participant?->display_name ?? 'Guest';
+                                    @endphp
+                                    <div class="message-reply">
+                                        <span class="reply-author">{{ $replyAuthor }}</span>
+                                        <span class="reply-text">{{ \Illuminate\Support\Str::limit($replyTo->content, 120) }}</span>
+                                    </div>
+                                @endif
                                 <div class="message-text">{{ $message->content }}</div>
+                                <div class="message-actions">
+                                    <button
+                                        type="button"
+                                        class="msg-action"
+                                        data-reply-id="{{ $message->id }}"
+                                        data-reply-author="{{ e($authorName) }}"
+                                        data-reply-text="{{ e(\Illuminate\Support\Str::limit($message->content, 500)) }}"
+                                    >
+                                        <i data-lucide="corner-up-right"></i>
+                                        <span>Reply</span>
+                                    </button>
+                                </div>
                             </div>
                         </li>
                     @empty
@@ -104,6 +129,17 @@
                                 @endunless
                                 <span class="panel-subtitle">Press Enter to send, Shift+Enter for a new line</span>
                             </div>
+                            <div class="reply-preview" id="replyPreview" hidden>
+                                <div class="reply-preview-label">
+                                    <i data-lucide="corner-up-left"></i>
+                                    <span>Replying to</span>
+                                    <span class="reply-preview-author" id="replyPreviewAuthor"></span>
+                                </div>
+                                <div class="reply-preview-text" id="replyPreviewText"></div>
+                                <button type="button" class="icon-btn" id="replyPreviewCancel" title="Cancel reply">
+                                    <i data-lucide="x"></i>
+                                </button>
+                            </div>
                             <div class="chat-input-row">
                                 <textarea
                                     name="content"
@@ -113,6 +149,7 @@
                                     rows="1"
                                     required
                                 ></textarea>
+                                <input type="hidden" name="reply_to_id" id="replyToId" value="">
                                 <button type="submit" class="send-btn" id="sendButton" title="Send message">
                                     <i data-lucide="send"></i>
                                 </button>
@@ -186,6 +223,11 @@
                 const qrDownload = document.getElementById('qrDownload');
                 const chatContainer = document.querySelector('.messages-container');
                 const csrfMeta = document.querySelector('meta[name=\"csrf-token\"]');
+                const replyToInput = document.getElementById('replyToId');
+                const replyPreview = document.getElementById('replyPreview');
+                const replyPreviewAuthor = document.getElementById('replyPreviewAuthor');
+                const replyPreviewText = document.getElementById('replyPreviewText');
+                const replyPreviewCancel = document.getElementById('replyPreviewCancel');
 
                 const buildQrUrl = (link) => 'https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=' + encodeURIComponent(link);
 
@@ -264,6 +306,26 @@
                         console.error('Remote form error', err);
                     }
                 };
+
+                const setReplyContext = (author, text, id) => {
+                    if (!replyToInput || !replyPreview || !replyPreviewAuthor || !replyPreviewText) return;
+                    replyToInput.value = id || '';
+                    if (id) {
+                        replyPreviewAuthor.textContent = author || 'Guest';
+                        replyPreviewText.textContent = text || '';
+                        replyPreview.hidden = false;
+                    } else {
+                        replyPreview.hidden = true;
+                        replyPreviewAuthor.textContent = '';
+                        replyPreviewText.textContent = '';
+                    }
+                };
+
+                const clearReplyContext = () => setReplyContext('', '', '');
+
+                if (replyPreviewCancel) {
+                    replyPreviewCancel.addEventListener('click', clearReplyContext);
+                }
 
                 async function reloadQuestionsPanel() {
                     if (!questionsPanel || !questionsPanelUrl) return;
@@ -348,6 +410,16 @@
                     });
                 }
 
+                if (chatContainer) {
+                    chatContainer.addEventListener('click', (event) => {
+                        const btn = event.target.closest('[data-reply-id]');
+                        if (!btn) return;
+                        event.preventDefault();
+                        setReplyContext(btn.dataset.replyAuthor, btn.dataset.replyText, btn.dataset.replyId);
+                        chatContainer.scrollTop = chatContainer.scrollHeight;
+                    });
+                }
+
                 if (window.Echo) {
                     const channelName = 'room.' + roomId;
                     window.Echo.channel(channelName)
@@ -367,6 +439,7 @@
                             }
                             const isOwnerAuthor = e.author.type === 'owner';
                             const time = new Date(e.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                            const replyHtml = e.reply_to ? `<div class="message-reply"><span class="reply-author">${e.reply_to.author || 'Guest'}</span><span class="reply-text">${e.reply_to.content || ''}</span></div>` : '';
 
                             wrapper.innerHTML = `
                                 <div class="message-avatar">${(e.author.name || '??').slice(0,2).toUpperCase()}</div>
@@ -377,10 +450,25 @@
                                             <span>${time}</span>
                                             ${isOwnerAuthor ? '<span class="message-badge message-badge-teacher">Host</span>' : ''}
                                             ${e.as_question ? '<span class="message-badge message-badge-question">To host</span>' : ''}
+                                            ${replyHtml ? '<span class="message-badge">Reply</span>' : ''}
                                         </div>
                                     </div>
+                                    ${replyHtml}
                                     <div class="message-text">${e.content}</div>
+                                    <div class="message-actions">
+                                        <button type="button" class="msg-action">
+                                            <i data-lucide="corner-up-right"></i>
+                                            <span>Reply</span>
+                                        </button>
+                                    </div>
                                 </div>`;
+
+                            const replyBtn = wrapper.querySelector('.msg-action');
+                            if (replyBtn) {
+                                replyBtn.dataset.replyId = e.id;
+                                replyBtn.dataset.replyAuthor = e.author.name || 'Guest';
+                                replyBtn.dataset.replyText = e.content || '';
+                            }
 
                             container.appendChild(wrapper);
                             container.scrollTop = container.scrollHeight;
@@ -446,6 +534,7 @@
                             if (questionCheckbox) {
                                 questionCheckbox.checked = false;
                             }
+                            clearReplyContext();
                         } catch (e) {
                             console.error('Send message error', e);
                         }
