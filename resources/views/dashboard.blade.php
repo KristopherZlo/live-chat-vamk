@@ -1,4 +1,4 @@
-﻿<x-app-layout>
+<x-app-layout>
     @php
         $user = Auth::user();
         $activeCount = $rooms->where('status', 'active')->count();

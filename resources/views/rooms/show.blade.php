@@ -1,4 +1,4 @@
-﻿<x-app-layout>
+<x-app-layout>
     @php
         $publicLink = route('rooms.public', $room->slug);
         $isFinished = $room->status === 'finished';
