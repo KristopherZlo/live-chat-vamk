@@ -12,6 +12,7 @@ class Message extends Model
     protected $fillable = [
         'room_id',
         'participant_id',
+        'reply_to_id',
         'user_id',
         'is_system',
         'content',
@@ -34,6 +35,11 @@ class Message extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function replyTo()
+    {
+        return $this->belongsTo(Message::class, 'reply_to_id');
     }
 
     public function question()

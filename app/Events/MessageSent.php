@@ -5,6 +5,7 @@ namespace App\Events;
 use App\Models\Message;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
+use Illuminate\Support\Str;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Broadcasting\InteractsWithSockets;
@@ -17,7 +18,7 @@ class MessageSent implements ShouldBroadcastNow
 
     public function __construct(Message $message)
     {
-        $this->message = $message->load(['user', 'participant', 'room', 'question']);
+        $this->message = $message->load(['user', 'participant', 'room', 'question', 'replyTo.user', 'replyTo.participant']);
     }
 
     public function broadcastOn(): Channel
@@ -46,6 +47,13 @@ class MessageSent implements ShouldBroadcastNow
                 'participant_id' => $this->message->participant_id,
             ],
             'as_question' => (bool) ($this->message->relationLoaded('question') ? $this->message->question : $this->message->question()->exists()),
+            'reply_to' => $this->message->replyTo ? [
+                'id' => $this->message->replyTo->id,
+                'author' => $this->message->replyTo->user_id
+                    ? $this->message->replyTo->user?->name
+                    : ($this->message->replyTo->participant?->display_name ?? 'Guest'),
+                'content' => Str::limit($this->message->replyTo->content, 140),
+            ] : null,
         ];
     }
 }

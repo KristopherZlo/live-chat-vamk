@@ -63,7 +63,7 @@ class RoomController extends Controller
         $participant = $this->getOrCreateParticipant($request, $room);
 
         $messages = $room->messages()
-            ->with(['participant', 'user', 'question'])
+            ->with(['participant', 'user', 'question', 'replyTo.user', 'replyTo.participant'])
             ->orderBy('created_at')
             ->get();
 
