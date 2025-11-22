@@ -34,7 +34,7 @@
         <button class="mobile-tab-btn" data-tab-target="queue">Queue</button>
         <button class="mobile-tab-btn" data-tab-target="history">History</button>
       @else
-        <button class="mobile-tab-btn" data-tab-target="questions">Questions</button>
+        <button class="mobile-tab-btn" data-tab-target="questions">My questions</button>
       @endif
       <button class="mobile-tab-btn mobile-tab-more" type="button" id="mobileMenuTabsBtn">
         <i data-lucide="more-horizontal"></i>
@@ -59,8 +59,9 @@
                             $authorName = $message->user?->name ?? $message->participant?->display_name ?? 'Guest';
                             $initials = \Illuminate\Support\Str::of($authorName)->substr(0, 2)->upper();
                             $isOutgoing = $isOwner ? $isOwnerMessage : ($participant && $message->participant && $message->participant->id === $participant->id);
+                            $isQuestionMessage = (bool) $message->question;
                         @endphp
-                        <li class="message {{ $isOutgoing ? 'message--outgoing' : '' }}">
+                        <li class="message {{ $isOutgoing ? 'message--outgoing' : '' }} {{ $isQuestionMessage ? 'message--question' : '' }}">
                             <div class="message-avatar">{{ $initials }}</div>
                             <div class="message-body">
                                 <div class="message-header">
@@ -69,6 +70,9 @@
                                         <span>{{ $message->created_at->format('H:i') }}</span>
                                         @if($isOwnerMessage)
                                             <span class="message-badge message-badge-teacher">Host</span>
+                                        @endif
+                                        @if($isQuestionMessage)
+                                            <span class="message-badge message-badge-question">To host</span>
                                         @endif
                                     </div>
                                 </div>
@@ -127,67 +131,8 @@
                     @include('rooms.partials.questions_panel')
                 </div>
             @else
-                <section class="panel student-panel mobile-panel" data-mobile-panel="questions">
-                    <div class="panel-header">
-                        <div>
-                            <div class="panel-title">
-                                <i data-lucide="help-circle"></i>
-                                <span>My questions</span>
-                            </div>
-                            <div class="panel-subtitle">Questions sent to the host</div>
-                        </div>
-                        <span class="queue-action">{{ isset($myQuestions) ? $myQuestions->count() : 0 }}</span>
-                    </div>
-                    <div class="panel-body">
-                        @if(isset($myQuestions) && $myQuestions->isNotEmpty())
-                            <ul class="questions-list">
-                                @foreach($myQuestions as $question)
-                                    @php
-                                        $myRating = optional($question->ratings->first())->rating;
-                                    @endphp
-                                    <li class="question-item">
-                                        <div class="question-header">
-                                            <div class="question-meta">
-                                                <span class="message-meta">{{ $question->created_at->format('H:i') }}</span>
-                                                <span class="status-pill status-{{ $question->status }}">{{ ucfirst($question->status) }}</span>
-                                            </div>
-                                            @if($room->status !== 'finished')
-                                                <form method="POST" action="{{ route('questions.participantDelete', $question) }}" onsubmit="return confirm('Delete this question?');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button class="btn btn-sm btn-danger" type="submit">Delete</button>
-                                                </form>
-                                            @endif
-                                        </div>
-                                        <div class="question-text">{{ $question->content }}</div>
-                                        @if($question->status === 'answered')
-                                            <div class="rating">
-                                                <span class="rating-label">Was this useful?</span>
-                                                <div class="rating-options">
-                                                    <form method="POST" action="{{ route('questions.rate', $question) }}">
-                                                        @csrf
-                                                        <input type="hidden" name="rating" value="1">
-                                                        <button class="rating-pill rating-pill-ok {{ $myRating === 1 ? 'active' : '' }}" type="submit">Yes</button>
-                                                    </form>
-                                                    <form method="POST" action="{{ route('questions.rate', $question) }}">
-                                                        @csrf
-                                                        <input type="hidden" name="rating" value="-1">
-                                                        <button class="rating-pill rating-pill-bad {{ $myRating === -1 ? 'active' : '' }}" type="submit">No</button>
-                                                    </form>
-                                                </div>
-                                            </div>
-                                        @endif
-                                    </li>
-                                @endforeach
-                            </ul>
-                        @else
-                            <p class="text-muted">You have not asked any questions yet.</p>
-                        @endif
-                    </div>
-                    <div class="panel-footer">
-                        <span>Only you can see these.</span>
-                        <span class="panel-subtitle">{{ isset($myQuestions) ? $myQuestions->count() : 0 }} total</span>
-                    </div>
+                <section class="panel student-panel mobile-panel" data-mobile-panel="questions" id="myQuestionsPanel">
+                    @include('rooms.partials.my_questions_panel', ['room' => $room, 'myQuestions' => $myQuestions])
                 </section>
             @endif
         </div>
@@ -224,15 +169,23 @@
         <script>
             document.addEventListener('DOMContentLoaded', () => {
                 const roomId = {{ $room->id }};
+                const currentUserId = @json(auth()->id());
+                const currentParticipantId = @json($participant?->id);
                 const publicLink = @json($publicLink);
                 const questionsPanel = document.getElementById('questions-panel');
-                const questionsPanelUrl = @json($isOwner ? route('rooms.questionsPanel', $room) : null);
+                const questionsPanelUrl = @json(route('rooms.questionsPanel', $room));
+                const myQuestionsPanel = document.getElementById('myQuestionsPanel');
+                const myQuestionsPanelUrl = @json(route('rooms.myQuestionsPanel', $room));
                 let queueNeedsNew = false;
+                let questionsPollTimer = null;
+                let myQuestionsPollTimer = null;
                 const qrButton = document.getElementById('qrButton');
                 const qrOverlay = document.getElementById('qrOverlay');
                 const qrClose = document.getElementById('qrClose');
                 const qrImage = document.getElementById('qrImage');
                 const qrDownload = document.getElementById('qrDownload');
+                const chatContainer = document.querySelector('.messages-container');
+                const csrfMeta = document.querySelector('meta[name=\"csrf-token\"]');
 
                 const buildQrUrl = (link) => 'https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=' + encodeURIComponent(link);
 
@@ -275,11 +228,42 @@
                 });
 
                 function bindQueueInteractions(scope = document) {
+                    if (!scope) return;
                     if (typeof window.rebindQueuePanels === 'function') {
                         window.rebindQueuePanels(scope);
                     }
                 }
-                bindQueueInteractions();
+                if (questionsPanel) {
+                    bindQueueInteractions();
+                }
+
+                const submitRemoteForm = async (form, onDone) => {
+                    const formData = new FormData(form);
+                    let method = (form.getAttribute('method') || 'POST').toUpperCase();
+                    const override = formData.get('_method');
+                    if (override) {
+                        method = override.toString().toUpperCase();
+                    }
+                    const token = formData.get('_token') || csrfMeta?.getAttribute('content') || '';
+
+                    try {
+                        const response = await fetch(form.action, {
+                            method,
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': token,
+                            },
+                            body: formData,
+                        });
+                        if (!response.ok) {
+                            console.error('Remote form failed', response.status);
+                        } else if (typeof onDone === 'function') {
+                            onDone();
+                        }
+                    } catch (err) {
+                        console.error('Remote form error', err);
+                    }
+                };
 
                 async function reloadQuestionsPanel() {
                     if (!questionsPanel || !questionsPanelUrl) return;
@@ -299,13 +283,69 @@
                         const html = await response.text();
                         questionsPanel.innerHTML = html;
                         bindQueueInteractions(questionsPanel);
-                        if (queueNeedsNew && typeof window.markQueueHasNew === 'function') {
+                        const hasNewItems = questionsPanel.querySelector('.queue-item[data-status=\"new\"]');
+                        if ((queueNeedsNew || hasNewItems) && typeof window.markQueueHasNew === 'function') {
                             window.markQueueHasNew();
                             queueNeedsNew = false;
                         }
                     } catch (e) {
                         console.error('Refresh questions panel error', e);
                     }
+                }
+
+                function startQuestionsPolling() {
+                    if (!questionsPanel || questionsPollTimer) return;
+                    questionsPollTimer = setInterval(reloadQuestionsPanel, 6000);
+                }
+
+                if (questionsPanel) {
+                    questionsPanel.addEventListener('submit', (event) => {
+                        const target = event.target;
+                        if (!(target instanceof HTMLFormElement)) return;
+                        if (target.dataset.remote !== 'questions-panel') return;
+                        event.preventDefault();
+                        submitRemoteForm(target, reloadQuestionsPanel);
+                    });
+                }
+
+                async function reloadMyQuestionsPanel() {
+                    if (!myQuestionsPanel || !myQuestionsPanelUrl) return;
+
+                    try {
+                        const response = await fetch(myQuestionsPanelUrl, {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                        });
+
+                        if (!response.ok) {
+                            console.error('Failed to refresh my questions panel', response.status);
+                            return;
+                        }
+
+                        const html = await response.text();
+                        myQuestionsPanel.innerHTML = html;
+                        if (typeof window.refreshLucideIcons === 'function') {
+                            window.refreshLucideIcons();
+                        }
+                    } catch (e) {
+                        console.error('Refresh my questions panel error', e);
+                    }
+                }
+
+                function startMyQuestionsPolling() {
+                    if (!myQuestionsPanel || myQuestionsPollTimer) return;
+                    myQuestionsPollTimer = setInterval(reloadMyQuestionsPanel, 6000);
+                }
+
+                if (myQuestionsPanel) {
+                    myQuestionsPanel.addEventListener('submit', (event) => {
+                        const target = event.target;
+                        if (!(target instanceof HTMLFormElement)) return;
+                        if (target.dataset.remote !== 'my-questions-panel') return;
+                        event.preventDefault();
+                        submitRemoteForm(target, reloadMyQuestionsPanel);
+                    });
                 }
 
                 if (window.Echo) {
@@ -315,8 +355,16 @@
                             const container = document.querySelector('.messages-container');
                             if (!container) return;
 
+                            const isOutgoing = (currentUserId && e.author.user_id && Number(currentUserId) === Number(e.author.user_id))
+                                || (currentParticipantId && e.author.participant_id && Number(currentParticipantId) === Number(e.author.participant_id));
                             const wrapper = document.createElement('li');
                             wrapper.classList.add('message');
+                            if (isOutgoing) {
+                                wrapper.classList.add('message--outgoing');
+                            }
+                            if (e.as_question) {
+                                wrapper.classList.add('message--question');
+                            }
                             const isOwnerAuthor = e.author.type === 'owner';
                             const time = new Date(e.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -328,6 +376,7 @@
                                         <div class="message-meta">
                                             <span>${time}</span>
                                             ${isOwnerAuthor ? '<span class="message-badge message-badge-teacher">Host</span>' : ''}
+                                            ${e.as_question ? '<span class="message-badge message-badge-question">To host</span>' : ''}
                                         </div>
                                     </div>
                                     <div class="message-text">${e.content}</div>
@@ -340,10 +389,29 @@
                             }
                         })
                         .listen('QuestionCreated', () => {
-                            queueNeedsNew = true;
-                            reloadQuestionsPanel();
+                            if (questionsPanel) {
+                                queueNeedsNew = true;
+                                reloadQuestionsPanel();
+                            }
+                            if (myQuestionsPanel) {
+                                reloadMyQuestionsPanel();
+                            }
                         })
-                        .listen('QuestionUpdated', reloadQuestionsPanel);
+                        .listen('QuestionUpdated', () => {
+                            if (questionsPanel) {
+                                reloadQuestionsPanel();
+                            }
+                            if (myQuestionsPanel) {
+                                reloadMyQuestionsPanel();
+                            }
+                        })
+                        .error(() => {
+                            startQuestionsPolling();
+                            startMyQuestionsPolling();
+                        });
+                } else {
+                    startQuestionsPolling();
+                    startMyQuestionsPolling();
                 }
 
                 const chatForm = document.getElementById('chat-form');
@@ -382,6 +450,10 @@
                             console.error('Send message error', e);
                         }
                     });
+                }
+
+                if (chatContainer) {
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
                 }
             });
         </script>

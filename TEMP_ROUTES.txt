@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -61,8 +61,7 @@ Route::delete('/questions/{question}', [QuestionController::class, 'destroy'])
     ->name('questions.destroy');
 
 Route::get('/rooms/{room}/questions-panel', [RoomController::class, 'questionsPanel'])
-    ->name('rooms.questionsPanel');
-Route::get('/rooms/{room}/my-questions-panel', [RoomController::class, 'myQuestionsPanel'])
-    ->name('rooms.myQuestionsPanel');
+    ->name('rooms.questionsPanel')
+    ->middleware('auth'); // только владелец заходит в админскую часть
 
 require __DIR__.'/auth.php';

@@ -17,7 +17,7 @@ class MessageSent implements ShouldBroadcastNow
 
     public function __construct(Message $message)
     {
-        $this->message = $message->load(['user', 'participant', 'room']);
+        $this->message = $message->load(['user', 'participant', 'room', 'question']);
     }
 
     public function broadcastOn(): Channel
@@ -41,8 +41,11 @@ class MessageSent implements ShouldBroadcastNow
                 'type' => $this->message->user_id ? 'owner' : 'participant',
                 'name' => $this->message->user_id
                     ? $this->message->user->name
-                    : ($this->message->participant->display_name ?? 'Гость'),
+                    : ($this->message->participant->display_name ?? 'Guest'),
+                'user_id' => $this->message->user_id,
+                'participant_id' => $this->message->participant_id,
             ],
+            'as_question' => (bool) ($this->message->relationLoaded('question') ? $this->message->question : $this->message->question()->exists()),
         ];
     }
 }

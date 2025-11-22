@@ -39,28 +39,32 @@
             </div>
             <div class="question-text">{{ $question->content }}</div>
             <div class="question-actions">
-              <div class="queue-controls">
-                <form method="POST" action="{{ route('questions.updateStatus', $question) }}">
+              @if($isOwner)
+                <div class="queue-controls">
+                  <form method="POST" action="{{ route('questions.updateStatus', $question) }}" data-remote="questions-panel">
+                    @csrf
+                    <input type="hidden" name="status" value="answered">
+                    <button type="submit" class="queue-action queue-action-answered">Answered</button>
+                  </form>
+                  <form method="POST" action="{{ route('questions.updateStatus', $question) }}" data-remote="questions-panel">
+                    @csrf
+                    <input type="hidden" name="status" value="ignored">
+                    <button type="submit" class="queue-action queue-action-ignored">Ignore</button>
+                  </form>
+                  <form method="POST" action="{{ route('questions.updateStatus', $question) }}" data-remote="questions-panel">
+                    @csrf
+                    <input type="hidden" name="status" value="later">
+                    <button type="submit" class="queue-action queue-action-later">Later</button>
+                  </form>
+                </div>
+                <form method="POST" action="{{ route('questions.ownerDelete', $question) }}" onsubmit="return confirm('Delete this question permanently?');" data-remote="questions-panel">
                   @csrf
-                  <input type="hidden" name="status" value="answered">
-                  <button type="submit" class="queue-action queue-action-answered">Answered</button>
+                  @method('DELETE')
+                  <button class="btn btn-sm btn-danger" type="submit">Delete</button>
                 </form>
-                <form method="POST" action="{{ route('questions.updateStatus', $question) }}">
-                  @csrf
-                  <input type="hidden" name="status" value="ignored">
-                  <button type="submit" class="queue-action queue-action-ignored">Ignore</button>
-                </form>
-                <form method="POST" action="{{ route('questions.updateStatus', $question) }}">
-                  @csrf
-                  <input type="hidden" name="status" value="later">
-                  <button type="submit" class="queue-action queue-action-later">Later</button>
-                </form>
-              </div>
-              <form method="POST" action="{{ route('questions.ownerDelete', $question) }}" onsubmit="return confirm('Delete this question permanently?');">
-                @csrf
-                @method('DELETE')
-                <button class="btn btn-sm btn-danger" type="submit">Delete</button>
-              </form>
+              @else
+                <span class="panel-subtitle">Only the host can manage the queue.</span>
+              @endif
             </div>
           </li>
         @endforeach
@@ -115,20 +119,24 @@
             @endif
 
             <div class="question-actions">
-              <div class="queue-controls">
-                @if($question->status !== 'new')
-                  <form method="POST" action="{{ route('questions.updateStatus', $question) }}">
-                    @csrf
-                    <input type="hidden" name="status" value="new">
-                    <button type="submit" class="queue-action">Move to queue</button>
-                  </form>
-                @endif
-              </div>
-              <form method="POST" action="{{ route('questions.destroy', $question) }}" onsubmit="return confirm('Delete this record for good?');">
-                @csrf
-                @method('DELETE')
-                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-              </form>
+              @if($isOwner)
+                <div class="queue-controls">
+                  @if($question->status !== 'new')
+                    <form method="POST" action="{{ route('questions.updateStatus', $question) }}" data-remote="questions-panel">
+                      @csrf
+                      <input type="hidden" name="status" value="new">
+                      <button type="submit" class="queue-action">Move to queue</button>
+                    </form>
+                  @endif
+                </div>
+                <form method="POST" action="{{ route('questions.destroy', $question) }}" onsubmit="return confirm('Delete this record for good?');" data-remote="questions-panel">
+                  @csrf
+                  @method('DELETE')
+                  <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                </form>
+              @else
+                <span class="panel-subtitle">Only the host can manage history.</span>
+              @endif
             </div>
           </li>
         @endforeach

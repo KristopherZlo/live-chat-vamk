@@ -17,17 +17,16 @@ class MessageController extends Controller
     {
         $user = Auth::user();
 
-        // базовая валидация
+        // Basic validation
         $data = $request->validate([
             'content' => ['required', 'string', 'max:2000'],
             'as_question' => ['nullable', 'boolean'],
         ]);
 
-        // определяем участника
+        // Identify participant (if not the owner)
         $participant = null;
 
         if ($user && $user->id === $room->user_id) {
-            // владелец комнаты — сообщения от имени владельца
             $participant = null;
         } else {
             $sessionKey = 'room_participant_' . $room->id;
@@ -41,11 +40,10 @@ class MessageController extends Controller
             }
 
             if (!$participant) {
-                return back()->withErrors('Ошибка участника. Обнови страницу.');
+                return back()->withErrors('Session expired. Please refresh and try again.');
             }
         }
 
-        // создаём сообщение
         $message = Message::create([
             'room_id' => $room->id,
             'participant_id' => $participant?->id,
@@ -54,9 +52,8 @@ class MessageController extends Controller
             'content' => $data['content'],
         ]);
 
-        event(new MessageSent($message));
+        $question = null;
 
-        // если стоит галочка "как вопрос создателю"
         if (!empty($data['as_question'])) {
             $question = Question::create([
                 'room_id' => $room->id,
@@ -67,8 +64,13 @@ class MessageController extends Controller
                 'status' => 'new',
             ]);
 
+            // Keep the relation in memory so broadcast metadata knows this was sent to host
+            $message->setRelation('question', $question);
+
             event(new QuestionCreated($question));
         }
+
+        event(new MessageSent($message));
 
         return redirect()->route('rooms.public', $room->slug);
     }
