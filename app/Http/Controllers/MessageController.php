@@ -16,6 +16,20 @@ class MessageController extends Controller
     public function store(Request $request, Room $room)
     {
         $user = Auth::user();
+        $isOwner = $user && $user->id === $room->user_id;
+        $isDevUser = $user && !$isOwner && $user->is_dev;
+
+        if ($room->status !== 'active') {
+            $message = 'Room is closed for new messages.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 403);
+            }
+
+            return redirect()
+                ->route('rooms.public', $room->slug)
+                ->withErrors($message);
+        }
 
         // Basic validation
         $data = $request->validate([
@@ -27,7 +41,7 @@ class MessageController extends Controller
         // Identify participant (if not the owner)
         $participant = null;
 
-        if ($user && $user->id === $room->user_id) {
+        if ($isOwner) {
             $participant = null;
         } else {
             $sessionKey = 'room_participant_' . $room->id;
@@ -35,6 +49,10 @@ class MessageController extends Controller
 
             if ($participantId) {
                 $participant = Participant::find($participantId);
+                if ($participant && $user && $user->is_dev && $participant->display_name !== $user->name) {
+                    $participant->display_name = $user->name;
+                    $participant->save();
+                }
                 if (!$participant) {
                     $request->session()->forget($sessionKey);
                 }
@@ -53,11 +71,13 @@ class MessageController extends Controller
             }
         }
 
+        $messageUserId = $isOwner || $isDevUser ? $user->id : null;
+
         $message = Message::create([
             'room_id' => $room->id,
             'participant_id' => $participant?->id,
             'reply_to_id' => $replyMessage?->id,
-            'user_id' => $user && $user->id === $room->user_id ? $user->id : null,
+            'user_id' => $messageUserId,
             'is_system' => false,
             'content' => $data['content'],
         ]);
@@ -69,7 +89,7 @@ class MessageController extends Controller
                 'room_id' => $room->id,
                 'message_id' => $message->id,
                 'participant_id' => $participant?->id,
-                'user_id' => null,
+                'user_id' => $messageUserId,
                 'content' => $data['content'],
                 'status' => 'new',
             ]);

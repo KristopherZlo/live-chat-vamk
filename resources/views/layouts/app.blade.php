@@ -31,15 +31,25 @@
     </main>
 
     <footer class="app-footer">
-        <div class="app-footer-left">
-            <a href="#">GDPR</a>
-            <a href="#">Contact</a>
-        </div>
-        <div class="app-footer-right">
-            <span class="footer-label">Language:</span>
-            <button class="footer-lang active" type="button">FI</button>
-            <button class="footer-lang" type="button">RU</button>
-            <button class="footer-lang" type="button">EN</button>
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="footer-logo">{{ config('app.name', 'Live Chat') }}</div>
+                    <div class="footer-note">VAMK Instant feedback</div>
+                    <a class="footer-contact" href="mailto:zloydeveloper.info@gmail.com">Contact: zloydeveloper.info@gmail.com</a>
+                </div>
+            <div class="footer-links">
+                <a href="#">GDPR</a>
+                <a href="#">Contact</a>
+                <a href="#">Help</a>
+            </div>
+            <div class="footer-meta">
+                <div class="footer-lang-group">
+                    <button class="footer-lang active" type="button">FI</button>
+                    <button class="footer-lang" type="button">RU</button>
+                    <button class="footer-lang" type="button">EN</button>
+                </div>
+                <div class="footer-copy">made with 💗 by Zlo</div>
+            </div>
         </div>
     </footer>
 </div>

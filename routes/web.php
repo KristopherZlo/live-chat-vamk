@@ -27,6 +27,8 @@ Route::middleware(['auth'])->group(function () {
         ->name('rooms.create');
     Route::post('/rooms', [RoomController::class, 'store'])
         ->name('rooms.store');
+    Route::patch('/rooms/{room}', [RoomController::class, 'update'])
+        ->name('rooms.update');
 });
 
 // Публичная страница комнаты по slug

@@ -155,6 +155,28 @@ function setupMobileTabs() {
   sync();
 }
 
+function setupChatEnterSubmit() {
+  const form = document.getElementById('chat-form');
+  const textarea = document.getElementById('chatInput');
+  if (!form || !textarea) return;
+
+  form.addEventListener('submit', () => {
+    textarea.value = '';
+    textarea.style.height = '';
+  });
+
+  textarea.addEventListener('keydown', (event) => {
+    const isEnter = event.key === 'Enter';
+    if (!isEnter || event.shiftKey || event.isComposing) return;
+    event.preventDefault();
+    if (typeof form.requestSubmit === 'function') {
+      form.requestSubmit();
+    } else {
+      form.submit();
+    }
+  });
+}
+
 function setupHistoryOpener(root = document) {
   const buttons = root.querySelectorAll('[data-toggle-history]');
   if (!buttons.length) return;
@@ -190,8 +212,18 @@ function setupHistoryOpener(root = document) {
 }
 
 function setupQueueNewHandlers(root = document) {
+  window.queueSeenQuestionIds = window.queueSeenQuestionIds || new Set();
   const queueItems = root.querySelectorAll('.queue-item');
   if (!queueItems.length) return;
+
+  if (window.queueSeenQuestionIds.size === 0) {
+    queueItems.forEach((item) => {
+      const id = Number(item.dataset.questionId || 0);
+      if (id) {
+        window.queueSeenQuestionIds.add(id);
+      }
+    });
+  }
 
   const removeBadgeIfCleared = () => {
     const hasNew = document.querySelector('.queue-item.queue-item-new');
@@ -206,23 +238,32 @@ function setupQueueNewHandlers(root = document) {
   };
 
   queueItems.forEach((item) => {
+    const id = Number(item.dataset.questionId || 0);
+    const isNewStatus = item.dataset.status === 'new';
+    if (id && !window.queueSeenQuestionIds.has(id) && isNewStatus) {
+      item.classList.add('queue-item-new');
+      window.queueSeenQuestionIds.add(id);
+    } else if (id && window.queueSeenQuestionIds.has(id)) {
+      item.classList.remove('queue-item-new');
+    }
+
     item.addEventListener('click', () => {
       if (!item.classList.contains('queue-item-new')) return;
       item.classList.remove('queue-item-new');
       removeBadgeIfCleared();
     });
   });
+
+  removeBadgeIfCleared();
 }
 
 function markQueueHasNew() {
   const queuePanel = document.getElementById('queuePanel');
   if (queuePanel) {
-    queuePanel.classList.add('has-new');
-    const newItems = queuePanel.querySelectorAll('.queue-item[data-status="new"]');
-    newItems.forEach((item) => {
-      item.classList.add('queue-item-new');
-    });
-    if (!document.getElementById('queueNewBadge')) {
+    setupQueueNewHandlers(queuePanel);
+    const hasNew = queuePanel.querySelector('.queue-item.queue-item-new');
+    queuePanel.classList.toggle('has-new', !!hasNew);
+    if (hasNew && !document.getElementById('queueNewBadge')) {
       const badge = document.createElement('span');
       badge.id = 'queueNewBadge';
       badge.className = 'queue-new-badge';
@@ -237,6 +278,64 @@ function markQueueHasNew() {
   }
 }
 
+function setupFlashMessages(root = document) {
+  const flashes = root.querySelectorAll('[data-flash]');
+  flashes.forEach((flash) => {
+    const closeBtn = flash.querySelector('[data-flash-close]');
+    const hide = () => {
+      flash.classList.add('hidden');
+      setTimeout(() => flash.remove(), 300);
+    };
+    if (closeBtn) {
+      closeBtn.addEventListener('click', hide);
+    }
+    setTimeout(hide, 3500);
+  });
+}
+
+function setupInlineEditors(root = document) {
+  const blocks = root.querySelectorAll('[data-inline-edit]');
+  blocks.forEach((block) => {
+    const trigger = block.querySelector('[data-inline-trigger]');
+    const form = block.querySelector('.inline-edit-form');
+    const display = block.querySelector('.inline-edit-display');
+    if (!trigger || !form || !display) return;
+
+    const cancel = block.querySelector('[data-inline-cancel]');
+    const input = form.querySelector('input, textarea');
+
+    const show = () => {
+      display.hidden = true;
+      form.hidden = false;
+      trigger.classList.add('active');
+      if (input) {
+        input.focus();
+        if (typeof input.select === 'function') {
+          input.select();
+        }
+      }
+    };
+
+    const hide = () => {
+      form.hidden = true;
+      display.hidden = false;
+      trigger.classList.remove('active');
+    };
+
+    trigger.addEventListener('click', (event) => {
+      event.preventDefault();
+      show();
+    });
+
+    if (cancel) {
+      cancel.addEventListener('click', (event) => {
+        event.preventDefault();
+        hide();
+      });
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   setupThemeToggle();
@@ -244,14 +343,18 @@ document.addEventListener('DOMContentLoaded', () => {
   setupMobileMenu();
   setupUserMenus();
   setupMobileTabs();
+  setupChatEnterSubmit();
   setupHistoryOpener();
   setupQueueNewHandlers();
+  setupFlashMessages();
+  setupInlineEditors();
   refreshLucideIcons();
 });
 
 window.rebindQueuePanels = (root = document) => {
   setupHistoryOpener(root);
   setupQueueNewHandlers(root);
+  setupFlashMessages(root);
   refreshLucideIcons();
 };
 

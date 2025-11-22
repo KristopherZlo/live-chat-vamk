@@ -33,18 +33,22 @@ class MessageSent implements ShouldBroadcastNow
             'room_id' => $this->message->room_id,
         ]);
 
+        $isOwner = $this->message->user_id && $this->message->room?->user_id && $this->message->user_id === $this->message->room->user_id;
+
         return [
             'id'         => $this->message->id,
             'room_id'    => $this->message->room_id,
             'content'    => $this->message->content,
             'created_at' => $this->message->created_at->toIso8601String(),
             'author'     => [
-                'type' => $this->message->user_id ? 'owner' : 'participant',
+                'type' => $isOwner ? 'owner' : 'participant',
                 'name' => $this->message->user_id
                     ? $this->message->user->name
                     : ($this->message->participant->display_name ?? 'Guest'),
                 'user_id' => $this->message->user_id,
                 'participant_id' => $this->message->participant_id,
+                'is_dev' => (bool) $this->message->user?->is_dev,
+                'is_owner' => $isOwner,
             ],
             'as_question' => (bool) ($this->message->relationLoaded('question') ? $this->message->question : $this->message->question()->exists()),
             'reply_to' => $this->message->replyTo ? [

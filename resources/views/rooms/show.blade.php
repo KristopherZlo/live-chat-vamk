@@ -1,7 +1,7 @@
 <x-app-layout>
     @php
         $publicLink = route('rooms.public', $room->slug);
-        $isFinished = $room->status === 'finished';
+        $isClosed = $room->status !== 'active';
     @endphp
     @php
         $avatarPalette = ['#2563eb', '#0ea5e9', '#6366f1', '#8b5cf6', '#14b8a6', '#f97316', '#f59e0b', '#10b981', '#ef4444'];
@@ -18,11 +18,54 @@
                 <div class="panel-title">
                     <i data-lucide="messages-square"></i>
                     <div>
-                        <div class="room-name">{{ $room->title }}</div>
+                        <div class="inline-editable" data-inline-edit>
+                            <div class="inline-edit-display room-name">{{ $room->title }}</div>
+                            @if($isOwner)
+                                <button class="icon-btn inline-edit-trigger" type="button" aria-label="Edit title" data-inline-trigger>
+                                    <i data-lucide="pencil"></i>
+                                </button>
+                                <form class="inline-edit-form" method="POST" action="{{ route('rooms.update', $room) }}" hidden>
+                                    @csrf
+                                    @method('PATCH')
+                                    <input
+                                        type="text"
+                                        name="title"
+                                        class="field-control inline-edit-input"
+                                        value="{{ $room->title }}"
+                                        required
+                                    >
+                                    <div class="inline-edit-actions">
+                                        <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                                        <button type="button" class="btn btn-sm btn-ghost" data-inline-cancel>Cancel</button>
+                                    </div>
+                                </form>
+                            @endif
+                        </div>
                         <div class="room-code">Room code: {{ $room->slug }}</div>
-                        @if($room->description)
-                            <div class="panel-subtitle">{{ $room->description }}</div>
-                        @endif
+                        <div class="inline-editable" data-inline-edit>
+                            <div class="inline-edit-display panel-subtitle">
+                                {{ $room->description ?: 'Add a description' }}
+                            </div>
+                            @if($isOwner)
+                                <button class="icon-btn inline-edit-trigger" type="button" aria-label="Edit description" data-inline-trigger>
+                                    <i data-lucide="pencil"></i>
+                                </button>
+                                <form class="inline-edit-form" method="POST" action="{{ route('rooms.update', $room) }}" hidden>
+                                    @csrf
+                                    @method('PATCH')
+                                    <textarea
+                                        name="description"
+                                        rows="2"
+                                        class="field-control inline-edit-input"
+                                        placeholder="Add a short agenda or note"
+                                    >{{ $room->description }}</textarea>
+                                    <div class="inline-edit-actions">
+                                        <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                                        <button type="button" class="btn btn-sm btn-ghost" data-inline-cancel>Cancel</button>
+                                    </div>
+                                </form>
+                            @endif
+                        </div>
                     </div>
                     <span class="status-pill status-{{ $room->status }}">{{ ucfirst($room->status) }}</span>
                 </div>
@@ -35,6 +78,25 @@
                 </div>
             </div>
         </div>
+
+        @if (session('status'))
+            <div class="flash flash-success" data-flash>
+                <span>{{ session('status') }}</span>
+                <button class="icon-btn flash-close" type="button" data-flash-close aria-label="Close">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+        @endif
+
+        @if ($errors->any())
+            <div class="form-alert">
+                <ul>
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
 
     <nav class="mobile-tabs" id="mobileTabs" aria-label="Sections">
       <button class="mobile-tab-btn active" data-tab-target="chat">Chat</button>
@@ -75,7 +137,12 @@
                             <div class="message-avatar colorized" style="background: {{ $avatarBg }}; color: #fff; border-color: transparent;">{{ $initials }}</div>
                             <div class="message-body">
                                 <div class="message-header">
-                                    <span class="message-author">{{ $authorName }}</span>
+                                    <span class="message-author">
+                                        {{ $authorName }}
+                                        @if($message->user?->is_dev)
+                                            <span class="message-badge message-badge-dev">dev</span>
+                                        @endif
+                                    </span>
                                     <div class="message-meta">
                                         <span>{{ $message->created_at->format('H:i') }}</span>
                                         @if($isOwnerMessage)
@@ -122,7 +189,7 @@
                     @endforelse
                 </ol>
 
-                @if(!$isFinished)
+                @if(!$isClosed)
                     <div class="chat-input">
                         <form id="chat-form" method="POST" action="{{ route('rooms.messages.store', $room) }}">
                             @csrf
@@ -167,7 +234,7 @@
                     </div>
                 @else
                     <div class="panel-footer">
-                        This room is finished. Messages are read-only.
+                        This room is closed. Messages are read-only.
                     </div>
                 @endif
             </section>
@@ -459,15 +526,16 @@
                             if (e.as_question) {
                                 wrapper.classList.add('message--question');
                             }
-                            const isOwnerAuthor = e.author.type === 'owner';
+                            const isOwnerAuthor = Boolean(e.author.is_owner);
                             const time = new Date(e.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                            const devBadge = e.author.is_dev ? '<span class="message-badge message-badge-dev">dev</span>' : '';
                             const replyHtml = e.reply_to ? `<div class="message-reply"><span class="reply-author">${e.reply_to.author || 'Guest'}</span><span class="reply-text">${e.reply_to.content || ''}</span></div>` : '';
 
                             wrapper.innerHTML = `
                                 <div class="message-avatar colorized" style="background:${avatarColor}; color:#fff; border-color:transparent;">${(e.author.name || '??').slice(0,2).toUpperCase()}</div>
                                 <div class="message-body">
                                     <div class="message-header">
-                                        <span class="message-author">${e.author.name}</span>
+                                        <span class="message-author">${e.author.name}${devBadge}</span>
                                         <div class="message-meta">
                                             <span>${time}</span>
                                             ${isOwnerAuthor ? '<span class="message-badge message-badge-teacher">Host</span>' : ''}

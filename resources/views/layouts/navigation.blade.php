@@ -2,7 +2,7 @@
   <div class="app-title">
     <div class="app-title-text">
       <a href="{{ route('dashboard') }}" class="room-name">Live Chat</a>
-      <div class="room-code">VAMK ? lecture Q&A</div>
+      <div class="room-code">VAMK Instant feedback</div>
     </div>
     <span class="badge">beta</span>
   </div>
