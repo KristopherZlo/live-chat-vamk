@@ -1,75 +1,42 @@
 <x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Мои комнаты') }}
-        </h2>
-    </x-slot>
-
-    <div class="py-6">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="mb-4 flex justify-between items-center">
-                <div class="text-gray-700">
-                    Привет, {{ Auth::user()->name }}.
-                </div>
-                <a href="{{ route('rooms.create') }}"
-                   class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700">
-                    Создать новую комнату
-                </a>
+    <div class="panel">
+        <div class="panel-header">
+            <div class="panel-title">
+                <i data-lucide="layout-dashboard"></i>
+                <span>Your rooms</span>
             </div>
+            <a href="{{ route('rooms.create') }}" class="btn btn-sm btn-primary">Create room</a>
+        </div>
 
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900">
-                    @if($rooms->isEmpty())
-                        <p>Пока нет комнат.</p>
-                    @else
-                        <table class="w-full text-left">
-                            <thead>
-                            <tr>
-                                <th class="py-2">Название</th>
-                                <th class="py-2">Статус</th>
-                                <th class="py-2">Ссылка</th>
-                                <th class="py-2">Действия</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            @foreach($rooms as $room)
-                                <tr class="border-t">
-                                    <td class="py-2">
-                                        {{ $room->title }}
-                                    </td>
-                                    <td class="py-2">
-                                        @switch($room->status)
-                                            @case('active')
-                                                Активен
-                                                @break
-                                            @case('finished')
-                                                Завершён
-                                                @break
-                                            @default
-                                                {{ $room->status }}
-                                        @endswitch
-                                    </td>
-                                    <td class="py-2">
-                                        <a href="{{ route('rooms.public', $room->slug) }}"
-                                           class="text-blue-600 underline"
-                                           target="_blank">
-                                            Открыть комнату
-                                        </a>
-                                    </td>
-                                    <td class="py-2">
-                                        <a href="{{ route('rooms.public', $room->slug) }}"
-                                           class="text-sm text-blue-600 underline"
-                                           target="_blank">
-                                            Открыть как гость
-                                        </a>
-                                    </td>
-                                </tr>
-                            @endforeach
-                            </tbody>
-                        </table>
-                    @endif
+        <div class="panel-body">
+            <p class="message-meta">Hi {{ Auth::user()->name }} � manage your live rooms below.</p>
+
+            @if($rooms->isEmpty())
+                <div class="text-muted">No rooms yet.</div>
+            @else
+                <div class="table">
+                    <div class="table-row table-head">
+                        <div>Title</div>
+                        <div>Status</div>
+                        <div>Public link</div>
+                        <div>Actions</div>
+                    </div>
+                    @foreach($rooms as $room)
+                        <div class="table-row">
+                            <div class="table-cell">{{ $room->title }}</div>
+                            <div class="table-cell">
+                                <span class="status-pill status-{{ $room->status }}">{{ $room->status }}</span>
+                            </div>
+                            <div class="table-cell">
+                                <a href="{{ route('rooms.public', $room->slug) }}" class="btn btn-sm btn-ghost" target="_blank" rel="noreferrer">Open</a>
+                            </div>
+                            <div class="table-cell">
+                                <a href="{{ route('rooms.public', $room->slug) }}" class="btn btn-sm btn-primary" target="_blank" rel="noreferrer">View live</a>
+                            </div>
+                        </div>
+                    @endforeach
                 </div>
-            </div>
+            @endif
         </div>
     </div>
 </x-app-layout>
