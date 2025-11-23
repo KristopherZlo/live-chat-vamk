@@ -67,4 +67,7 @@ Route::get('/rooms/{room}/questions-panel', [RoomController::class, 'questionsPa
 Route::get('/rooms/{room}/my-questions-panel', [RoomController::class, 'myQuestionsPanel'])
     ->name('rooms.myQuestionsPanel');
 
+Route::view('/legal/privacy', 'legal.privacy')
+    ->name('privacy');
+
 require __DIR__.'/auth.php';

@@ -54,7 +54,7 @@
                 <div class="footer-links-list">
                     <a href="#">FAQ</a>
                     <a href="#">GDPR</a>
-                    <a href="#">Privacy & terms</a>
+                    <a href="{{ route('privacy') }}">Privacy & terms</a>
                     <a href="mailto:zloydeveloper.info@gmail.com">Contact</a>
                 </div>
             </div>
@@ -79,4 +79,3 @@
 @stack('scripts')
 </body>
 </html>
-
