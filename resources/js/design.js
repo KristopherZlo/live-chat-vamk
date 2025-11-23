@@ -1,4 +1,185 @@
 const THEME_KEY = 'lc-theme';
+const QUEUE_SEEN_KEY_PREFIX = 'lc-queue-seen';
+const QUEUE_SOUND_KEY = 'lc-queue-sound';
+
+let queueSoundPlayer = null;
+let queueSoundPlayerSrc = null;
+let queueSoundPreference = true;
+
+function normalizeId(value) {
+  const num = Number(value);
+  return Number.isInteger(num) && num > 0 ? num : null;
+}
+
+function getQueuePanel(root = document) {
+  if (root && typeof root.querySelector === 'function') {
+    const found = root.querySelector('#queuePanel');
+    if (found) return found;
+  }
+  return document.getElementById('queuePanel');
+}
+
+function getQueueStorageKey(queuePanel = getQueuePanel()) {
+  if (!queuePanel) return null;
+  const roomId = queuePanel.dataset.roomId;
+  const viewerId = queuePanel.dataset.viewerId || 'viewer';
+  if (!roomId) return null;
+  return `${QUEUE_SEEN_KEY_PREFIX}:${roomId}:${viewerId}`;
+}
+
+function loadQueueSeenState(queuePanel = getQueuePanel()) {
+  const storageKey = getQueueStorageKey(queuePanel);
+  let seenIds = window.queueSeenQuestionIds;
+
+  const needsLoad = !seenIds || window.queueSeenQuestionIdsKey !== storageKey;
+  if (needsLoad) {
+    seenIds = new Set();
+    if (storageKey) {
+      try {
+        const stored = localStorage.getItem(storageKey);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((value) => {
+              const id = normalizeId(value);
+              if (id) {
+                seenIds.add(id);
+              }
+            });
+          }
+        }
+      } catch (e) {
+        /* ignore */
+      }
+    }
+    window.queueSeenQuestionIds = seenIds;
+    window.queueSeenQuestionIdsKey = storageKey;
+  }
+
+  return { storageKey, seenIds };
+}
+
+function persistQueueSeenState(storageKey, seenIds) {
+  if (!storageKey || !seenIds) return;
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(Array.from(seenIds)));
+  } catch (e) {
+    /* ignore */
+  }
+}
+
+function updateQueueBadge(queuePanel = getQueuePanel()) {
+  if (!queuePanel) return;
+  const hasNew = queuePanel.querySelector('.queue-item.queue-item-new');
+  let badge = document.getElementById('queueNewBadge');
+
+  queuePanel.classList.toggle('has-new', !!hasNew);
+
+  if (hasNew && !badge) {
+    badge = document.createElement('span');
+    badge.id = 'queueNewBadge';
+    badge.className = 'queue-new-badge';
+    badge.innerHTML = '<span>New</span>';
+    const headerExtra = queuePanel.querySelector('.queue-header-extra');
+    if (headerExtra) {
+      headerExtra.prepend(badge);
+    } else {
+      queuePanel.prepend(badge);
+    }
+  } else if (!hasNew && badge) {
+    badge.remove();
+  }
+}
+
+function loadQueueSoundSetting() {
+  let enabled = true;
+  try {
+    const stored = localStorage.getItem(QUEUE_SOUND_KEY);
+    if (stored === 'off') {
+      enabled = false;
+    } else if (stored === 'on') {
+      enabled = true;
+    }
+  } catch (e) {
+    /* ignore */
+  }
+  queueSoundPreference = enabled;
+  return enabled;
+}
+
+function persistQueueSoundSetting(enabled) {
+  const value = enabled ? 'on' : 'off';
+  try {
+    localStorage.setItem(QUEUE_SOUND_KEY, value);
+  } catch (e) {
+    /* ignore */
+  }
+}
+
+function isQueueSoundEnabled() {
+  return typeof queueSoundPreference === 'boolean'
+    ? queueSoundPreference
+    : loadQueueSoundSetting();
+}
+
+function ensureQueueSoundPlayer(url) {
+  const src = url || window.queueSoundUrl || queueSoundPlayerSrc;
+  if (!src) return null;
+  if (!queueSoundPlayer || queueSoundPlayerSrc !== src) {
+    try {
+      queueSoundPlayer = new Audio(src);
+      queueSoundPlayer.preload = 'auto';
+      queueSoundPlayerSrc = src;
+    } catch (e) {
+      queueSoundPlayer = null;
+    }
+  }
+  return queueSoundPlayer;
+}
+
+function playQueueSound(url) {
+  if (!isQueueSoundEnabled()) return;
+  const player = ensureQueueSoundPlayer(url);
+  if (!player) return;
+  try {
+    player.currentTime = 0;
+    player.play().catch(() => {});
+  } catch (e) {
+    /* ignore */
+  }
+}
+
+function setupQueueSoundToggle() {
+  const toggles = document.querySelectorAll('[data-queue-sound-toggle]');
+  if (!toggles.length) return;
+
+  let enabled = loadQueueSoundSetting();
+
+  const syncUI = () => {
+    toggles.forEach((btn) => {
+      const stateEl = btn.querySelector('[data-sound-state]');
+      if (stateEl) {
+        stateEl.textContent = enabled ? 'On' : 'Off';
+      }
+      btn.classList.toggle('off', !enabled);
+    });
+  };
+
+  toggles.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      enabled = !enabled;
+      queueSoundPreference = enabled;
+      persistQueueSoundSetting(enabled);
+      syncUI();
+    });
+  });
+
+  syncUI();
+}
+
+function initQueueSoundPlayer(url) {
+  ensureQueueSoundPlayer(url);
+}
 
 function refreshLucideIcons() {
   if (window.lucide && typeof window.lucide.createIcons === 'function') {
@@ -212,69 +393,49 @@ function setupHistoryOpener(root = document) {
 }
 
 function setupQueueNewHandlers(root = document) {
-  window.queueSeenQuestionIds = window.queueSeenQuestionIds || new Set();
-  const queueItems = root.querySelectorAll('.queue-item');
-  if (!queueItems.length) return;
-
-  if (window.queueSeenQuestionIds.size === 0) {
-    queueItems.forEach((item) => {
-      const id = Number(item.dataset.questionId || 0);
-      if (id) {
-        window.queueSeenQuestionIds.add(id);
-      }
-    });
+  const queuePanel = getQueuePanel(root);
+  const scope = queuePanel || root;
+  const queueItems = scope.querySelectorAll('.queue-item');
+  const { storageKey, seenIds } = loadQueueSeenState(queuePanel);
+  if (!queueItems.length) {
+    updateQueueBadge(queuePanel);
+    return;
   }
 
-  const removeBadgeIfCleared = () => {
-    const hasNew = document.querySelector('.queue-item.queue-item-new');
-    const badge = document.getElementById('queueNewBadge');
-    const queuePanel = document.getElementById('queuePanel');
-    if (!hasNew && badge) {
-      badge.remove();
-    }
-    if (!hasNew && queuePanel) {
-      queuePanel.classList.remove('has-new');
-    }
+  const markSeen = (id) => {
+    if (!id || seenIds.has(id)) return;
+    seenIds.add(id);
+    persistQueueSeenState(storageKey, seenIds);
   };
 
   queueItems.forEach((item) => {
-    const id = Number(item.dataset.questionId || 0);
+    const id = normalizeId(item.dataset.questionId);
     const isNewStatus = item.dataset.status === 'new';
-    if (id && !window.queueSeenQuestionIds.has(id) && isNewStatus) {
+    const isSeen = id && seenIds.has(id);
+
+    if (!isNewStatus) {
+      item.classList.remove('queue-item-new');
+    } else if (id && !isSeen) {
       item.classList.add('queue-item-new');
-      window.queueSeenQuestionIds.add(id);
-    } else if (id && window.queueSeenQuestionIds.has(id)) {
+    } else if (id && isSeen) {
       item.classList.remove('queue-item-new');
     }
 
     item.addEventListener('click', () => {
-      if (!item.classList.contains('queue-item-new')) return;
+      if (!id || !item.classList.contains('queue-item-new')) return;
       item.classList.remove('queue-item-new');
-      removeBadgeIfCleared();
+      markSeen(id);
+      updateQueueBadge(queuePanel);
     });
   });
 
-  removeBadgeIfCleared();
+  updateQueueBadge(queuePanel);
 }
 
 function markQueueHasNew() {
   const queuePanel = document.getElementById('queuePanel');
   if (queuePanel) {
     setupQueueNewHandlers(queuePanel);
-    const hasNew = queuePanel.querySelector('.queue-item.queue-item-new');
-    queuePanel.classList.toggle('has-new', !!hasNew);
-    if (hasNew && !document.getElementById('queueNewBadge')) {
-      const badge = document.createElement('span');
-      badge.id = 'queueNewBadge';
-      badge.className = 'queue-new-badge';
-      badge.innerHTML = '<span>New</span>';
-      const headerExtra = queuePanel.querySelector('.queue-header-extra');
-      if (headerExtra) {
-        headerExtra.prepend(badge);
-      } else {
-        queuePanel.prepend(badge);
-      }
-    }
   }
 }
 
@@ -337,11 +498,13 @@ function setupInlineEditors(root = document) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  loadQueueSoundSetting();
   initTheme();
   setupThemeToggle();
   setupCopyButtons();
   setupMobileMenu();
   setupUserMenus();
+  setupQueueSoundToggle();
   setupMobileTabs();
   setupChatEnterSubmit();
   setupHistoryOpener();
@@ -359,3 +522,6 @@ window.rebindQueuePanels = (root = document) => {
 };
 
 window.markQueueHasNew = markQueueHasNew;
+window.playQueueSound = playQueueSound;
+window.initQueueSoundPlayer = initQueueSoundPlayer;
+window.isQueueSoundEnabled = isQueueSoundEnabled;

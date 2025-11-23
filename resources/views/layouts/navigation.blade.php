@@ -26,6 +26,10 @@
           <i data-lucide="chevron-down" aria-hidden="true"></i>
         </summary>
         <div class="user-menu-dropdown">
+          <button type="button" class="dropdown-link setting" data-queue-sound-toggle>
+            <span>Question sound</span>
+            <span class="pill" data-sound-state>On</span>
+          </button>
           <a class="dropdown-link" href="{{ route('profile.edit') }}">Profile</a>
           <form method="POST" action="{{ route('logout') }}">
             @csrf
