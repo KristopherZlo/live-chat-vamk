@@ -29,6 +29,8 @@ Route::middleware(['auth'])->group(function () {
         ->name('rooms.store');
     Route::patch('/rooms/{room}', [RoomController::class, 'update'])
         ->name('rooms.update');
+    Route::delete('/rooms/{room}', [RoomController::class, 'destroy'])
+        ->name('rooms.destroy');
 });
 
 // Публичная страница комнаты по slug
