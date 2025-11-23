@@ -30,6 +30,23 @@
         {{ $slot }}
     </main>
 
+    @unless(request()->routeIs('rooms.*'))
+        <nav class="mobile-tabs app-mobile-tabs" aria-label="Quick navigation">
+            <a class="mobile-tab-btn {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
+                <i data-lucide="home"></i>
+                <span>Dashboard</span>
+            </a>
+            <a class="mobile-tab-btn {{ request()->routeIs('rooms.create') ? 'active' : '' }}" href="{{ route('rooms.create') }}">
+                <i data-lucide="plus"></i>
+                <span>New room</span>
+            </a>
+            <a class="mobile-tab-btn {{ request()->routeIs('profile.edit') ? 'active' : '' }}" href="{{ route('profile.edit') }}">
+                <i data-lucide="user"></i>
+                <span>Profile</span>
+            </a>
+        </nav>
+    @endunless
+
     <footer class="app-footer">
             <div class="footer-grid">
                 <div class="footer-brand">

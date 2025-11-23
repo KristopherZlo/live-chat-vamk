@@ -3,7 +3,13 @@
     $historyCount = $historyQuestions->count();
 @endphp
 
-<section class="panel queue-panel mobile-panel mobile-active" data-mobile-panel="queue" id="queuePanel">
+<section
+  class="panel queue-panel mobile-panel mobile-active"
+  data-mobile-panel="queue"
+  id="queuePanel"
+  data-room-id="{{ $room->id }}"
+  data-viewer-id="{{ auth()->id() ?? 'guest' }}"
+>
   <div class="panel-header">
     <div>
       <div class="panel-title">

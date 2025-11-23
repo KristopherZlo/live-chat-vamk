@@ -2,6 +2,7 @@
     @php
         $publicLink = route('rooms.public', $room->slug);
         $isClosed = $room->status !== 'active';
+        $queueSoundUrl = \Illuminate\Support\Facades\Vite::asset('resources/audio/new-question-sound.mp3');
     @endphp
     @php
         $avatarPalette = ['#2563eb', '#0ea5e9', '#6366f1', '#8b5cf6', '#14b8a6', '#f97316', '#f59e0b', '#10b981', '#ef4444'];
@@ -282,9 +283,11 @@
         <script>
             document.addEventListener('DOMContentLoaded', () => {
                 const roomId = {{ $room->id }};
+                const isOwnerUser = @json($isOwner);
                 const currentUserId = @json(auth()->id());
                 const currentParticipantId = @json($participant?->id);
                 const publicLink = @json($publicLink);
+                const queueSoundUrl = @json($queueSoundUrl);
                 const questionsPanel = document.getElementById('questions-panel');
                 const questionsPanelUrl = @json(route('rooms.questionsPanel', $room));
                 const myQuestionsPanel = document.getElementById('myQuestionsPanel');
@@ -305,6 +308,13 @@
                 const replyPreviewText = document.getElementById('replyPreviewText');
                 const replyPreviewCancel = document.getElementById('replyPreviewCancel');
                 const avatarPalette = ['#2563eb', '#0ea5e9', '#6366f1', '#8b5cf6', '#14b8a6', '#f97316', '#f59e0b', '#10b981', '#ef4444'];
+
+                if (queueSoundUrl) {
+                    window.queueSoundUrl = queueSoundUrl;
+                    if (typeof window.initQueueSoundPlayer === 'function') {
+                        window.initQueueSoundPlayer(queueSoundUrl);
+                    }
+                }
 
                 const buildQrUrl = (link) => 'https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=' + encodeURIComponent(link);
 
@@ -570,6 +580,9 @@
                             if (questionsPanel) {
                                 queueNeedsNew = true;
                                 reloadQuestionsPanel();
+                            }
+                            if (isOwnerUser && typeof window.playQueueSound === 'function') {
+                                window.playQueueSound(queueSoundUrl);
                             }
                             if (myQuestionsPanel) {
                                 reloadMyQuestionsPanel();
