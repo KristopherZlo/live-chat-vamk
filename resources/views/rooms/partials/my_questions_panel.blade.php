@@ -23,7 +23,6 @@
                     <div class="question-header">
                         <div class="question-meta">
                             <span class="message-meta">{{ $question->created_at->format('H:i') }}</span>
-                            <span class="status-pill status-{{ $question->status }}">{{ ucfirst($question->status) }}</span>
                         </div>
                         @if($room->status !== 'finished')
                             <form method="POST" action="{{ route('questions.participantDelete', $question) }}" onsubmit="return confirm('Delete this question?');" data-remote="my-questions-panel">

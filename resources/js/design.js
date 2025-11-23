@@ -411,7 +411,7 @@ function setupQueueNewHandlers(root = document) {
 
   queueItems.forEach((item) => {
     const id = normalizeId(item.dataset.questionId);
-    const isNewStatus = item.dataset.status === 'new';
+    const isNewStatus = item.classList.contains('queue-item-new');
     const isSeen = id && seenIds.has(id);
 
     if (!isNewStatus) {

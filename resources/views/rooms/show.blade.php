@@ -265,14 +265,16 @@
             </div>
             <div class="qr-body">
                 <div class="qr-box">
-                    <img id="qrImage" alt="QR code" width="140" height="140" loading="lazy">
+                    <canvas id="qrCanvas" role="img" aria-label="QR code"></canvas>
+                    <div class="qr-logo">
+                        <img src="{{ Vite::asset('resources/icons/logo_black.svg') }}" class="qr-logo-img" alt="Live chat logo">
+                    </div>
                 </div>
                 <div class="qr-info">
                     <div class="panel-subtitle">Public link</div>
                     <a href="{{ $publicLink }}" class="qr-link" target="_blank" rel="noreferrer">{{ $publicLink }}</a>
                     <div class="qr-footer">
                         <button class="btn btn-sm btn-ghost" type="button" data-copy="{{ $publicLink }}">Copy link</button>
-                        <a class="btn btn-sm btn-primary" id="qrDownload" href="#" download="room-{{ $room->slug }}-qr.png">Download</a>
                     </div>
                 </div>
             </div>
@@ -295,11 +297,10 @@
                 let queueNeedsNew = false;
                 let questionsPollTimer = null;
                 let myQuestionsPollTimer = null;
-                const qrButton = document.getElementById('qrButton');
-                const qrOverlay = document.getElementById('qrOverlay');
-                const qrClose = document.getElementById('qrClose');
-                const qrImage = document.getElementById('qrImage');
-                const qrDownload = document.getElementById('qrDownload');
+                  const qrButton = document.getElementById('qrButton');
+                  const qrOverlay = document.getElementById('qrOverlay');
+                  const qrClose = document.getElementById('qrClose');
+                  const qrCanvas = document.getElementById('qrCanvas');
                 const chatContainer = document.querySelector('.messages-container');
                 const csrfMeta = document.querySelector('meta[name=\"csrf-token\"]');
                 const replyToInput = document.getElementById('replyToId');
@@ -316,45 +317,218 @@
                     }
                 }
 
-                const buildQrUrl = (link) => 'https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=' + encodeURIComponent(link);
+                  const QR_CANVAS_SIZE = 360;
+                  const QR_FETCH_SIZE = 720;
+                  const buildQrUrl = (link, size = QR_FETCH_SIZE) =>
+                      `https://api.qrserver.com/v1/create-qr-code/?format=png&margin=16&ecc=H&size=${size}x${size}&data=${encodeURIComponent(link)}`;
+                  const getCssVar = (name, fallback = '') => {
+                      const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+                      return value || fallback;
+                  };
+                  const parseQrModules = (imageData, size) => {
+                      const isDark = (x, y) => {
+                          const idx = (y * size + x) * 4;
+                          return imageData.data[idx] < 150;
+                      };
+                      const sampleY = Math.max(1, Math.floor(size * 0.14));
+                      const runs = [];
+                      let lastColor = isDark(0, sampleY);
+                      let start = 0;
+                      for (let x = 1; x <= size; x++) {
+                          const current = x === size ? !lastColor : isDark(x, sampleY);
+                          if (current !== lastColor) {
+                              runs.push({ color: lastColor, length: x - start });
+                              start = x;
+                              lastColor = current;
+                          }
+                      }
+                      if (!runs.length) {
+                          return null;
+                      }
+                      const quietZone = runs[0];
+                      const finderRun = runs.find((run) => run.color && run.length >= 5);
+                      if (!quietZone || !finderRun) {
+                          return null;
+                      }
+                      const moduleSize = Math.max(1, Math.round(finderRun.length / 7));
+                      const available = size - quietZone.length * 2;
+                      const moduleCount = Math.max(21, Math.round(available / moduleSize));
+                      if (moduleCount <= 0) {
+                          return null;
+                      }
+                      const modules = [];
+                      const offset = quietZone.length;
+                      for (let row = 0; row < moduleCount; row++) {
+                          const sampleYPos = Math.min(size - 1, Math.floor(offset + (row + 0.5) * moduleSize));
+                          const rowValues = [];
+                          for (let col = 0; col < moduleCount; col++) {
+                              const sampleXPos = Math.min(size - 1, Math.floor(offset + (col + 0.5) * moduleSize));
+                              rowValues.push(isDark(sampleXPos, sampleYPos));
+                          }
+                          modules.push(rowValues);
+                      }
+                      return { modules, moduleSize, moduleCount, offset };
+                  };
+                  async function fetchQrImage(link, size) {
+                      const response = await fetch(buildQrUrl(link, size), { cache: 'force-cache' });
+                      if (!response.ok) {
+                          throw new Error('Unable to load QR code');
+                      }
+                      const blob = await response.blob();
+                      if (typeof createImageBitmap === 'function') {
+                          return createImageBitmap(blob, { resizeWidth: size, resizeHeight: size });
+                      }
+                      return new Promise((resolve, reject) => {
+                          const url = URL.createObjectURL(blob);
+                          const img = new Image();
+                          img.onload = () => {
+                              URL.revokeObjectURL(url);
+                              resolve(img);
+                          };
+                          img.onerror = (err) => {
+                              URL.revokeObjectURL(url);
+                              reject(err);
+                          };
+                          img.src = url;
+                      });
+                  }
+                  let lastRenderedLink = null;
+                  let lastRenderedTheme = null;
+                  async function drawStyledQr(link) {
+                      if (!qrCanvas || !link) return;
+                      const currentTheme = document.body.dataset.theme || 'light';
+                      if (lastRenderedLink === link && lastRenderedTheme === currentTheme) {
+                          return;
+                      }
+                      const renderJob = (async () => {
+                          const canvasSize = QR_CANVAS_SIZE;
+                          qrCanvas.width = canvasSize;
+                          qrCanvas.height = canvasSize;
+                          qrCanvas.style.width = '100%';
+                          qrCanvas.style.height = '100%';
+                          const ctx = qrCanvas.getContext('2d');
+                          if (!ctx) return;
+                          const backgroundColor = getCssVar('--bg-elevated', '#ffffff');
+                          const dotColor = '#121212';
+                          ctx.clearRect(0, 0, canvasSize, canvasSize);
+                          ctx.fillStyle = backgroundColor;
+                          ctx.fillRect(0, 0, canvasSize, canvasSize);
+                          try {
+                              const image = await fetchQrImage(link, QR_FETCH_SIZE);
+                              const offscreen = document.createElement('canvas');
+                              offscreen.width = canvasSize;
+                              offscreen.height = canvasSize;
+                              const offCtx = offscreen.getContext('2d');
+                              if (!offCtx) return;
+                              offCtx.drawImage(image, 0, 0, canvasSize, canvasSize);
+                              const imageData = offCtx.getImageData(0, 0, canvasSize, canvasSize);
+                              const parsed = parseQrModules(imageData, canvasSize);
+                              if (parsed) {
+                                  ctx.fillStyle = backgroundColor;
+                                  ctx.fillRect(0, 0, canvasSize, canvasSize);
+                                  const moduleSize = parsed.moduleSize;
+                                  const strokeWidth = Math.max(3, moduleSize * 1.05);
+                                  const dotRadius = Math.min(moduleSize * 0.58, strokeWidth / 1.15);
+                                  ctx.lineWidth = strokeWidth;
+                                  ctx.lineCap = 'round';
+                                  ctx.lineJoin = 'round';
+                                  ctx.fillStyle = dotColor;
+                                  ctx.strokeStyle = dotColor;
+                                  parsed.modules.forEach((row, rowIndex) => {
+                                      row.forEach((cell, colIndex) => {
+                                          if (!cell) return;
+                                          const centerX = parsed.offset + (colIndex + 0.5) * moduleSize;
+                                          const centerY = parsed.offset + (rowIndex + 0.5) * moduleSize;
+                                          ctx.beginPath();
+                                          ctx.arc(centerX, centerY, dotRadius, 0, Math.PI * 2);
+                                          ctx.fill();
+                                          if (colIndex < parsed.moduleCount - 1 && row[colIndex + 1]) {
+                                              ctx.beginPath();
+                                              ctx.moveTo(centerX, centerY);
+                                              ctx.lineTo(centerX + moduleSize, centerY);
+                                              ctx.stroke();
+                                          }
+                                          if (rowIndex < parsed.moduleCount - 1 && parsed.modules[rowIndex + 1][colIndex]) {
+                                              ctx.beginPath();
+                                              ctx.moveTo(centerX, centerY);
+                                              ctx.lineTo(centerX, centerY + moduleSize);
+                                              ctx.stroke();
+                                          }
+                                      });
+                                  });
+                                  const blankRadius = Math.min(canvasSize / 2.2, parsed.moduleSize * 4);
+                                  ctx.globalCompositeOperation = 'destination-out';
+                                  ctx.beginPath();
+                                  ctx.arc(canvasSize / 2, canvasSize / 2, blankRadius, 0, Math.PI * 2);
+                                  ctx.fill();
+                                  ctx.globalCompositeOperation = 'source-over';
+                                  ctx.fillStyle = backgroundColor;
+                                  ctx.beginPath();
+                                  ctx.arc(canvasSize / 2, canvasSize / 2, Math.max(blankRadius - 4, 4), 0, Math.PI * 2);
+                                  ctx.fill();
+                                  ctx.globalCompositeOperation = 'source-over';
+                              } else {
+                                  ctx.drawImage(image, 0, 0, canvasSize, canvasSize);
+                              }
+                              if (image && typeof image.close === 'function') {
+                                  image.close();
+                              }
+                          } catch (error) {
+                              console.error('Styled QR build failed', error);
+                              const fallbackUrl = buildQrUrl(link, QR_FETCH_SIZE);
+                              const fallback = new Image();
+                              fallback.crossOrigin = 'anonymous';
+                              fallback.src = fallbackUrl;
+                              await new Promise((resolve) => {
+                                  fallback.onload = fallback.onerror = () => resolve();
+                              });
+                              ctx.drawImage(fallback, 0, 0, canvasSize, canvasSize);
+                              return;
+                          }
+                            lastRenderedLink = link;
+                            lastRenderedTheme = currentTheme;
+                      })();
+                      await renderJob;
+                  }
+                  const openQr = async () => {
+                      if (!qrOverlay) return;
+                      qrOverlay.classList.add('show');
+                      qrOverlay.setAttribute('aria-hidden', 'false');
+                      await drawStyledQr(publicLink);
+                  };
 
-                function openQr() {
-                    if (!qrOverlay) return;
-                    qrOverlay.classList.add('show');
-                    qrOverlay.setAttribute('aria-hidden', 'false');
-                    if (qrImage && !qrImage.src) {
-                        const qrUrl = buildQrUrl(publicLink);
-                        qrImage.src = qrUrl;
-                        if (qrDownload) {
-                            qrDownload.href = qrUrl;
-                        }
-                    }
-                }
+                  function closeQr() {
+                      if (!qrOverlay) return;
+                      qrOverlay.classList.remove('show');
+                      qrOverlay.setAttribute('aria-hidden', 'true');
+                  }
 
-                function closeQr() {
-                    if (!qrOverlay) return;
-                    qrOverlay.classList.remove('show');
-                    qrOverlay.setAttribute('aria-hidden', 'true');
-                }
-
-                if (qrButton) {
-                    qrButton.addEventListener('click', openQr);
-                }
+                  if (qrButton) {
+                    qrButton.addEventListener('click', () => {
+                      openQr().catch(() => {});
+                    });
+                  }
                 if (qrClose) {
                     qrClose.addEventListener('click', closeQr);
                 }
-                if (qrOverlay) {
-                    qrOverlay.addEventListener('click', (event) => {
-                        if (event.target === qrOverlay) {
-                            closeQr();
-                        }
-                    });
-                }
-                document.addEventListener('keydown', (event) => {
-                    if (event.key === 'Escape') {
-                        closeQr();
-                    }
-                });
+                  if (qrOverlay) {
+                      qrOverlay.addEventListener('click', (event) => {
+                          if (event.target === qrOverlay) {
+                              closeQr();
+                          }
+                      });
+                  }
+                  document.addEventListener('keydown', (event) => {
+                      if (event.key === 'Escape') {
+                          closeQr();
+                      }
+                  });
+                  const themeObserver = new MutationObserver(() => {
+                      if (qrOverlay?.classList.contains('show')) {
+                          drawStyledQr(publicLink);
+                      }
+                  });
+                  themeObserver.observe(document.body, { attributes: true, attributeFilter: ['data-theme'] });
 
                 function bindQueueInteractions(scope = document) {
                     if (!scope) return;
@@ -443,7 +617,7 @@
                         const html = await response.text();
                         questionsPanel.innerHTML = html;
                         bindQueueInteractions(questionsPanel);
-                        const hasNewItems = questionsPanel.querySelector('.queue-item[data-status=\"new\"]');
+                        const hasNewItems = questionsPanel.querySelector('.queue-item.queue-item-new');
                         if ((queueNeedsNew || hasNewItems) && typeof window.markQueueHasNew === 'function') {
                             window.markQueueHasNew();
                             queueNeedsNew = false;

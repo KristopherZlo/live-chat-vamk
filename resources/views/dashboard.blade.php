@@ -10,7 +10,7 @@
         <div class="dashboard-hero__content">
             <div class="eyebrow">Dashboard</div>
             <h1 class="dashboard-hero__title" id="dashboardGreeting" data-username="{{ $user->name }}">
-                Welcome back, {{ $user->name }}
+                Good day, {{ $user->name }}
             </h1>
             <p class="panel-subtitle">Run live rooms in the same sleek style as your chats.</p>
             <div class="dashboard-hero__actions">
@@ -168,10 +168,6 @@
                                         <span>{{ $room->status === 'active' ? 'Close room' : 'Reopen room' }}</span>
                                     </button>
                                 </form>
-                                <a href="{{ $publicLink }}" class="btn btn-sm btn-ghost" target="_blank" rel="noreferrer">
-                                    <i data-lucide="external-link"></i>
-                                    <span>Public view</span>
-                                </a>
                                 <a href="{{ $publicLink }}" class="btn btn-sm btn-primary" target="_blank" rel="noreferrer">
                                     <i data-lucide="messages-square"></i>
                                     <span>Open live room</span>
