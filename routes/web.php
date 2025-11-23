@@ -6,10 +6,10 @@ use App\Http\Controllers\RoomController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\QuestionController;
 
-Route::get('/', function () {
-    return redirect()->route('dashboard');
-})->middleware('auth');
+Route::get('/', [RoomController::class, 'landing'])->name('home');
 
+Route::get('/join', [RoomController::class, 'joinForm'])->name('rooms.join');
+Route::post('/join', [RoomController::class, 'joinSubmit'])->name('rooms.join.submit');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

@@ -12,6 +12,52 @@ use Illuminate\Validation\Rule;
 
 class RoomController extends Controller
 {
+    public function landing()
+    {
+        if (Auth::check()) {
+            return redirect()->route('dashboard');
+        }
+
+        return redirect()->route('rooms.join');
+    }
+
+    public function joinForm()
+    {
+        return view('rooms.join');
+    }
+
+    public function joinSubmit(Request $request)
+    {
+        $data = $request->validate([
+            'code' => ['required', 'string', 'max:255'],
+        ]);
+
+        $input = trim($data['code']);
+
+        $slug = Str::of($input)
+            ->afterLast('/')
+            ->before('?')
+            ->before('#')
+            ->trim()
+            ->value();
+
+        if ($slug === '') {
+            return back()
+                ->withErrors(['code' => 'Enter a valid room code.'])
+                ->withInput();
+        }
+
+        $room = Room::where('slug', $slug)->first();
+
+        if (!$room) {
+            return back()
+                ->withErrors(['code' => 'Room not found. Check the code and try again.'])
+                ->withInput();
+        }
+
+        return redirect()->route('rooms.public', $slug);
+    }
+
     protected function ensureOwner(Room $room): void
     {
         if (!Auth::check() || Auth::id() !== $room->user_id) {

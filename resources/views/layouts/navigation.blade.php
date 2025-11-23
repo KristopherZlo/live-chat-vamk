@@ -1,22 +1,22 @@
 <header class="app-header">
   <div class="app-title">
     <div class="app-logo">
-      <a class="app-logo-link" href="{{ route('dashboard') }}" aria-label="Live Chat">
-        <img src="{{ Vite::asset('resources/icons/logo_black.svg') }}" class="app-logo-img app-logo-img--light" alt="Live Chat logo">
-        <img src="{{ Vite::asset('resources/icons/logo_white.svg') }}" class="app-logo-img app-logo-img--dark" alt="Live Chat logo">
+      <a class="app-logo-link" href="{{ route('dashboard') }}" aria-label="Ghost Room">
+        <img src="{{ Vite::asset('resources/icons/logo_black.svg') }}" class="app-logo-img app-logo-img--light" alt="Ghost Room logo">
+        <img src="{{ Vite::asset('resources/icons/logo_white.svg') }}" class="app-logo-img app-logo-img--dark" alt="Ghost Room logo">
       </a>
     </div>
     <div class="app-title-text">
-      <a href="{{ route('dashboard') }}" class="room-name">Live Chat</a>
-      <div class="room-code">VAMK Instant feedback</div>
+      <a href="{{ route('dashboard') }}" class="room-name">Ghost Room</a>
+      <div class="room-code">Instant feedback</div>
     </div>
     <span class="badge">beta</span>
   </div>
 
   <div class="app-controls">
     <nav class="app-nav">
-      <a class="btn btn-sm btn-ghost" href="{{ route('dashboard') }}">Dashboard</a>
       @auth
+        <a class="btn btn-sm btn-ghost" href="{{ route('dashboard') }}">Dashboard</a>
         <a class="btn btn-sm btn-ghost" href="{{ route('rooms.create') }}">New room</a>
       @endauth
     </nav>
@@ -45,7 +45,6 @@
       </details>
     @else
       <a class="btn btn-sm btn-primary" href="{{ route('login') }}">Sign in</a>
-      <a class="btn btn-sm btn-ghost" href="{{ route('register') }}">Register</a>
     @endauth
   </div>
 </header>
@@ -55,11 +54,11 @@
     <div class="mobile-menu-handle"></div>
     <div class="mobile-menu-row">
       <div class="mobile-menu-actions">
-        <a class="btn btn-sm btn-ghost" href="{{ route('dashboard') }}" data-close-menu>
-          <i data-lucide="layout-dashboard"></i>
-          <span>Dashboard</span>
-        </a>
         @auth
+          <a class="btn btn-sm btn-ghost" href="{{ route('dashboard') }}" data-close-menu>
+            <i data-lucide="layout-dashboard"></i>
+            <span>Dashboard</span>
+          </a>
           <a class="btn btn-sm btn-ghost" href="{{ route('rooms.create') }}" data-close-menu>
             <i data-lucide="plus"></i>
             <span>New room</span>
@@ -87,10 +86,6 @@
           <a class="btn btn-sm btn-primary" href="{{ route('login') }}" data-close-menu>
             <i data-lucide="log-in"></i>
             <span>Sign in</span>
-          </a>
-          <a class="btn btn-sm btn-ghost" href="{{ route('register') }}" data-close-menu>
-            <i data-lucide="user-plus"></i>
-            <span>Register</span>
           </a>
         @endauth
       </div>

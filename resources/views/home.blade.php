@@ -3,7 +3,7 @@
         <div class="panel-header">
             <div class="panel-title">
                 <i data-lucide="radio"></i>
-                <span>Welcome to Live Chat VAMK</span>
+                <span>Welcome to Ghost Room</span>
             </div>
         </div>
         <div class="panel-body">

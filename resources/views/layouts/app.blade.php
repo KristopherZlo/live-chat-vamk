@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ config('app.name', 'Live Chat') }}</title>
+    <title>{{ config('app.name', 'Ghost Room') }}</title>
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
     <script src="https://unpkg.com/lucide@latest" defer></script>
@@ -52,8 +52,6 @@
             <div class="footer-column">
                 <div class="footer-heading">Support</div>
                 <div class="footer-links-list">
-                    <a href="#">FAQ</a>
-                    <a href="#">GDPR</a>
                     <a href="{{ route('privacy') }}">Privacy & terms</a>
                     <a href="mailto:zloydeveloper.info@gmail.com">Contact</a>
                 </div>
@@ -69,8 +67,8 @@
             <div class="footer-column">
                 <div class="footer-heading">About</div>
                 <div class="footer-links-list">
-                    <span class="footer-muted">Live Chat | Instant feedback</span>
-                    <span class="footer-muted">Made by Zlo</span>
+                    <span class="footer-muted">Ghost Room - Anonymous live chat for lectures. Send questions without interrupting the class.</span>
+                    <span class="footer-muted">Made with ❤ by Zloy</span>
                 </div>
             </div>
         </div>
