@@ -2759,12 +2759,156 @@ main {
   overflow: visible;
 }
 
+.room-header .panel-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.room-header-bar {
+  width: 100%;
+}
+
+.room-header-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: min(50%, 680px);
+  min-width: 320px;
+}
+
+.room-title-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.room-header-aside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+  min-width: 260px;
+}
+
+.room-header .panel-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.room-header .panel-actions .btn {
+  flex: 0 0 auto;
+}
+
+.room-status {
+  align-self: flex-end;
+}
+
 .room-header .panel-title {
   align-items: center;
 }
 
 .room-header .panel-title i {
   margin-top: 0.18rem;
+}
+
+.room-description {
+  position: relative;
+  line-height: 1.45;
+}
+
+.room-description.is-collapsible {
+  cursor: pointer;
+}
+
+.room-description.is-collapsed {
+  max-height: 4.6rem;
+  overflow: hidden;
+}
+
+.room-description.is-collapsible::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1.6rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0), var(--bg-elevated));
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+[data-theme="dark"] .room-description.is-collapsible::after {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0), var(--bg-elevated));
+}
+
+.room-description.is-collapsible.is-collapsed::after {
+  opacity: 1;
+}
+
+.room-description.is-collapsible::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0.2rem;
+  font-size: 0.75rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.6rem;
+  padding: 0.15rem 0.5rem;
+  color: var(--text-secondary);
+  opacity: 0;
+  transform: translateY(2px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  pointer-events: none;
+}
+
+.room-description.is-collapsible.is-collapsed::before {
+  content: "Expand";
+}
+
+.room-description.is-collapsible:not(.is-collapsed)::before {
+  content: "Collapse";
+}
+
+.room-description.is-collapsible:hover::before,
+.room-description.is-collapsible:focus-visible::before {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.room-description.is-collapsible:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+}
+
+@media (max-width: 980px) {
+  .room-header .panel-header {
+    grid-template-columns: 1fr;
+  }
+
+  .room-header-main {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .room-header-aside {
+    width: 100%;
+    align-items: flex-start;
+  }
+
+  .room-status {
+    align-self: flex-start;
+  }
+
+  .room-header .panel-actions {
+    justify-content: flex-start;
+  }
 }
 
 .app-mobile-tabs {

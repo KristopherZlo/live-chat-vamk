@@ -498,6 +498,35 @@ function setupInlineEditors(root = document) {
   });
 }
 
+function setupRoomDescriptions(root = document) {
+  const descriptions = root.querySelectorAll('[data-room-description]');
+  descriptions.forEach((desc) => {
+    if (desc.dataset.roomDescriptionBound === '1') return;
+    desc.dataset.roomDescriptionBound = '1';
+
+    const apply = () => {
+      const collapsed = desc.dataset.collapsed !== 'false';
+      desc.classList.toggle('is-collapsed', collapsed);
+      desc.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    };
+
+    const toggle = () => {
+      const collapsed = desc.dataset.collapsed !== 'false';
+      desc.dataset.collapsed = collapsed ? 'false' : 'true';
+      apply();
+    };
+
+    desc.addEventListener('click', toggle);
+    desc.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      toggle();
+    });
+
+    apply();
+  });
+}
+
 function setupRoomDeleteModals() {
   const modals = Array.from(document.querySelectorAll('[data-room-delete-modal]'));
   const triggers = document.querySelectorAll('[data-room-delete-trigger]');
@@ -585,6 +614,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupQueueNewHandlers();
   setupFlashMessages();
   setupInlineEditors();
+  setupRoomDescriptions();
   setupRoomDeleteModals();
   refreshLucideIcons();
 });
@@ -593,6 +623,7 @@ window.rebindQueuePanels = (root = document) => {
   setupHistoryOpener(root);
   setupQueueNewHandlers(root);
   setupFlashMessages(root);
+  setupRoomDescriptions(root);
   refreshLucideIcons();
 };
 
