@@ -163,6 +163,90 @@
                                     <i data-lucide="messages-square"></i>
                                     <span>Open live room</span>
                                 </a>
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-danger room-delete-btn"
+                                    data-room-delete-trigger="{{ $room->id }}"
+                                >
+                                    <i data-lucide="trash-2"></i>
+                                    <span>Delete room</span>
+                                </button>
+                            </div>
+
+                            <div
+                                class="modal-overlay room-delete-modal"
+                                data-room-delete-modal="{{ $room->id }}"
+                                hidden
+                            >
+                                <div
+                                    class="modal-dialog"
+                                    role="dialog"
+                                    aria-modal="true"
+                                    aria-labelledby="deleteRoomTitle{{ $room->id }}"
+                                >
+                                    <div class="modal-header">
+                                        <div class="modal-title-group">
+                                            <div class="modal-eyebrow">Delete room</div>
+                                            <h3 class="modal-title" id="deleteRoomTitle{{ $room->id }}">
+                                                Type "{{ $room->title }}" to confirm
+                                            </h3>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            class="icon-btn modal-close"
+                                            aria-label="Close"
+                                            data-room-delete-close
+                                        >
+                                            <i data-lucide="x"></i>
+                                        </button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p class="modal-text">
+                                            Deleting this room will permanently remove <strong>{{ $room->title }}</strong>,
+                                            all questions, and all messages inside it.
+                                        </p>
+                                        <div class="modal-alert danger">
+                                            <i data-lucide="shield-alert"></i>
+                                            <span>This action cannot be undone.</span>
+                                        </div>
+                                        <form
+                                            method="POST"
+                                            action="{{ route('rooms.destroy', $room) }}"
+                                            class="modal-form"
+                                        >
+                                            @csrf
+                                            @method('DELETE')
+                                            <label class="modal-label" for="confirmTitle{{ $room->id }}">
+                                                Enter the room name to delete
+                                            </label>
+                                            <input
+                                                type="text"
+                                                id="confirmTitle{{ $room->id }}"
+                                                name="confirm_title"
+                                                class="field-control modal-input"
+                                                placeholder="{{ $room->title }}"
+                                                autocomplete="off"
+                                                data-room-delete-input
+                                                data-room-title="{{ $room->title }}"
+                                                required
+                                            >
+                                            <div class="modal-actions">
+                                                <button type="button" class="btn btn-ghost" data-room-delete-close>
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    type="submit"
+                                                    class="btn btn-danger"
+                                                    data-room-delete-submit
+                                                    disabled
+                                                >
+                                                    <i data-lucide="trash-2"></i>
+                                                    <span>Delete room</span>
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
                             </div>
                         </article>
                     @endforeach

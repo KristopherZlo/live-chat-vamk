@@ -8,6 +8,7 @@ use App\Models\Participant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class RoomController extends Controller
 {
@@ -99,6 +100,23 @@ class RoomController extends Controller
         }
 
         return back()->with('status', $statusMessage);
+    }
+
+    public function destroy(Request $request, Room $room)
+    {
+        $this->ensureOwner($room);
+
+        $request->validate([
+            'confirm_title' => ['required', 'string', Rule::in([$room->title])],
+        ], [
+            'confirm_title.in' => 'The room name does not match. Type it exactly to delete.',
+        ]);
+
+        $room->delete();
+
+        return redirect()
+            ->route('dashboard')
+            ->with('status', 'Room deleted along with its questions and messages.');
     }
 
     public function showPublic(Request $request, $slug)
@@ -267,4 +285,3 @@ class RoomController extends Controller
         ]);
     }
 }
-

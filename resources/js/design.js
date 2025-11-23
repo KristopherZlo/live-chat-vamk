@@ -498,6 +498,79 @@ function setupInlineEditors(root = document) {
   });
 }
 
+function setupRoomDeleteModals() {
+  const modals = Array.from(document.querySelectorAll('[data-room-delete-modal]'));
+  const triggers = document.querySelectorAll('[data-room-delete-trigger]');
+  if (!modals.length || !triggers.length) return;
+
+  const syncState = (modal) => {
+    const input = modal.querySelector('[data-room-delete-input]');
+    const submit = modal.querySelector('[data-room-delete-submit]');
+    const expected = input ? input.dataset.roomTitle || '' : '';
+    if (submit) {
+      submit.disabled = !input || input.value !== expected;
+    }
+  };
+
+  const closeModal = (modal) => {
+    if (!modal || modal.hasAttribute('hidden')) return;
+    modal.classList.remove('show');
+    setTimeout(() => {
+      modal.hidden = true;
+      const anyOpen = modals.some((m) => !m.hasAttribute('hidden'));
+      if (!anyOpen) {
+        document.body.classList.remove('modal-open');
+      }
+    }, 140);
+  };
+
+  const openModal = (modal) => {
+    if (!modal) return;
+    modal.hidden = false;
+    requestAnimationFrame(() => modal.classList.add('show'));
+    document.body.classList.add('modal-open');
+    const input = modal.querySelector('[data-room-delete-input]');
+    if (input) {
+      input.value = '';
+      syncState(modal);
+      input.focus({ preventScroll: true });
+    }
+  };
+
+  modals.forEach((modal) => {
+    const input = modal.querySelector('[data-room-delete-input]');
+    if (input) {
+      input.addEventListener('input', () => syncState(modal));
+    }
+
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) {
+        closeModal(modal);
+      }
+    });
+
+    modal.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        closeModal(modal);
+      }
+    });
+
+    modal.querySelectorAll('[data-room-delete-close]').forEach((btn) => {
+      btn.addEventListener('click', () => closeModal(modal));
+    });
+
+    syncState(modal);
+  });
+
+  triggers.forEach((trigger) => {
+    const modal = document.querySelector(
+      `[data-room-delete-modal="${trigger.dataset.roomDeleteTrigger}"]`,
+    );
+    if (!modal) return;
+    trigger.addEventListener('click', () => openModal(modal));
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   loadQueueSoundSetting();
   initTheme();
@@ -512,6 +585,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupQueueNewHandlers();
   setupFlashMessages();
   setupInlineEditors();
+  setupRoomDeleteModals();
   refreshLucideIcons();
 });
 
