@@ -137,7 +137,7 @@
                 <div class="panel-header">
                     <div class="panel-title">
                         <i data-lucide="message-circle"></i>
-                        <span>Live chat</span>
+                        <span>Ghost Room chat</span>
                     </div>
                     <div class="panel-subtitle">Ask and discuss during the lecture.</div>
                 </div>
@@ -286,7 +286,7 @@
                 <div class="qr-box">
                     <canvas id="qrCanvas" role="img" aria-label="QR code"></canvas>
                     <div class="qr-logo">
-                        <img src="{{ Vite::asset('resources/icons/logo_black.svg') }}" class="qr-logo-img" alt="Live chat logo">
+                        <img src="{{ Vite::asset('resources/icons/logo_black.svg') }}" class="qr-logo-img" alt="Ghost Room logo">
                     </div>
                 </div>
                 <div class="qr-info">

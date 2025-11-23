@@ -3733,6 +3733,54 @@ main {
   flex: 0 0 auto;
 }
 
+/* Join page */
+.join-hero {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.2rem;
+  padding: 1.35rem 1.4rem 1.5rem;
+  align-items: center;
+}
+
+.join-hero__content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.join-hero__title {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.join-hero__card {
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.85rem;
+  background: var(--bg-elevated);
+  padding: 1rem 1.1rem 1.15rem;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.join-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.join-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.join-actions .btn {
+  flex: 1 1 auto;
+  justify-content: center;
+}
 @media (max-width: 1200px) {
   .rooms-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
