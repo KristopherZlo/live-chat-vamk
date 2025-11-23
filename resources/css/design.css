@@ -3739,11 +3739,29 @@ main {
       color: #34d399;
     }
 
-    .flash-close {
-      border: none;
-      background: transparent;
-      cursor: pointer;
-    }
+.flash-close {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.legal-page .panel-body {
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.legal-content {
+  max-width: 800px;
+  margin: 0 auto;
+  display: grid;
+  gap: 1rem;
+  line-height: 1.6;
+}
+
+.legal-meta {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
 
 @media (max-width: 720px) {
   .dashboard-hero {
