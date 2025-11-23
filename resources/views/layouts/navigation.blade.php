@@ -49,32 +49,59 @@
     <div class="mobile-menu-handle"></div>
     <div class="mobile-menu-row">
       <div class="mobile-menu-actions">
-        <a class="btn btn-sm btn-ghost" href="{{ route('dashboard') }}" data-close-menu>Dashboard</a>
+        <a class="btn btn-sm btn-ghost" href="{{ route('dashboard') }}" data-close-menu>
+          <i data-lucide="layout-dashboard"></i>
+          <span>Dashboard</span>
+        </a>
         @auth
-          <a class="btn btn-sm btn-ghost" href="{{ route('rooms.create') }}" data-close-menu>New room</a>
+          <a class="btn btn-sm btn-ghost" href="{{ route('rooms.create') }}" data-close-menu>
+            <i data-lucide="plus"></i>
+            <span>New room</span>
+          </a>
         @endauth
-        <button class="btn btn-sm btn-ghost" type="button" data-theme-toggle data-close-menu>Toggle theme</button>
+        <button class="btn btn-sm btn-ghost" type="button" data-theme-toggle data-close-menu>
+          <i data-lucide="sun"></i>
+          <span>Toggle theme</span>
+        </button>
       </div>
       <div class="mobile-menu-actions">
         @auth
-          <a class="btn btn-sm btn-ghost" href="{{ route('profile.edit') }}" data-close-menu>Profile</a>
+          <a class="btn btn-sm btn-ghost" href="{{ route('profile.edit') }}" data-close-menu>
+            <i data-lucide="user"></i>
+            <span>Profile</span>
+          </a>
           <form method="POST" action="{{ route('logout') }}">
             @csrf
-            <button type="submit" class="btn btn-sm btn-primary" data-close-menu>Log out</button>
+            <button type="submit" class="btn btn-sm btn-primary" data-close-menu>
+              <i data-lucide="log-out"></i>
+              <span>Log out</span>
+            </button>
           </form>
         @else
-          <a class="btn btn-sm btn-primary" href="{{ route('login') }}" data-close-menu>Sign in</a>
-          <a class="btn btn-sm btn-ghost" href="{{ route('register') }}" data-close-menu>Register</a>
+          <a class="btn btn-sm btn-primary" href="{{ route('login') }}" data-close-menu>
+            <i data-lucide="log-in"></i>
+            <span>Sign in</span>
+          </a>
+          <a class="btn btn-sm btn-ghost" href="{{ route('register') }}" data-close-menu>
+            <i data-lucide="user-plus"></i>
+            <span>Register</span>
+          </a>
         @endauth
       </div>
     </div>
 
-    <div class="mobile-menu-footer">
-      <div class="mobile-menu-footer-links">
-        <a href="#" data-close-menu>GDPR</a>
-        <a href="#" data-close-menu>Contact</a>
-      </div>
-      <div class="mobile-menu-footer-lang">
+      <div class="mobile-menu-footer">
+        <div class="mobile-menu-footer-links">
+          <a href="#" data-close-menu>
+            <i data-lucide="shield-check"></i>
+            <span>GDPR</span>
+          </a>
+          <a href="#" data-close-menu>
+            <i data-lucide="mail"></i>
+            <span>Contact</span>
+          </a>
+        </div>
+        <div class="mobile-menu-footer-lang">
         <button class="footer-lang active" type="button" data-close-menu>FI</button>
         <button class="footer-lang" type="button" data-close-menu>RU</button>
         <button class="footer-lang" type="button" data-close-menu>EN</button>

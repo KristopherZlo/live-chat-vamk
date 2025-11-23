@@ -13,7 +13,7 @@
         };
     @endphp
 
-    <div class="{{ $isOwner ? 'role-teacher' : 'role-student' }}">
+    <div class="{{ $isOwner ? 'role-teacher' : 'role-student' }} room-page">
         <div class="panel room-header">
             <div class="panel-header">
                 <div class="panel-title">

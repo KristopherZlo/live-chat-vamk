@@ -308,7 +308,8 @@ function setupMobileTabs() {
   const tabButtons = document.querySelectorAll('[data-tab-target]');
   if (!tabButtons.length) return;
 
-  let active = tabButtons[0].dataset.tabTarget;
+  const initial = Array.from(tabButtons).find((btn) => btn.classList.contains('active'));
+  let active = initial ? initial.dataset.tabTarget : tabButtons[0].dataset.tabTarget;
   const MOBILE_BREAKPOINT = 768;
 
   const sync = () => {
