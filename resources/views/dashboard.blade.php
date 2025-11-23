@@ -147,15 +147,6 @@
                                         <div class="room-stat-value">{{ $room->questions_count }}</div>
                                     </div>
                                 </div>
-                                <div class="room-stat">
-                                    <div class="room-stat-icon neutral">
-                                        <i data-lucide="shield-check"></i>
-                                    </div>
-                                    <div>
-                                        <div class="room-stat-label">Public read</div>
-                                        <div class="room-stat-value">{{ $room->is_public_read ? 'Enabled' : 'Owner only' }}</div>
-                                    </div>
-                                </div>
                             </div>
 
                             <div class="room-card-actions">
