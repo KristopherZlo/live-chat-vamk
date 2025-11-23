@@ -85,7 +85,37 @@ html {
       font-size: 1rem;
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.65rem;
+    }
+
+    .app-logo {
+      width: 2.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .app-logo-link {
+      display: block;
+      line-height: 0;
+    }
+
+    .app-logo-img {
+      height: 2rem;
+      width: auto;
+      display: block;
+    }
+
+    .app-logo-img--dark {
+      display: none;
+    }
+
+    [data-theme="dark"] .app-logo-img--dark {
+      display: block;
+    }
+
+    [data-theme="dark"] .app-logo-img--light {
+      display: none;
     }
 
     .app-title span.badge {
@@ -821,10 +851,10 @@ html {
       color: #6b7280;
     }
 
-    .status-hidden {
-      border-color: #64748b;
-      color: #64748b;
-    }
+.status-hidden {
+  border-color: #64748b;
+  color: #64748b;
+}
 
     [data-theme="dark"] .status-new {
       border-color: var(--accent-strong);
@@ -1093,19 +1123,70 @@ html {
 .qr-box {
   width: 360px;
   height: 360px;
-  border-radius: 0.4rem;
-  border: 1px dashed var(--border-strong);
+  border-radius: 1.2rem;
+  border: 1px solid var(--border-strong);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.4), rgba(248, 251, 255, 0.6));
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.7rem;
-  color: var(--muted);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 25px 45px rgba(15, 23, 42, 0.25);
+}
+
+.qr-box canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: inherit;
 }
 
 .qr-box img {
   width: 100%;
   height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.qr-logo {
+  position: absolute;
+  width: 90px;
+  height: 90px;
+  border-radius: 1.4rem;
+   background: #fff;
+   border: 6px solid #fff;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   padding: 0.35rem;
+   pointer-events: none;
+   top: 50%;
+   left: 50%;
+   transform: translate(-50%, -50%);
+   z-index: 2;
+}
+
+.qr-logo-img {
+  width: 78%;
+  height: 78%;
   object-fit: contain;
+  display: block;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  filter: none;
+}
+
+[data-theme="dark"] .qr-card {
+  background: #0f172a;
+  border-color: #1f2c3f;
+}
+
+[data-theme="dark"] .qr-box {
+  border-color: #1f2c3f;
+  background: rgba(15, 23, 42, 0.95);
+  box-shadow: 0 25px 45px rgba(0, 0, 0, 0.45);
 }
 
 @media (max-width: 520px) {
@@ -1122,6 +1203,11 @@ html {
   .qr-box {
     width: 260px;
     height: 260px;
+  }
+
+  .qr-logo {
+    width: 70px;
+    height: 70px;
   }
 }
 
@@ -2576,107 +2662,93 @@ main {
   flex-shrink: 0;
   width: 100%;
   margin-top: auto;
-  padding: 1.15rem 1.4rem;
-  border-top: 1px solid var(--border-strong);
-  background: var(--bg-elevated);
-  box-shadow: 0 -8px 16px rgba(15, 23, 42, 0.08);
+  padding: 1.25rem 1.5rem 1.4rem;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg);
+  box-shadow: none;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
 }
 
 .footer-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   align-items: flex-start;
   gap: 1.25rem 2rem;
   width: 100%;
+  max-width: 1180px;
 }
 
-.footer-brand {
-  display: flex;
-  flex-direction: column;
+.footer-column {
+  display: grid;
   gap: 0.35rem;
 }
 
-.footer-logo {
+.footer-heading {
   font-weight: 800;
-  font-size: 1rem;
   letter-spacing: 0.01em;
-  line-height: 1.2;
+  font-size: 0.96rem;
+  color: var(--text-primary);
 }
 
-.footer-note {
-  color: var(--text-secondary);
-  font-size: 0.85rem;
+.footer-links-list {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.9rem;
 }
 
-.footer-contact {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
+.footer-links-list a {
+  color: var(--text-primary);
   text-decoration: none;
-  transition: color 0.15s ease;
+  font-weight: 600;
+  line-height: 1.35;
 }
 
-.footer-contact:hover {
+.footer-links-list a:hover {
   color: var(--accent-strong);
 }
 
-.footer-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  justify-content: center;
+.footer-muted {
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.footer-social {
+  align-self: flex-start;
+}
+
+.footer-social-links {
+  display: inline-flex;
+  gap: 0.6rem;
   align-items: center;
 }
 
-.footer-links a {
-  color: var(--text-secondary);
-  text-decoration: none;
-  font-weight: 600;
-  padding-bottom: 0.1rem;
-}
-
-.footer-links a:hover {
-  color: var(--accent-strong);
-}
-
-.footer-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  align-items: flex-end;
-  justify-content: center;
-  min-height: 100%;
-}
-
-.footer-lang-group {
+.footer-social-links a {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
   display: inline-flex;
-  gap: 0.65rem;
-}
-
-.footer-lang {
-  border-radius: 0.9rem;
-  border: 1px solid var(--border-subtle);
-  background: #fff;
-  padding: 0.3rem 0.85rem;
-  font-size: 0.82rem;
-  cursor: pointer;
+  align-items: center;
+  justify-content: center;
   color: var(--text-primary);
-  font-weight: 700;
-  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.08);
+  background: var(--bg-elevated);
+  text-decoration: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transition: transform 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
 
-.footer-lang.active {
+.footer-social-links a:hover {
+  transform: translateY(-2px);
   border-color: var(--accent);
   color: var(--accent-strong);
-  background: var(--accent-soft);
 }
 
-.footer-copy {
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-  font-weight: 600;
+.footer-social-links i {
+  width: 1.1rem;
+  height: 1.1rem;
 }
 
 .room-header {
@@ -2685,6 +2757,14 @@ main {
   min-height: auto;
   flex: 0 0 auto;
   overflow: visible;
+}
+
+.room-header .panel-title {
+  align-items: center;
+}
+
+.room-header .panel-title i {
+  margin-top: 0.18rem;
 }
 
 .app-mobile-tabs {

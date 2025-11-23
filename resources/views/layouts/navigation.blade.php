@@ -1,5 +1,11 @@
 <header class="app-header">
   <div class="app-title">
+    <div class="app-logo">
+      <a class="app-logo-link" href="{{ route('dashboard') }}" aria-label="Live Chat">
+        <img src="{{ Vite::asset('resources/icons/logo_black.svg') }}" class="app-logo-img app-logo-img--light" alt="Live Chat logo">
+        <img src="{{ Vite::asset('resources/icons/logo_white.svg') }}" class="app-logo-img app-logo-img--dark" alt="Live Chat logo">
+      </a>
+    </div>
     <div class="app-title-text">
       <a href="{{ route('dashboard') }}" class="room-name">Live Chat</a>
       <div class="room-code">VAMK Instant feedback</div>

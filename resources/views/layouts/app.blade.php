@@ -48,24 +48,30 @@
     @endunless
 
     <footer class="app-footer">
-            <div class="footer-grid">
-                <div class="footer-brand">
-                    <div class="footer-logo">{{ config('app.name', 'Live Chat') }}</div>
-                    <div class="footer-note">VAMK Instant feedback</div>
-                    <a class="footer-contact" href="mailto:zloydeveloper.info@gmail.com">Contact: zloydeveloper.info@gmail.com</a>
+        <div class="footer-grid">
+            <div class="footer-column">
+                <div class="footer-heading">Support</div>
+                <div class="footer-links-list">
+                    <a href="#">FAQ</a>
+                    <a href="#">GDPR</a>
+                    <a href="#">Privacy & terms</a>
+                    <a href="mailto:zloydeveloper.info@gmail.com">Contact</a>
                 </div>
-            <div class="footer-links">
-                <a href="#">GDPR</a>
-                <a href="#">Contact</a>
-                <a href="#">Help</a>
             </div>
-            <div class="footer-meta">
-                <div class="footer-lang-group">
-                    <button class="footer-lang active" type="button">FI</button>
-                    <button class="footer-lang" type="button">RU</button>
-                    <button class="footer-lang" type="button">EN</button>
+            <div class="footer-column">
+                <div class="footer-heading">Product</div>
+                <div class="footer-links-list">
+                    <a href="{{ route('dashboard') }}">Dashboard</a>
+                    <a href="{{ route('rooms.create') }}">New room</a>
+                    <a href="{{ route('profile.edit') }}">Profile</a>
                 </div>
-                <div class="footer-copy">made with 💗 by Zlo</div>
+            </div>
+            <div class="footer-column">
+                <div class="footer-heading">About</div>
+                <div class="footer-links-list">
+                    <span class="footer-muted">Live Chat | Instant feedback</span>
+                    <span class="footer-muted">Made by Zlo</span>
+                </div>
             </div>
         </div>
     </footer>
@@ -73,3 +79,4 @@
 @stack('scripts')
 </body>
 </html>
+
