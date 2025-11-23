@@ -309,6 +309,13 @@
                 const replyPreviewText = document.getElementById('replyPreviewText');
                 const replyPreviewCancel = document.getElementById('replyPreviewCancel');
                 const avatarPalette = ['#2563eb', '#0ea5e9', '#6366f1', '#8b5cf6', '#14b8a6', '#f97316', '#f59e0b', '#10b981', '#ef4444'];
+                const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;',
+                }[char] ?? char));
 
                 if (queueSoundUrl) {
                     window.queueSoundUrl = queueSoundUrl;
@@ -701,6 +708,11 @@
 
                             const isOutgoing = (currentUserId && e.author.user_id && Number(currentUserId) === Number(e.author.user_id))
                                 || (currentParticipantId && e.author.participant_id && Number(currentParticipantId) === Number(e.author.participant_id));
+                            const authorNameRaw = e.author?.name || 'Guest';
+                            const authorName = escapeHtml(authorNameRaw);
+                            const content = escapeHtml(e.content || '');
+                            const replyAuthor = escapeHtml(e.reply_to?.author || 'Guest');
+                            const replyContent = escapeHtml(e.reply_to?.content || '');
                             const avatarColor = avatarColorFromName(e.author.name);
                             const wrapper = document.createElement('li');
                             wrapper.classList.add('message');
@@ -713,13 +725,14 @@
                             const isOwnerAuthor = Boolean(e.author.is_owner);
                             const time = new Date(e.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                             const devBadge = e.author.is_dev ? '<span class="message-badge message-badge-dev">dev</span>' : '';
-                            const replyHtml = e.reply_to ? `<div class="message-reply"><span class="reply-author">${e.reply_to.author || 'Guest'}</span><span class="reply-text">${e.reply_to.content || ''}</span></div>` : '';
+                            const replyHtml = e.reply_to ? `<div class="message-reply"><span class="reply-author">${replyAuthor}</span><span class="reply-text">${replyContent}</span></div>` : '';
+                            const initials = escapeHtml((authorNameRaw || '??').slice(0,2).toUpperCase());
 
                             wrapper.innerHTML = `
-                                <div class="message-avatar colorized" style="background:${avatarColor}; color:#fff; border-color:transparent;">${(e.author.name || '??').slice(0,2).toUpperCase()}</div>
+                                <div class="message-avatar colorized" style="background:${avatarColor}; color:#fff; border-color:transparent;">${initials}</div>
                                 <div class="message-body">
                                     <div class="message-header">
-                                        <span class="message-author">${e.author.name}${devBadge}</span>
+                                        <span class="message-author">${authorName}${devBadge}</span>
                                         <div class="message-meta">
                                             <span>${time}</span>
                                             ${isOwnerAuthor ? '<span class="message-badge message-badge-teacher">Host</span>' : ''}
@@ -728,7 +741,7 @@
                                         </div>
                                     </div>
                                     ${replyHtml}
-                                    <div class="message-text">${e.content}</div>
+                                    <div class="message-text">${content}</div>
                                     <div class="message-actions">
                                         <button type="button" class="msg-action">
                                             <i data-lucide="corner-up-right"></i>
@@ -740,7 +753,7 @@
                             const replyBtn = wrapper.querySelector('.msg-action');
                             if (replyBtn) {
                                 replyBtn.dataset.replyId = e.id;
-                                replyBtn.dataset.replyAuthor = e.author.name || 'Guest';
+                                replyBtn.dataset.replyAuthor = authorNameRaw || 'Guest';
                                 replyBtn.dataset.replyText = e.content || '';
                             }
 

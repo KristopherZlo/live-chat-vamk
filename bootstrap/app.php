@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -12,7 +13,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->alias([
+            'throttle' => ThrottleRequests::class,
+        ]);
+
+        // Throttle all web routes: 20 req/sec (~1200 per minute) per IP
+        $middleware->appendToGroup('web', 'throttle:web');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
