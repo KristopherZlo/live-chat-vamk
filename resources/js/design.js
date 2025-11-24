@@ -375,6 +375,12 @@ function setupHistoryOpener(root = document) {
     if (historyPanel) historyPanel.classList.toggle('hidden', !historyVisible);
 
     buttons.forEach((b) => b.classList.toggle('active', historyVisible));
+    buttons.forEach((btn) => {
+      const label = btn.querySelector('span');
+      if (label) {
+        label.textContent = historyVisible ? 'Close history' : 'Open history';
+      }
+    });
 
     // mobile tab sync
     const historyTab = document.querySelector('[data-tab-target="history"]');

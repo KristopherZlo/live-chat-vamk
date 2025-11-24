@@ -144,119 +144,193 @@
                     <div class="panel-subtitle">Ask and discuss during the lecture.</div>
                 </div>
 
-                <ol class="chat-messages messages-container" id="chatMessages">
-                    @forelse($messages as $message)
-                        @php
-                            $isOwnerMessage = $message->user && $message->user_id === $room->user_id;
-                            $authorName = $message->user?->name ?? $message->participant?->display_name ?? 'Guest';
-                            $initials = \Illuminate\Support\Str::of($authorName)->substr(0, 2)->upper();
-                            $isOutgoing = $isOwner ? $isOwnerMessage : ($participant && $message->participant && $message->participant->id === $participant->id);
-                            $isQuestionMessage = (bool) $message->question;
-                            $replyTo = $message->replyTo;
-                            $avatarBg = $avatarColor($authorName);
-                        @endphp
-                        <li class="message {{ $isOutgoing ? 'message--outgoing' : '' }} {{ $isQuestionMessage ? 'message--question' : '' }}">
-                            <div class="message-avatar colorized" style="background: {{ $avatarBg }}; color: #fff; border-color: transparent;">{{ $initials }}</div>
-                            <div class="message-body">
-                                <div class="message-header">
-                                    <span class="message-author">
-                                        {{ $authorName }}
-                                        @if($message->user?->is_dev)
-                                            <span class="message-badge message-badge-dev">dev</span>
-                                        @endif
-                                    </span>
-                                    <div class="message-meta">
-                                        <span>{{ $message->created_at->format('H:i') }}</span>
-                                        @if($isOwnerMessage)
-                                            <span class="message-badge message-badge-teacher">Host</span>
-                                        @endif
-                                        @if($isQuestionMessage)
-                                            <span class="message-badge message-badge-question">To host</span>
-                                        @endif
-                                        @if($replyTo)
-                                            <span class="message-badge">Reply</span>
-                                        @endif
+                @if($isBanned)
+                    <div class="flash flash-danger" data-flash>
+                        <span>You were banned by the host. Chat is read-only.</span>
+                        <button class="icon-btn flash-close" type="button" data-flash-close aria-label="Close">
+                            <i data-lucide="x"></i>
+                        </button>
+                    </div>
+                @endif
+
+                @if($isOwner)
+                    <div class="chat-subtabs" data-chat-tabs>
+                        <button class="chat-tab-btn active" type="button" data-chat-tab="chat">
+                            <span>Chat</span>
+                        </button>
+                        <button class="chat-tab-btn" type="button" data-chat-tab="bans">
+                            <span>Bans</span>
+                            <span class="pill-soft">{{ $bannedParticipants->count() }}</span>
+                        </button>
+                    </div>
+                @endif
+
+                <div class="chat-pane" data-chat-panel="chat">
+                    <ol class="chat-messages messages-container" id="chatMessages">
+                        @forelse($messages as $message)
+                            @php
+                                $isOwnerMessage = $message->user && $message->user_id === $room->user_id;
+                                $authorName = $message->user?->name ?? $message->participant?->display_name ?? 'Guest';
+                                $initials = \Illuminate\Support\Str::of($authorName)->substr(0, 2)->upper();
+                                $isOutgoing = $isOwner ? $isOwnerMessage : ($participant && $message->participant && $message->participant->id === $participant->id);
+                                $isQuestionMessage = (bool) $message->question;
+                                $replyTo = $message->replyTo;
+                                $avatarBg = $avatarColor($authorName);
+                            @endphp
+                            <li class="message {{ $isOutgoing ? 'message--outgoing' : '' }} {{ $isQuestionMessage ? 'message--question' : '' }}">
+                                <div class="message-avatar colorized" style="background: {{ $avatarBg }}; color: #fff; border-color: transparent;">{{ $initials }}</div>
+                                <div class="message-body">
+                                    @if($isOwner && $message->participant && !$isOwnerMessage)
+                                        <form
+                                            method="POST"
+                                            action="{{ route('rooms.bans.store', $room) }}"
+                                            class="message-ban-form"
+                                            data-ban-confirm="1"
+                                        >
+                                            @csrf
+                                            <input type="hidden" name="participant_id" value="{{ $message->participant->id }}">
+                                            <button type="submit" class="message-ban-btn" title="Ban participant">
+                                                <i data-lucide="gavel"></i>
+                                            </button>
+                                        </form>
+                                    @endif
+                                    <div class="message-header">
+                                        <span class="message-author">
+                                            {{ $authorName }}
+                                            @if($message->user?->is_dev)
+                                                <span class="message-badge message-badge-dev">dev</span>
+                                            @endif
+                                        </span>
+                                        <div class="message-meta">
+                                            <span>{{ $message->created_at->format('H:i') }}</span>
+                                            @if($isOwnerMessage)
+                                                <span class="message-badge message-badge-teacher">Host</span>
+                                            @endif
+                                            @if($isQuestionMessage)
+                                                <span class="message-badge message-badge-question">To host</span>
+                                            @endif
+                                            @if($replyTo)
+                                                <span class="message-badge">Reply</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    @if($replyTo)
+                                        @php
+                                            $replyAuthor = $replyTo->user?->name ?? $replyTo->participant?->display_name ?? 'Guest';
+                                        @endphp
+                                        <div class="message-reply">
+                                            <span class="reply-author">{{ $replyAuthor }}</span>
+                                            <span class="reply-text">{{ \Illuminate\Support\Str::limit($replyTo->content, 120) }}</span>
+                                        </div>
+                                    @endif
+                                    <div class="message-text">{{ $message->content }}</div>
+                                    <div class="message-actions">
+                                        <button
+                                            type="button"
+                                            class="msg-action"
+                                            data-reply-id="{{ $message->id }}"
+                                            data-reply-author="{{ e($authorName) }}"
+                                            data-reply-text="{{ e(\Illuminate\Support\Str::limit($message->content, 500)) }}"
+                                        >
+                                            <i data-lucide="corner-up-right"></i>
+                                            <span>Reply</span>
+                                        </button>
                                     </div>
                                 </div>
-                                @if($replyTo)
-                                    @php
-                                        $replyAuthor = $replyTo->user?->name ?? $replyTo->participant?->display_name ?? 'Guest';
-                                    @endphp
-                                    <div class="message-reply">
-                                        <span class="reply-author">{{ $replyAuthor }}</span>
-                                        <span class="reply-text">{{ \Illuminate\Support\Str::limit($replyTo->content, 120) }}</span>
+                            </li>
+                        @empty
+                            <li class="message message-empty" data-empty-message>
+                                <div class="message-body">
+                                    <div class="message-text">No messages yet.</div>
+                                </div>
+                            </li>
+                        @endforelse
+                    </ol>
+
+                    @if($isBanned)
+                        <div class="panel-footer ban-notice">
+                            You were banned by the host. You can still read messages but cannot post.
+                        </div>
+                    @elseif(!$isClosed)
+                        <div class="chat-input">
+                            <form id="chat-form" method="POST" action="{{ route('rooms.messages.store', $room) }}">
+                                @csrf
+                                <div class="chat-send-options">
+                                    @unless($isOwner)
+                                        <label class="switch" id="sendToTeacherSwitch">
+                                            <input type="checkbox" name="as_question" value="1" id="sendToTeacher">
+                                            <span class="switch-track">
+                                              <span class="switch-thumb"></span>
+                                            </span>
+                                            <span class="switch-label">Send to host</span>
+                                        </label>
+                                    @endunless
+                                    <span class="panel-subtitle">Press Enter to send, Shift+Enter for a new line</span>
+                                </div>
+                                <div class="reply-preview" id="replyPreview" hidden>
+                                    <div class="reply-preview-label">
+                                        <i data-lucide="corner-up-left"></i>
+                                        <span>Replying to</span>
+                                        <span class="reply-preview-author" id="replyPreviewAuthor"></span>
                                     </div>
-                                @endif
-                                <div class="message-text">{{ $message->content }}</div>
-                                <div class="message-actions">
-                                    <button
-                                        type="button"
-                                        class="msg-action"
-                                        data-reply-id="{{ $message->id }}"
-                                        data-reply-author="{{ e($authorName) }}"
-                                        data-reply-text="{{ e(\Illuminate\Support\Str::limit($message->content, 500)) }}"
-                                    >
-                                        <i data-lucide="corner-up-right"></i>
-                                        <span>Reply</span>
+                                    <div class="reply-preview-text" id="replyPreviewText"></div>
+                                    <button type="button" class="icon-btn" id="replyPreviewCancel" title="Cancel reply">
+                                        <i data-lucide="x"></i>
                                     </button>
                                 </div>
-                            </div>
-                        </li>
-                    @empty
-                        <li class="message message-empty" data-empty-message>
-                            <div class="message-body">
-                                <div class="message-text">No messages yet.</div>
-                            </div>
-                        </li>
-                    @endforelse
-                </ol>
-
-                @if(!$isClosed)
-                    <div class="chat-input">
-                        <form id="chat-form" method="POST" action="{{ route('rooms.messages.store', $room) }}">
-                            @csrf
-                            <div class="chat-send-options">
-                                @unless($isOwner)
-                                    <label class="switch" id="sendToTeacherSwitch">
-                                        <input type="checkbox" name="as_question" value="1" id="sendToTeacher">
-                                        <span class="switch-track">
-                                          <span class="switch-thumb"></span>
-                                        </span>
-                                        <span class="switch-label">Send to host</span>
-                                    </label>
-                                @endunless
-                                <span class="panel-subtitle">Press Enter to send, Shift+Enter for a new line</span>
-                            </div>
-                            <div class="reply-preview" id="replyPreview" hidden>
-                                <div class="reply-preview-label">
-                                    <i data-lucide="corner-up-left"></i>
-                                    <span>Replying to</span>
-                                    <span class="reply-preview-author" id="replyPreviewAuthor"></span>
+                                <div class="chat-input-row">
+                                    <textarea
+                                        name="content"
+                                        id="chatInput"
+                                        class="chat-textarea"
+                                        placeholder="Type your message..."
+                                        rows="1"
+                                        required
+                                    ></textarea>
+                                    <input type="hidden" name="reply_to_id" id="replyToId" value="">
+                                    <button type="submit" class="send-btn" id="sendButton" title="Send message">
+                                        <i data-lucide="send"></i>
+                                    </button>
                                 </div>
-                                <div class="reply-preview-text" id="replyPreviewText"></div>
-                                <button type="button" class="icon-btn" id="replyPreviewCancel" title="Cancel reply">
-                                    <i data-lucide="x"></i>
-                                </button>
+                            </form>
+                        </div>
+                    @else
+                        <div class="panel-footer">
+                            This room is closed. Messages are read-only.
+                        </div>
+                    @endif
+                </div>
+
+                @if($isOwner)
+                    <div class="chat-pane chat-pane-bans" data-chat-panel="bans" hidden>
+                        <div class="moderation-block">
+                            <div class="moderation-head">
+                                <div>
+                                    <div class="moderation-title">Banned participants</div>
+                                    <div class="panel-subtitle">Banned users cannot post messages or questions.</div>
+                                </div>
+                                <span class="pill-soft">{{ $bannedParticipants->count() }}</span>
                             </div>
-                            <div class="chat-input-row">
-                                <textarea
-                                    name="content"
-                                    id="chatInput"
-                                    class="chat-textarea"
-                                    placeholder="Type your message..."
-                                    rows="1"
-                                    required
-                                ></textarea>
-                                <input type="hidden" name="reply_to_id" id="replyToId" value="">
-                                <button type="submit" class="send-btn" id="sendButton" title="Send message">
-                                    <i data-lucide="send"></i>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                @else
-                    <div class="panel-footer">
-                        This room is closed. Messages are read-only.
+                            @if($bannedParticipants->isEmpty())
+                                <div class="empty-state">No banned participants yet.</div>
+                            @else
+                                <ul class="ban-list">
+                                    @foreach($bannedParticipants as $ban)
+                                        <li class="ban-item">
+                                            <div>
+                                                <div class="ban-name">{{ $ban->display_name ?? $ban->participant?->display_name ?? 'Guest' }}</div>
+                                                <div class="ban-meta">Banned {{ $ban->created_at->diffForHumans(null, true) }} ago</div>
+                                            </div>
+                                            <form method="POST" action="{{ route('rooms.bans.destroy', [$room, $ban->id]) }}">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-ghost">Unban</button>
+                                            </form>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            @endif
+                        </div>
                     </div>
                 @endif
             </section>
@@ -315,6 +389,7 @@
                 const questionsPanelUrl = @json(route('rooms.questionsPanel', $room));
                 const myQuestionsPanel = document.getElementById('myQuestionsPanel');
                 const myQuestionsPanelUrl = @json(route('rooms.myQuestionsPanel', $room));
+                const banStoreUrl = @json(route('rooms.bans.store', $room));
                 let queueNeedsNew = false;
                 let questionsPollTimer = null;
                 let myQuestionsPollTimer = null;
@@ -323,7 +398,11 @@
                   const qrClose = document.getElementById('qrClose');
                   const qrCanvas = document.getElementById('qrCanvas');
                 const chatContainer = document.querySelector('.messages-container');
+                const chatInputWrapper = document.querySelector('[data-chat-panel=\"chat\"] .chat-input');
+                const chatTabButtons = document.querySelectorAll('[data-chat-tab]');
+                const chatPanes = document.querySelectorAll('[data-chat-panel]');
                 const csrfMeta = document.querySelector('meta[name=\"csrf-token\"]');
+                const csrfToken = csrfMeta?.getAttribute('content') || '';
                 const replyToInput = document.getElementById('replyToId');
                 const replyPreview = document.getElementById('replyPreview');
                 const replyPreviewAuthor = document.getElementById('replyPreviewAuthor');
@@ -345,12 +424,149 @@
                     }
                 };
 
+                const showBanState = (messageText = 'You were banned by the host. Chat is locked.') => {
+                    if (!chatInputWrapper) return;
+                    chatInputWrapper.innerHTML = `
+                        <div class="flash flash-danger">
+                            <span>${escapeHtml(messageText)}</span>
+                        </div>
+                    `;
+                };
+
+                const banModal = (() => {
+                    let overlay = null;
+                    let confirmBtn = null;
+                    let cancelBtn = null;
+                    let resolver = null;
+
+                    const ensureModal = () => {
+                        if (overlay) return;
+                        overlay = document.createElement('div');
+                        overlay.className = 'modal-overlay';
+                        overlay.dataset.banModal = '1';
+                        overlay.hidden = true;
+                        overlay.innerHTML = `
+                            <div class="modal-dialog">
+                                <div class="modal-header">
+                                    <div class="modal-title-group">
+                                        <div class="modal-eyebrow">Moderation</div>
+                                        <div class="modal-title">Ban participant?</div>
+                                    </div>
+                                    <button type="button" class="modal-close" data-ban-cancel aria-label="Close">
+                                        <i data-lucide="x"></i>
+                                    </button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="modal-text">Are you sure you want to ban this participant? They won’t be able to post messages or questions.</div>
+                                </div>
+                                <div class="modal-actions">
+                                    <button type="button" class="btn btn-sm btn-ghost" data-ban-cancel>Cancel</button>
+                                    <button type="button" class="btn btn-sm btn-danger" data-ban-confirm>Ban</button>
+                                </div>
+                            </div>
+                        `;
+                        document.body.appendChild(overlay);
+                        confirmBtn = overlay.querySelector('[data-ban-confirm]');
+                        cancelBtn = overlay.querySelectorAll('[data-ban-cancel]');
+
+                        const close = () => {
+                            overlay.classList.remove('show');
+                            document.body.classList.remove('modal-open');
+                            if (resolver) {
+                                resolver(false);
+                                resolver = null;
+                            }
+                            setTimeout(() => overlay.hidden = true, 120);
+                        };
+
+                        overlay.addEventListener('click', (event) => {
+                            if (event.target === overlay) {
+                                close();
+                            }
+                        });
+
+                        cancelBtn.forEach((btn) => btn.addEventListener('click', close));
+
+                        if (confirmBtn) {
+                            confirmBtn.addEventListener('click', () => {
+                                overlay.classList.remove('show');
+                                document.body.classList.remove('modal-open');
+                                if (resolver) {
+                                    resolver(true);
+                                    resolver = null;
+                                }
+                                setTimeout(() => overlay.hidden = true, 120);
+                            });
+                        }
+                    };
+
+                    const open = () => new Promise((resolve) => {
+                        ensureModal();
+                        resolver = resolve;
+                        overlay.hidden = false;
+                        requestAnimationFrame(() => overlay.classList.add('show'));
+                        document.body.classList.add('modal-open');
+                        if (window.refreshLucideIcons) {
+                            window.refreshLucideIcons();
+                        }
+                    });
+
+                    return { open };
+                })();
+
+                const bindBanForms = (scope = document) => {
+                    const banForms = scope.querySelectorAll('form[data-ban-confirm]');
+                    banForms.forEach((form) => {
+                        if (form.dataset.banBound === '1') return;
+                        form.dataset.banBound = '1';
+                        form.addEventListener('submit', async (event) => {
+                            event.preventDefault();
+                            const confirmed = await banModal.open();
+                            if (confirmed) {
+                                form.submit();
+                            }
+                        });
+                    });
+                };
+
+                function setupChatTabs() {
+                    if (!chatTabButtons.length || !chatPanes.length) return;
+                    let active = 'chat';
+                    const current = Array.from(chatTabButtons).find((btn) => btn.classList.contains('active'));
+                    if (current?.dataset.chatTab) {
+                        active = current.dataset.chatTab;
+                    }
+
+                    const sync = () => {
+                        chatTabButtons.forEach((btn) => {
+                            const isActive = btn.dataset.chatTab === active;
+                            btn.classList.toggle('active', isActive);
+                        });
+                        chatPanes.forEach((pane) => {
+                            const isMatch = pane.dataset.chatPanel === active;
+                            pane.hidden = !isMatch;
+                        });
+                    };
+
+                    chatTabButtons.forEach((btn) => {
+                        btn.addEventListener('click', () => {
+                            active = btn.dataset.chatTab || 'chat';
+                            sync();
+                        });
+                    });
+
+                    sync();
+                }
+
                 if (queueSoundUrl) {
                     window.queueSoundUrl = queueSoundUrl;
                     if (typeof window.initQueueSoundPlayer === 'function') {
                         window.initQueueSoundPlayer(queueSoundUrl);
                     }
                 }
+
+                setupChatTabs();
+                bindBanForms();
 
                   const QR_CANVAS_SIZE = 360;
                   const QR_FETCH_SIZE = 720;
@@ -653,6 +869,7 @@
                         questionsPanel.innerHTML = html;
                         bindQueueInteractions(questionsPanel);
                         const hasNewItems = questionsPanel.querySelector('.queue-item.queue-item-new');
+                        bindBanForms(questionsPanel);
                         if ((queueNeedsNew || hasNewItems) && typeof window.markQueueHasNew === 'function') {
                             window.markQueueHasNew();
                             queueNeedsNew = false;
@@ -756,10 +973,21 @@
                             const devBadge = e.author.is_dev ? '<span class="message-badge message-badge-dev">dev</span>' : '';
                             const replyHtml = e.reply_to ? `<div class="message-reply"><span class="reply-author">${replyAuthor}</span><span class="reply-text">${replyContent}</span></div>` : '';
                             const initials = escapeHtml((authorNameRaw || '??').slice(0,2).toUpperCase());
+                            const canBan = isOwnerUser && !isOwnerAuthor && e.author.participant_id;
+                            const banButtonHtml = canBan ? `
+                                <form method="POST" action="${banStoreUrl}" class="message-ban-form" data-ban-confirm="1">
+                                    <input type="hidden" name="_token" value="${csrfToken}">
+                                    <input type="hidden" name="participant_id" value="${e.author.participant_id}">
+                                    <button type="submit" class="message-ban-btn" title="Ban participant">
+                                        <i data-lucide="gavel"></i>
+                                    </button>
+                                </form>
+                            ` : '';
 
                             wrapper.innerHTML = `
                                 <div class="message-avatar colorized" style="background:${avatarColor}; color:#fff; border-color:transparent;">${initials}</div>
                                 <div class="message-body">
+                                    ${banButtonHtml}
                                     <div class="message-header">
                                         <span class="message-author">${authorName}${devBadge}</span>
                                         <div class="message-meta">
@@ -787,6 +1015,7 @@
                             }
 
                             container.appendChild(wrapper);
+                            bindBanForms(wrapper);
                             container.scrollTop = container.scrollHeight;
                             if (window.refreshLucideIcons) {
                                 window.refreshLucideIcons();
@@ -838,6 +1067,11 @@
                                 },
                                 body: formData,
                             });
+
+                            if (response.status === 403) {
+                                showBanState('You were banned by the host. Chat is locked.');
+                                return;
+                            }
 
                             if (!response.ok) {
                                 console.error('Send message failed', response.status);

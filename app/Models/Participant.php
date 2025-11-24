@@ -13,6 +13,8 @@ class Participant extends Model
         'room_id',
         'session_token',
         'display_name',
+        'ip_address',
+        'fingerprint',
     ];
 
     public function room()

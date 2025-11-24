@@ -360,14 +360,15 @@ html {
       align-items: center;
     }
 
-    .chat-messages {
-      list-style: none;
-      margin: 0;
-      padding: 0.75rem;
-      flex: 1;
-      overflow-y: auto;
-      scroll-behavior: smooth;
-    }
+.chat-messages {
+  list-style: none;
+  margin: 0;
+  padding: 0.75rem;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
 
     .chat-messages::-webkit-scrollbar {
       width: 6px;
@@ -541,6 +542,52 @@ html {
       height: 0.9rem;
     }
 
+    .msg-action-danger {
+      color: var(--bad);
+    }
+
+    .msg-action-form {
+      display: inline-flex;
+    }
+
+.message-body {
+  position: relative;
+}
+
+.message-ban-form {
+  position: absolute;
+  top: 0.3rem;
+  right: -1.85rem;
+  opacity: 0.15;
+  transform: translateX(22px);
+  transition: opacity 0.12s ease-out, transform 0.18s ease-out;
+}
+
+.message:hover .message-ban-form {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.message-ban-btn {
+  border: none;
+  background: var(--bg-soft);
+  border-radius: 0.6rem;
+  padding: 0.2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  width: 28px;
+  height: 28px;
+}
+
+.message-ban-btn:hover {
+  color: var(--bad);
+  border-color: var(--bad);
+}
+
     @keyframes message-in {
       to {
         opacity: 1;
@@ -562,6 +609,119 @@ html {
   justify-content: space-between;
   gap: 0.65rem;
   flex-wrap: wrap;
+}
+
+.ban-notice {
+  color: var(--bad);
+  font-weight: 600;
+}
+
+.chat-subtabs {
+  display: flex;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem 0.1rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.chat-tab-btn {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  transition: all 0.14s ease-out;
+}
+
+.chat-tab-btn.active {
+  background: var(--bg-soft);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+  box-shadow: inset 0 0 0 1px var(--border-subtle);
+}
+
+.chat-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.chat-pane[hidden] {
+  display: none;
+}
+
+.moderation-block {
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.85rem;
+  padding: 0.7rem 0.8rem;
+  margin: 0.4rem 0.75rem 0.5rem;
+  background: var(--bg-soft);
+}
+
+.moderation-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.moderation-title {
+  font-weight: 700;
+  margin-bottom: 0.05rem;
+}
+
+.pill-soft {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.15rem 0.65rem;
+  border-radius: 999px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border-subtle);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.ban-list {
+  list-style: none;
+  margin: 0.65rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.ban-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.75rem;
+  border: 1px dashed var(--border-subtle);
+}
+
+.ban-name {
+  font-weight: 700;
+}
+
+.ban-meta {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.question-actions-secondary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
 }
 
 .chat-input-row {
@@ -1523,7 +1683,7 @@ html {
     padding: 0.5rem 0.75rem 0.75rem;
   }
 
-  /* Вместо сетки — колонка */
+  /* Stack the layout vertically on small screens */
   .layout,
   .layout.teacher {
     display: flex;
@@ -1537,7 +1697,7 @@ html {
     max-height: none;
   }
 
-  /* Хедер сжимается и становится двухстрочным */
+  /* Compact header layout to fit narrow screens */
   .app-header {
     padding: 0.6rem 0.75rem;
     flex-direction: column;
@@ -1568,7 +1728,7 @@ html {
     text-align: left;
   }
 
-  /* Чат — как отдельное приложение */
+  /* Rounded chat panel with tighter padding on mobile */
   .chat-panel {
     display: flex;
     flex-direction: column;
@@ -1597,7 +1757,7 @@ html {
     padding-bottom: 0.5rem;
   }
 
-  /* input приклеен к низу панели */
+  /* Keep chat input sticky at the bottom */
   .chat-input {
     position: sticky;
     bottom: 0;
@@ -1621,7 +1781,7 @@ html {
   }
 
   .send-btn {
-    height: 2.9rem;              /* около 44–48px по гайдам по тач-таргетам :contentReference[oaicite:0]{index=0} */
+    height: 2.9rem;              /* Keep tap target around 44-48px for accessibility */
     min-width: 2.9rem;
     padding: 0 0.75rem;
     border-radius: 999px;
@@ -1644,7 +1804,7 @@ html {
     max-width: 85%;
   }
 
-  /* Остальные панели — как секции ниже чата */
+  /* Tighter padding for non-chat panels on mobile */
   .panel:not(.chat-panel) {
     padding: 0.6rem 0.75rem 0.65rem;
     border-radius: 0.9rem;
@@ -1653,6 +1813,7 @@ html {
   .panel-header {
     padding-bottom: 0.35rem;
   }
+
 }
 
 
@@ -1665,7 +1826,7 @@ html {
     padding-inline: 0.75rem;
   }
 
-  /* убираем "beta", чтобы не захламлять строку */
+  /* Hide the beta badge on very small screens to save space */
   .app-title .badge {
     display: none;
   }
@@ -4285,6 +4446,17 @@ main {
     [data-theme="dark"] .flash-success {
       background: rgba(52, 211, 153, 0.18);
       color: #34d399;
+    }
+
+    .flash-danger {
+      border-color: var(--bad);
+      background: rgba(239, 68, 68, 0.12);
+      color: #b91c1c;
+    }
+
+    [data-theme="dark"] .flash-danger {
+      background: rgba(239, 68, 68, 0.16);
+      color: #fca5a5;
     }
 
 .flash-close {

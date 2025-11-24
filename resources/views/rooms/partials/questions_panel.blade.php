@@ -43,7 +43,9 @@
                 <span class="message-author">{{ $question->participant?->display_name ?? 'Anonymous' }}</span>
                 <span class="message-meta">{{ $question->created_at->format('H:i') }}</span>
               </div>
-              <span class="status-pill status-{{ $question->status }}">{{ ucfirst($question->status) }}</span>
+              @if($question->status !== 'new')
+                <span class="status-pill status-{{ $question->status }}">{{ ucfirst($question->status) }}</span>
+              @endif
             </div>
             <div class="question-text">{{ $question->content }}</div>
             <div class="question-actions">
@@ -65,11 +67,27 @@
                     <button type="submit" class="queue-action queue-action-later">Later</button>
                   </form>
                 </div>
-                <form method="POST" action="{{ route('questions.ownerDelete', $question) }}" onsubmit="return confirm('Delete this question permanently?');" data-remote="questions-panel">
-                  @csrf
-                  @method('DELETE')
-                  <button class="btn btn-sm btn-danger" type="submit">Delete</button>
-                </form>
+                <div class="question-actions-secondary">
+                  @if($question->participant)
+                    <form
+                      method="POST"
+                      action="{{ route('rooms.bans.store', $room) }}"
+                      data-ban-confirm="1"
+                    >
+                      @csrf
+                      <input type="hidden" name="participant_id" value="{{ $question->participant->id }}">
+                      <button class="btn btn-sm btn-ghost" type="submit">
+                        <i data-lucide="gavel"></i>
+                        <span>Ban participant</span>
+                      </button>
+                    </form>
+                  @endif
+                  <form method="POST" action="{{ route('questions.ownerDelete', $question) }}" onsubmit="return confirm('Delete this question permanently?');" data-remote="questions-panel">
+                    @csrf
+                    @method('DELETE')
+                    <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+                  </form>
+                </div>
               @else
                 <span class="panel-subtitle">Only the host can manage the queue.</span>
               @endif
@@ -147,11 +165,27 @@
                     </form>
                   @endif
                 </div>
-                <form method="POST" action="{{ route('questions.destroy', $question) }}" onsubmit="return confirm('Delete this record for good?');" data-remote="questions-panel">
-                  @csrf
-                  @method('DELETE')
-                  <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                </form>
+                <div class="question-actions-secondary">
+                  @if($question->participant)
+                    <form
+                      method="POST"
+                      action="{{ route('rooms.bans.store', $room) }}"
+                      data-ban-confirm="1"
+                    >
+                      @csrf
+                      <input type="hidden" name="participant_id" value="{{ $question->participant->id }}">
+                      <button type="submit" class="btn btn-sm btn-ghost">
+                        <i data-lucide="gavel"></i>
+                        <span>Ban participant</span>
+                      </button>
+                    </form>
+                  @endif
+                  <form method="POST" action="{{ route('questions.destroy', $question) }}" onsubmit="return confirm('Delete this record for good?');" data-remote="questions-panel">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                  </form>
+                </div>
               @else
                 <span class="panel-subtitle">Only the host can manage history.</span>
               @endif

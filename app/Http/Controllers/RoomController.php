@@ -5,9 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Room;
 use App\Models\Message;
 use App\Models\Participant;
+use App\Models\RoomBan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 class RoomController extends Controller
@@ -65,7 +68,6 @@ class RoomController extends Controller
         }
     }
 
-    // Список комнат владельца
     public function dashboard(Request $request)
     {
         $rooms = $request->user()
@@ -77,13 +79,11 @@ class RoomController extends Controller
         return view('dashboard', compact('rooms'));
     }
 
-    // Форма создания комнаты
     public function create()
     {
         return view('rooms.create');
     }
 
-    // Создание комнаты
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -102,10 +102,9 @@ class RoomController extends Controller
 
         return redirect()
             ->route('rooms.public', $room->slug)
-            ->with('status', 'Комната создана');
+            ->with('status', ' ');
     }
 
-    // Update room details and status
     public function update(Request $request, Room $room)
     {
         $this->ensureOwner($room);
@@ -173,17 +172,26 @@ class RoomController extends Controller
             abort(403);
         }
 
-        $participant = $this->getOrCreateParticipant($request, $room);
+        $fingerprint = $this->resolveFingerprint($request);
+        $ipAddress = $request->ip();
+
+        if (!$this->isOwner($room) && $this->isIdentityBanned($room, $ipAddress, $fingerprint)) {
+            abort(403);
+        }
+
+        $participant = $this->getOrCreateParticipant($request, $room, $fingerprint, $ipAddress);
 
         $messages = $room->messages()
             ->with(['participant', 'user', 'question', 'replyTo.user', 'replyTo.participant'])
             ->orderBy('created_at')
             ->get();
 
-        $isOwner = $request->user() && $room->user_id === $request->user()->id;
+        $isOwner = $this->isOwner($room);
+        $isBanned = false;
 
         $queueQuestions = collect();
         $historyQuestions = collect();
+        $bannedParticipants = collect();
 
         if ($isOwner) {
             $queueQuestions = $room->questions()
@@ -203,11 +211,18 @@ class RoomController extends Controller
                 })
                 ->orderBy('created_at', 'desc')
                 ->get();
+
+            $bannedParticipants = $room->bans()
+                ->with('participant')
+                ->orderByDesc('created_at')
+                ->get();
+        } elseif ($participant && $participant->id) {
+            $isBanned = $room->isParticipantBanned($participant, $ipAddress, $fingerprint);
         }
 
         $myQuestions = collect();
 
-        if (! $isOwner && $participant && $participant->id) {
+        if (!$isOwner && $participant && $participant->id) {
             $myQuestions = $room->questions()
                 ->where('participant_id', $participant->id)
                 ->whereNull('deleted_by_participant_at')
@@ -223,23 +238,35 @@ class RoomController extends Controller
             'messages' => $messages,
             'participant' => $participant,
             'isOwner' => $isOwner,
+            'isBanned' => $isBanned,
+            'bannedParticipants' => $bannedParticipants,
             'queueQuestions' => $queueQuestions,
             'historyQuestions' => $historyQuestions,
             'myQuestions' => $myQuestions,
         ]);
     }
 
-    protected function getOrCreateParticipant(Request $request, Room $room): Participant
+    protected function getOrCreateParticipant(Request $request, Room $room, string $fingerprint, ?string $ipAddress = null): Participant
     {
         $user = $request->user();
+        $ipAddress = $ipAddress ?? $request->ip();
+        $hasIdentityColumns = Schema::hasColumn('participants', 'ip_address')
+            && Schema::hasColumn('participants', 'fingerprint');
 
-        // если пользователь — владелец комнаты, участник не нужен
+        //      
         if ($user && $user->id === $room->user_id) {
-            return new Participant([
+            $data = [
                 'room_id' => $room->id,
                 'session_token' => '',
                 'display_name' => $user->name,
-            ]);
+            ];
+
+            if ($hasIdentityColumns) {
+                $data['ip_address'] = $ipAddress;
+                $data['fingerprint'] = $fingerprint;
+            }
+
+            return new Participant($data);
         }
 
         $sessionKey = 'room_participant_' . $room->id;
@@ -251,6 +278,14 @@ class RoomController extends Controller
             if ($participant) {
                 if ($user && $user->is_dev && $participant->display_name !== $user->name) {
                     $participant->display_name = $user->name;
+                }
+
+                if ($hasIdentityColumns && ($participant->ip_address !== $ipAddress || $participant->fingerprint !== $fingerprint)) {
+                    $participant->ip_address = $ipAddress;
+                    $participant->fingerprint = $fingerprint;
+                }
+
+                if ($participant->isDirty()) {
                     $participant->save();
                 }
 
@@ -258,14 +293,20 @@ class RoomController extends Controller
             }
         }
 
-        // создаём нового участника
         $token = Str::uuid()->toString();
 
-        $participant = Participant::create([
+        $participantData = [
             'room_id' => $room->id,
             'session_token' => $token,
             'display_name' => $user && $user->is_dev ? $user->name : 'User' . random_int(1000, 9999),
-        ]);
+        ];
+
+        if ($hasIdentityColumns) {
+            $participantData['ip_address'] = $ipAddress;
+            $participantData['fingerprint'] = $fingerprint;
+        }
+
+        $participant = Participant::create($participantData);
 
         $request->session()->put($sessionKey, $participant->id);
 
@@ -277,7 +318,6 @@ class RoomController extends Controller
         $user = auth()->user();
         $isOwner = $user && $user->id === $room->user_id;
 
-                // та же логика, что ты используешь в showPublic для правой панели
         $queueQuestions = $room->questions()
             ->with('participant')
             ->whereIn('status', ['new', 'later'])
@@ -310,7 +350,7 @@ class RoomController extends Controller
             abort(403);
         }
 
-        $participant = $this->getOrCreateParticipant($request, $room);
+        $participant = $this->getOrCreateParticipant($request, $room, $this->resolveFingerprint($request), $request->ip());
 
         if (!$participant || !$participant->id) {
             abort(403);
@@ -330,4 +370,47 @@ class RoomController extends Controller
             'myQuestions' => $myQuestions,
         ]);
     }
-}
+
+    protected function resolveFingerprint(Request $request): string
+    {
+        $existing = $request->cookie('lc_fp');
+        if ($existing) {
+            return $existing;
+        }
+
+        $fingerprint = (string) Str::uuid();
+        Cookie::queue(cookie('lc_fp', $fingerprint, 60 * 24 * 365, '/', null, false, false));
+
+        return $fingerprint;
+    }
+
+    protected function isIdentityBanned(Room $room, ?string $ipAddress, ?string $fingerprint): bool
+    {
+        $hasIdentityColumns = Schema::hasColumn('room_bans', 'ip_address')
+            && Schema::hasColumn('room_bans', 'fingerprint');
+
+        if (!$hasIdentityColumns) {
+            return false;
+        }
+
+        if (!$ipAddress && !$fingerprint) {
+            return false;
+        }
+
+        return $room->bans()
+            ->where(function ($query) use ($ipAddress, $fingerprint) {
+                if ($ipAddress) {
+                    $query->orWhere('ip_address', $ipAddress);
+                }
+                if ($fingerprint) {
+                    $query->orWhere('fingerprint', $fingerprint);
+                }
+            })
+            ->exists();
+    }
+
+    protected function isOwner(Room $room): bool
+    {
+        return auth()->check() && auth()->id() === $room->user_id;
+    }
+}
