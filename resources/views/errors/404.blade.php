@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ config('app.name', 'Ghost Room') }}</title>
+    <title>Page not found • {{ config('app.name', 'Ghost Room') }}</title>
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
     <script>
@@ -35,41 +35,28 @@
 
     @vite(['resources/css/app.css', 'resources/css/design.css', 'resources/js/app.js', 'resources/js/design.js'])
 </head>
-@php($pageClass = $pageClass ?? $attributes->get('page-class'))
-<body class="app{{ $pageClass ? ' ' . $pageClass : '' }}">
+<body class="app error-page-shell">
 <div class="app-shell">
     @include('layouts.navigation')
 
-    <main>
-        @isset($header)
-            <div class="panel">
-                <div class="panel-header">
-                    <div class="panel-title">
-                        {{ $header }}
-                    </div>
-                </div>
+    <main class="error-page">
+        <section class="panel error-panel">
+            <div class="error-sheen"></div>
+            <div class="error-glow"></div>
+            <div class="eyebrow error-eyebrow">404 / Not Found</div>
+            <div class="error-code">404</div>
+            <h1 class="error-title">This page went ghost</h1>
+            <p class="panel-subtitle error-lead">
+                We couldn't find what you were looking for. It might have been renamed, moved, or never existed.
+            </p>
+            <div class="error-actions">
+                <button class="btn btn-primary" type="button" onclick="history.back()">
+                    <i data-lucide="arrow-left"></i>
+                    <span>Go back</span>
+                </button>
             </div>
-        @endisset
-
-        {{ $slot }}
+        </section>
     </main>
-
-    @unless(request()->routeIs('rooms.*'))
-        <nav class="mobile-tabs app-mobile-tabs" aria-label="Quick navigation">
-            <a class="mobile-tab-btn {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
-                <i data-lucide="home"></i>
-                <span>Dashboard</span>
-            </a>
-            <a class="mobile-tab-btn {{ request()->routeIs('rooms.create') ? 'active' : '' }}" href="{{ route('rooms.create') }}">
-                <i data-lucide="plus"></i>
-                <span>New room</span>
-            </a>
-            <a class="mobile-tab-btn {{ request()->routeIs('profile.edit') ? 'active' : '' }}" href="{{ route('profile.edit') }}">
-                <i data-lucide="user"></i>
-                <span>Profile</span>
-            </a>
-        </nav>
-    @endunless
 
     <footer class="app-footer">
         <div class="footer-grid">
@@ -92,7 +79,7 @@
                 <div class="footer-heading">About</div>
                 <div class="footer-links-list">
                     <span class="footer-muted">Ghost Room - Anonymous live chat for lectures. Send questions without interrupting the class.</span>
-                    <span class="footer-muted">Made with 💜 by Zloy</span>
+                    <span class="footer-muted">Made with love by Zloy</span>
                 </div>
             </div>
         </div>
