@@ -13,15 +13,6 @@
                 Good day, {{ $user->name }}
             </h1>
             <p class="panel-subtitle">Run live rooms in the same sleek style as your chats.</p>
-            <div class="dashboard-hero__actions">
-                <a href="{{ route('rooms.create') }}" class="btn btn-primary">Create room</a>
-                @if($latestRoom)
-                    <a href="{{ route('rooms.public', $latestRoom->slug) }}" class="btn btn-ghost">
-                        <i data-lucide="play-circle"></i>
-                        <span>Open latest room</span>
-                    </a>
-                @endif
-            </div>
         </div>
     </section>
 
@@ -71,6 +62,12 @@
                             $publicLink = route('rooms.public', $room->slug);
                         @endphp
                         <article class="room-card panel">
+                            <div class="room-card-meta">
+                                <span class="room-code">Code: {{ $room->slug }}</span>
+                                <span class="dot-separator">&bull;</span>
+                                <span class="message-meta">Updated {{ $room->updated_at->format('d.m H:i') }}</span>
+                                <span class="status-pill status-{{ $room->status }}">{{ ucfirst($room->status) }}</span>
+                            </div>
                             <div class="room-card-header">
                                 <div class="room-card-title">
                                     <div class="inline-editable" data-inline-edit>
@@ -94,16 +91,7 @@
                                             </div>
                                         </form>
                                     </div>
-                                    <span class="status-pill status-{{ $room->status }}">{{ ucfirst($room->status) }}</span>
                                 </div>
-                                <button class="icon-btn room-copy" type="button" data-copy="{{ $publicLink }}" title="Copy public link">
-                                    <i data-lucide="copy"></i>
-                                </button>
-                            </div>
-                            <div class="room-card-meta">
-                                <span class="room-code">Code: {{ $room->slug }}</span>
-                                <span class="dot-separator">&bull;</span>
-                                <span class="message-meta">Updated {{ $room->updated_at->format('d.m H:i') }}</span>
                             </div>
                             <div class="inline-editable" data-inline-edit>
                                 <p class="inline-edit-display room-card-desc">
@@ -130,7 +118,7 @@
 
                             <div class="room-card-stats">
                                 <div class="room-stat">
-                                    <div class="room-stat-icon accent">
+                                    <div class="room-stat-icon neutral">
                                         <i data-lucide="message-square"></i>
                                     </div>
                                     <div>
@@ -150,6 +138,10 @@
                             </div>
 
                             <div class="room-card-actions">
+                                <a href="{{ $publicLink }}" class="btn btn-sm btn-primary" target="_blank" rel="noreferrer">
+                                    <i data-lucide="messages-square"></i>
+                                    <span>Open live room</span>
+                                </a>
                                 <form method="POST" action="{{ route('rooms.update', $room) }}" class="inline-status-form">
                                     @csrf
                                     @method('PATCH')
@@ -159,10 +151,6 @@
                                         <span>{{ $room->status === 'active' ? 'Close room' : 'Reopen room' }}</span>
                                     </button>
                                 </form>
-                                <a href="{{ $publicLink }}" class="btn btn-sm btn-primary" target="_blank" rel="noreferrer">
-                                    <i data-lucide="messages-square"></i>
-                                    <span>Open live room</span>
-                                </a>
                                 <button
                                     type="button"
                                     class="btn btn-sm btn-danger room-delete-btn"

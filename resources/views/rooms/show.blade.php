@@ -88,13 +88,15 @@
                 </div>
                 <div class="room-header-aside">
                     <span class="status-pill status-{{ $room->status }} room-status">{{ ucfirst($room->status) }}</span>
-                    <div class="panel-actions">
-                        <button class="btn btn-sm btn-ghost" type="button" data-copy="{{ $publicLink }}">Copy link</button>
-                        <button class="btn btn-sm btn-ghost" type="button" id="qrButton">
-                            <i data-lucide="qr-code"></i>
-                            <span>Show QR-code</span>
-                        </button>
-                    </div>
+                    @if($isOwner)
+                        <div class="panel-actions">
+                            <button class="btn btn-sm btn-ghost" type="button" data-copy="{{ $publicLink }}">Copy link</button>
+                            <button class="btn btn-sm btn-ghost" type="button" id="qrButton">
+                                <i data-lucide="qr-code"></i>
+                                <span>Show QR-code</span>
+                            </button>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -201,7 +203,7 @@
                             </div>
                         </li>
                     @empty
-                        <li class="message">
+                        <li class="message message-empty" data-empty-message>
                             <div class="message-body">
                                 <div class="message-text">No messages yet.</div>
                             </div>
@@ -335,6 +337,13 @@
                     '"': '&quot;',
                     "'": '&#039;',
                 }[char] ?? char));
+                const removeEmptyMessageState = () => {
+                    if (!chatContainer) return;
+                    const empty = chatContainer.querySelector('.message-empty');
+                    if (empty) {
+                        empty.remove();
+                    }
+                };
 
                 if (queueSoundUrl) {
                     window.queueSoundUrl = queueSoundUrl;
@@ -434,7 +443,7 @@
                           qrCanvas.style.height = '100%';
                           const ctx = qrCanvas.getContext('2d');
                           if (!ctx) return;
-                          const backgroundColor = getCssVar('--bg-elevated', '#ffffff');
+                          const backgroundColor = '#ffffff';
                           const dotColor = '#121212';
                           ctx.clearRect(0, 0, canvasSize, canvasSize);
                           ctx.fillStyle = backgroundColor;
@@ -724,6 +733,7 @@
                         .listen('MessageSent', (e) => {
                             const container = document.querySelector('.messages-container');
                             if (!container) return;
+                            removeEmptyMessageState();
 
                             const isOutgoing = (currentUserId && e.author.user_id && Number(currentUserId) === Number(e.author.user_id))
                                 || (currentParticipantId && e.author.participant_id && Number(currentParticipantId) === Number(e.author.participant_id));
@@ -834,6 +844,7 @@
                                 return;
                             }
 
+                            removeEmptyMessageState();
                             const textarea = chatForm.querySelector('textarea[name="content"]');
                             if (textarea) {
                                 textarea.value = '';

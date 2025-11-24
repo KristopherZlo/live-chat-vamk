@@ -191,6 +191,8 @@ window.refreshLucideIcons = refreshLucideIcons;
 function applyTheme(theme) {
   const normalized = theme === 'dark' ? 'dark' : 'light';
   document.body.dataset.theme = normalized;
+  document.documentElement.dataset.theme = normalized;
+  document.documentElement.style.backgroundColor = normalized === 'dark' ? '#000000' : '#ffffff';
   try {
     localStorage.setItem(THEME_KEY, normalized);
   } catch (e) {
@@ -384,9 +386,6 @@ function setupHistoryOpener(root = document) {
   const toggle = () => {
     historyVisible = !historyVisible;
     applyVisibility();
-    if (historyVisible && historyPanel) {
-      historyPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
   };
 
   buttons.forEach((btn) => btn.addEventListener('click', toggle));
@@ -411,15 +410,14 @@ function setupQueueNewHandlers(root = document) {
 
   queueItems.forEach((item) => {
     const id = normalizeId(item.dataset.questionId);
-    const isNewStatus = item.classList.contains('queue-item-new');
+    const status = (item.dataset.status || '').toLowerCase();
+    const isNewStatus = status === 'new';
     const isSeen = id && seenIds.has(id);
 
-    if (!isNewStatus) {
+    if (!isNewStatus || isSeen) {
       item.classList.remove('queue-item-new');
-    } else if (id && !isSeen) {
+    } else if (isNewStatus) {
       item.classList.add('queue-item-new');
-    } else if (id && isSeen) {
-      item.classList.remove('queue-item-new');
     }
 
     item.addEventListener('click', () => {

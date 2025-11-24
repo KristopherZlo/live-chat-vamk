@@ -33,15 +33,17 @@
     @else
       <ul class="queue-list">
         @foreach($queueQuestions as $question)
-          <li class="queue-item {{ $question->status === 'new' ? 'queue-item-new' : '' }}" data-question-id="{{ $question->id }}">
+          <li
+            class="queue-item {{ $question->status === 'new' ? 'queue-item-new' : '' }}"
+            data-question-id="{{ $question->id }}"
+            data-status="{{ $question->status }}"
+          >
             <div class="question-header">
               <div class="question-meta">
                 <span class="message-author">{{ $question->participant?->display_name ?? 'Anonymous' }}</span>
                 <span class="message-meta">{{ $question->created_at->format('H:i') }}</span>
               </div>
-              @if($question->status === 'new')
-                <span class="status-pill status-{{ $question->status }}">{{ ucfirst($question->status) }}</span>
-              @endif
+              <span class="status-pill status-{{ $question->status }}">{{ ucfirst($question->status) }}</span>
             </div>
             <div class="question-text">{{ $question->content }}</div>
             <div class="question-actions">
@@ -123,9 +125,7 @@
                 <span class="message-author">{{ $question->participant?->display_name ?? 'Anonymous' }}</span>
                 <span class="message-meta">{{ $question->created_at->format('d.m H:i') }}</span>
               </div>
-              @if($question->status === 'new')
-                <span class="status-pill status-{{ $question->status }}">{{ ucfirst($question->status) }}</span>
-              @endif
+              <span class="status-pill status-{{ $question->status }}">{{ ucfirst($question->status) }}</span>
             </div>
             <div class="question-text">{{ $question->content }}</div>
 

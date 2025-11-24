@@ -8,11 +8,34 @@
     <title>{{ config('app.name', 'Ghost Room') }}</title>
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+    <script>
+        (() => {
+            const KEY = 'lc-theme';
+            let theme = 'light';
+            try {
+                const stored = localStorage.getItem(KEY);
+                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                theme = stored === 'dark' || (!stored && prefersDark) ? 'dark' : 'light';
+            } catch (e) {
+                theme = 'light';
+            }
+            const apply = () => {
+                document.documentElement.dataset.theme = theme;
+                document.documentElement.style.backgroundColor = theme === 'dark' ? '#000000' : '#ffffff';
+                if (document.body) {
+                    document.body.dataset.theme = theme;
+                }
+            };
+            apply();
+            document.addEventListener('DOMContentLoaded', apply);
+            document.documentElement.style.backgroundColor = theme === 'dark' ? '#000000' : '#ffffff';
+        })();
+    </script>
     <script src="https://unpkg.com/lucide@latest" defer></script>
 
     @vite(['resources/css/app.css', 'resources/css/design.css', 'resources/js/app.js', 'resources/js/design.js'])
 </head>
-<body class="app" data-theme="light">
+<body class="app">
 <div class="app-shell">
     @include('layouts.navigation')
 
@@ -68,7 +91,7 @@
                 <div class="footer-heading">About</div>
                 <div class="footer-links-list">
                     <span class="footer-muted">Ghost Room - Anonymous live chat for lectures. Send questions without interrupting the class.</span>
-                    <span class="footer-muted">Made with ❤ by Zloy</span>
+                    <span class="footer-muted">Made with 💜 by Zloy</span>
                 </div>
             </div>
         </div>
