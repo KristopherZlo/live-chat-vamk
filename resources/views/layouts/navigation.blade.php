@@ -93,9 +93,9 @@
 
       <div class="mobile-menu-footer">
         <div class="mobile-menu-footer-links">
-          <a href="#" data-close-menu>
+          <a href="{{ route('privacy') }}" data-close-menu>
             <i data-lucide="shield-check"></i>
-            <span>GDPR</span>
+            <span>Privacy & terms</span>
           </a>
           <a href="#" data-close-menu>
             <i data-lucide="mail"></i>

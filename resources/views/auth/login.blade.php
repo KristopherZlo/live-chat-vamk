@@ -1,47 +1,87 @@
 <x-guest-layout>
-    <!-- Session Status -->
-    <x-auth-session-status class="mb-4" :status="session('status')" />
+    <div class="login-background" aria-hidden="true">
+        <div class="login-blur login-blur-1"></div>
+        <div class="login-blur login-blur-2"></div>
+        <div class="login-blur login-blur-3"></div>
+    </div>
 
-    <form method="POST" action="{{ route('login') }}">
-        @csrf
+    <div class="login-modal">
+        <div class="login-modal-split">
+            <div class="login-modal-content">
+                <div class="login-logo-wrap">
+                    <img src="{{ asset('assets/ghostup_logo_white.svg') }}" alt="Ghost Room" class="login-logo">
+                </div>
 
-        <!-- Email Address -->
-        <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus autocomplete="username" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
-        </div>
+                <div class="login-text">
+                    <h2>Welcome back</h2>
+                    <p>Sign in to continue your journey</p>
+                </div>
 
-        <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
+                <x-auth-session-status class="login-status" :status="session('status')" />
 
-            <x-text-input id="password" class="block mt-1 w-full"
+                <button type="button" class="login-provider-button" id="discordLogin">
+                    <span class="login-provider-icon" aria-hidden="true">
+                        <img src="{{ asset('assets/discord-white-icon.svg') }}" alt="" width="22" height="22">
+                    </span>
+                    Continue with Discord
+                </button>
+
+                <div class="login-divider">
+                    <span>or continue with email</span>
+                </div>
+
+                <form method="POST" action="{{ route('login') }}" class="login-form">
+                    @csrf
+
+                    <div class="login-field">
+                        <label for="email">Email</label>
+                        <input
+                            id="email"
+                            type="email"
+                            name="email"
+                            value="{{ old('email') }}"
+                            required
+                            autofocus
+                            autocomplete="username"
+                            placeholder="you@example.com">
+                        <x-input-error :messages="$errors->get('email')" class="login-input-error" />
+                    </div>
+
+                    <div class="login-field">
+                        <label for="password">Password</label>
+                        <input
+                            id="password"
                             type="password"
                             name="password"
-                            required autocomplete="current-password" />
+                            required
+                            autocomplete="current-password"
+                            placeholder="********">
+                        <x-input-error :messages="$errors->get('password')" class="login-input-error" />
+                    </div>
 
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
+                    <div class="login-form-meta">
+                        <label for="remember_me" class="login-remember">
+                            <input id="remember_me" type="checkbox" name="remember">
+                            <span class="login-checkmark" aria-hidden="true"></span>
+                            <span>Stay signed in</span>
+                        </label>
+
+                        @if (Route::has('password.request'))
+                            <a class="login-link" href="{{ route('password.request') }}">
+                                Forgot password?
+                            </a>
+                        @endif
+                    </div>
+
+                    <button class="login-submit" type="submit">
+                        Log in
+                    </button>
+                </form>
+            </div>
+
+            <div class="login-modal-illustration" aria-hidden="true">
+                <svg viewBox="0 0 400 500" class="login-illustration"></svg>
+            </div>
         </div>
-
-        <!-- Remember Me -->
-        <div class="block mt-4">
-            <label for="remember_me" class="inline-flex items-center">
-                <input id="remember_me" type="checkbox" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" name="remember">
-                <span class="ms-2 text-sm text-gray-600">{{ __('Remember me') }}</span>
-            </label>
-        </div>
-
-        <div class="flex items-center justify-end mt-4">
-            @if (Route::has('password.request'))
-                <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('password.request') }}">
-                    {{ __('Forgot your password?') }}
-                </a>
-            @endif
-
-            <x-primary-button class="ms-3">
-                {{ __('Log in') }}
-            </x-primary-button>
-        </div>
-    </form>
+    </div>
 </x-guest-layout>
