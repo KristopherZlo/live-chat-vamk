@@ -43,8 +43,6 @@
           </form>
         </div>
       </details>
-    @else
-      <a class="btn btn-sm btn-primary" href="{{ route('login') }}">Sign in</a>
     @endauth
   </div>
 </header>
@@ -82,11 +80,6 @@
               <span>Log out</span>
             </button>
           </form>
-        @else
-          <a class="btn btn-sm btn-primary" href="{{ route('login') }}" data-close-menu>
-            <i data-lucide="log-in"></i>
-            <span>Sign in</span>
-          </a>
         @endauth
       </div>
     </div>
