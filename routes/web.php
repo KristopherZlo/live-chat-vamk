@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\QuestionController;
+use App\Http\Controllers\RoomBanController;
 
 Route::get('/', [RoomController::class, 'landing'])->name('home');
 
@@ -31,6 +32,10 @@ Route::middleware(['auth'])->group(function () {
         ->name('rooms.update');
     Route::delete('/rooms/{room}', [RoomController::class, 'destroy'])
         ->name('rooms.destroy');
+    Route::post('/rooms/{room}/bans', [RoomBanController::class, 'store'])
+        ->name('rooms.bans.store');
+    Route::delete('/rooms/{room}/bans/{ban}', [RoomBanController::class, 'destroy'])
+        ->name('rooms.bans.destroy');
 });
 
 // Публичная страница комнаты по slug

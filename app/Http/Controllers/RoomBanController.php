@@ -24,15 +24,25 @@ class RoomBanController extends Controller
 
         $participant = Participant::findOrFail($data['participant_id']);
 
+        $hasIdentityColumns = Schema::hasColumn('room_bans', 'ip_address')
+            && Schema::hasColumn('room_bans', 'fingerprint');
+
+        $banData = [
+            'participant_id' => $participant->id,
+            'display_name' => $participant->display_name,
+        ];
+
+        if ($hasIdentityColumns) {
+            $banData['ip_address'] = $participant->ip_address ?? $request->ip();
+            $banData['fingerprint'] = $participant->fingerprint ?? $request->cookie('lc_fp');
+        }
+
         $room->bans()->firstOrCreate(
             [
                 'session_token' => $participant->session_token,
                 'room_id' => $room->id,
             ],
-            [
-                'participant_id' => $participant->id,
-                'display_name' => $participant->display_name,
-            ]
+            $banData
         );
 
         return back()->with('status', 'Participant banned from this room.');

@@ -18,6 +18,8 @@ class MessageController extends Controller
         $user = Auth::user();
         $isOwner = $user && $user->id === $room->user_id;
         $isDevUser = $user && !$isOwner && $user->is_dev;
+        $ipAddress = $request->ip();
+        $fingerprint = $request->cookie('lc_fp');
 
         if ($room->status !== 'active') {
             $message = 'Room is closed for new messages.';
@@ -61,6 +63,16 @@ class MessageController extends Controller
             if (!$participant) {
                 return back()->withErrors('Session expired. Please refresh and try again.');
             }
+        }
+
+        if ($participant && $room->isParticipantBanned($participant, $ipAddress, $fingerprint)) {
+            $message = 'You are banned from sending messages in this room.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 403);
+            }
+
+            return back()->withErrors($message);
         }
 
         $replyMessage = null;

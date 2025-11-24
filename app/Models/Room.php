@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Models\RoomBan;
+use App\Models\Participant;
+use Illuminate\Support\Facades\Schema;
 
 class Room extends Model
 {
@@ -37,5 +40,37 @@ class Room extends Model
     public function questions()
     {
         return $this->hasMany(Question::class);
+    }
+
+    public function bans()
+    {
+        return $this->hasMany(RoomBan::class);
+    }
+
+    public function isParticipantBanned(?Participant $participant, ?string $ipAddress = null, ?string $fingerprint = null): bool
+    {
+        if (!$participant) {
+            return false;
+        }
+
+        $hasIdentityColumns = Schema::hasColumn('room_bans', 'ip_address')
+            && Schema::hasColumn('room_bans', 'fingerprint');
+
+        return $this->bans()
+            ->where(function ($query) use ($participant, $ipAddress, $fingerprint, $hasIdentityColumns) {
+                $query->where('participant_id', $participant->id)
+                    ->orWhere('session_token', $participant->session_token);
+
+                if ($hasIdentityColumns) {
+                    if ($ipAddress) {
+                        $query->orWhere('ip_address', $ipAddress);
+                    }
+
+                    if ($fingerprint) {
+                        $query->orWhere('fingerprint', $fingerprint);
+                    }
+                }
+            })
+            ->exists();
     }
 }
