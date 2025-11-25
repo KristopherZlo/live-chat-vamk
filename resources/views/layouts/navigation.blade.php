@@ -2,8 +2,8 @@
   <div class="app-title">
     <div class="app-logo">
       <a class="app-logo-link" href="{{ route('dashboard') }}" aria-label="Ghost Room">
-        <img src="{{ Vite::asset('resources/icons/logo_black.svg') }}" class="app-logo-img app-logo-img--light" alt="Ghost Room logo">
-        <img src="{{ Vite::asset('resources/icons/logo_white.svg') }}" class="app-logo-img app-logo-img--dark" alt="Ghost Room logo">
+        <img src="{{ asset('icons/logo_black.svg') }}" class="app-logo-img app-logo-img--light" alt="Ghost Room logo">
+        <img src="{{ asset('icons/logo_white.svg') }}" class="app-logo-img app-logo-img--dark" alt="Ghost Room logo">
       </a>
     </div>
     <div class="app-title-text">

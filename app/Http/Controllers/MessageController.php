@@ -121,6 +121,16 @@ class MessageController extends Controller
 
         event(new MessageSent($message));
 
-        return redirect()->route('rooms.public', $room->slug);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message_id' => $message->id,
+                'question_id' => $question?->id,
+                'as_question' => (bool) $question,
+            ], 201);
+        }
+
+        return redirect()
+            ->route('rooms.public', $room->slug)
+            ->with('status', 'Message sent.');
     }
 }

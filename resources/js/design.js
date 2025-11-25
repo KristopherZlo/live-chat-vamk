@@ -5,6 +5,8 @@ const QUEUE_SOUND_KEY = 'lc-queue-sound';
 let queueSoundPlayer = null;
 let queueSoundPlayerSrc = null;
 let queueSoundPreference = true;
+let queueSoundPrimed = false;
+let queueSoundPrimeHandlerBound = false;
 
 function normalizeId(value) {
   const num = Number(value);
@@ -149,6 +151,55 @@ function playQueueSound(url) {
   }
 }
 
+function primeQueueSound(url) {
+  if (queueSoundPrimed) return;
+  const player = ensureQueueSoundPlayer(url);
+  if (!player) return;
+
+  const previousMute = player.muted;
+  const restore = () => {
+    player.muted = previousMute;
+  };
+
+  try {
+    player.muted = true;
+    const attempt = player.play();
+    if (attempt && typeof attempt.then === 'function') {
+      attempt
+        .then(() => {
+          queueSoundPrimed = true;
+          player.pause();
+          player.currentTime = 0;
+        })
+        .catch(() => {})
+        .finally(restore);
+    } else {
+      restore();
+    }
+  } catch (e) {
+    restore();
+  }
+}
+
+function setupSoundPriming(url) {
+  if (queueSoundPrimed || queueSoundPrimeHandlerBound) return;
+  queueSoundPrimeHandlerBound = true;
+
+  const handler = () => {
+    primeQueueSound(url);
+    if (queueSoundPrimed) {
+      ['pointerdown', 'touchstart', 'keydown'].forEach((eventName) => {
+        window.removeEventListener(eventName, handler);
+      });
+      queueSoundPrimeHandlerBound = false;
+    }
+  };
+
+  ['pointerdown', 'touchstart', 'keydown'].forEach((eventName) => {
+    window.addEventListener(eventName, handler, { passive: true });
+  });
+}
+
 function setupQueueSoundToggle() {
   const toggles = document.querySelectorAll('[data-queue-sound-toggle]');
   if (!toggles.length) return;
@@ -179,6 +230,7 @@ function setupQueueSoundToggle() {
 
 function initQueueSoundPlayer(url) {
   ensureQueueSoundPlayer(url);
+  setupSoundPriming(url);
 }
 
 function refreshLucideIcons() {
@@ -612,6 +664,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupMobileMenu();
   setupUserMenus();
   setupQueueSoundToggle();
+  setupSoundPriming(window.queueSoundUrl);
   setupMobileTabs();
   setupChatEnterSubmit();
   setupHistoryOpener();
