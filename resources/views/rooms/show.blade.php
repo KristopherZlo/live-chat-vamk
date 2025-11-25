@@ -2,7 +2,7 @@
     @php
         $publicLink = route('rooms.public', $room->slug);
         $isClosed = $room->status !== 'active';
-        $queueSoundUrl = \Illuminate\Support\Facades\Vite::asset('resources/audio/new-question-sound.mp3');
+        $queueSoundUrl = asset('audio/new-question-sound.mp3');
     @endphp
     @php
         $avatarPalette = ['#2563eb', '#0ea5e9', '#6366f1', '#8b5cf6', '#14b8a6', '#f97316', '#f59e0b', '#10b981', '#ef4444'];
@@ -362,7 +362,7 @@
                 <div class="qr-box">
                     <canvas id="qrCanvas" role="img" aria-label="QR code"></canvas>
                     <div class="qr-logo">
-                        <img src="{{ Vite::asset('resources/icons/logo_black.svg') }}" class="qr-logo-img" alt="Ghost Room logo">
+                        <img src="{{ asset('icons/logo_black.svg') }}" class="qr-logo-img" alt="Ghost Room logo">
                     </div>
                 </div>
                 <div class="qr-info">
@@ -1051,6 +1051,14 @@
                 }
 
                 const chatForm = document.getElementById('chat-form');
+                const sendButton = document.getElementById('sendButton');
+                const setSendingState = (isSending) => {
+                    if (!sendButton) return;
+                    sendButton.disabled = isSending;
+                    sendButton.classList.toggle('sending', isSending);
+                    sendButton.setAttribute('aria-busy', isSending ? 'true' : 'false');
+                };
+
                 if (chatForm) {
                     chatForm.addEventListener('submit', async (event) => {
                         event.preventDefault();
@@ -1059,6 +1067,7 @@
                         const url = chatForm.action;
 
                         try {
+                            setSendingState(true);
                             const response = await fetch(url, {
                                 method: 'POST',
                                 headers: {
@@ -1091,6 +1100,8 @@
                             clearReplyContext();
                         } catch (e) {
                             console.error('Send message error', e);
+                        } finally {
+                            setSendingState(false);
                         }
                     });
                 }

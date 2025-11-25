@@ -6,6 +6,7 @@ use App\Models\Participant;
 use App\Models\Room;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 class RoomBanController extends Controller

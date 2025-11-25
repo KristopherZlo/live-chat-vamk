@@ -1893,6 +1893,7 @@ html {
     @media (max-width: 768px) {
       :root {
         --mobile-tab-bar-height: 76px;
+        --mobile-safe-bottom: env(safe-area-inset-bottom, 0px);
         --mobile-header-height: 112px;
       }
 
@@ -1942,7 +1943,7 @@ html {
     display: flex;
     flex-direction: column;
     gap: 0.65rem;
-    padding: 0.65rem 0.85rem calc(var(--mobile-tab-bar-height) + 0.45rem);
+    padding: 0.65rem 0.85rem calc(var(--mobile-tab-bar-height) + var(--mobile-safe-bottom) + 0.75rem);
     min-height: 0;
     overflow: hidden;
     width: 100vw;
@@ -1961,6 +1962,7 @@ html {
         display: flex;
         flex-direction: column;
         gap: 0.65rem;
+        padding-bottom: calc(var(--mobile-tab-bar-height) + var(--mobile-safe-bottom, 0px));
       }
 
       .layout {
@@ -1970,6 +1972,7 @@ html {
         flex-direction: column;
         gap: 0.65rem;
         overflow: hidden;
+        padding-bottom: calc(var(--mobile-tab-bar-height) + var(--mobile-safe-bottom, 0px));
       }
 
       .panel {
@@ -2165,13 +2168,13 @@ html {
         display: flex;
         flex-wrap: nowrap;
         gap: 0.35rem;
-        padding: 0.5rem 0.65rem;
+        padding: 0.5rem 0.65rem calc(0.5rem + var(--mobile-safe-bottom, 0px));
         background: var(--bg-elevated);
         border-top: 1px solid var(--border-subtle);
         box-shadow: 0 -8px 18px rgba(0, 0, 0, 0.08);
         z-index: 45;
-        height: var(--mobile-tab-bar-height);
-        min-height: var(--mobile-tab-bar-height);
+        height: calc(var(--mobile-tab-bar-height) + var(--mobile-safe-bottom, 0px));
+        min-height: calc(var(--mobile-tab-bar-height) + var(--mobile-safe-bottom, 0px));
       }
 
       .mobile-tab-btn {
@@ -2253,7 +2256,7 @@ html {
       .chat-panel {
         flex: 1;
         min-height: 0;
-        padding: 0.65rem 0.75rem 0;
+        padding: 0.65rem 0.75rem calc(var(--mobile-tab-bar-height) + var(--mobile-safe-bottom, 0px));
         gap: 0.2rem;
       }
 
@@ -2282,11 +2285,11 @@ html {
 
       .chat-input {
         position: sticky;
-        bottom: 0;
+        bottom: calc(var(--mobile-tab-bar-height) + var(--mobile-safe-bottom, 0px));
         background: inherit;
         border-top: 1px solid var(--border-subtle);
         margin: 0 -0.75rem -0.05rem;
-        padding: 0.55rem 0.75rem 0.7rem;
+        padding: 0.55rem 0.75rem calc(0.7rem + var(--mobile-safe-bottom, 0px));
         border-radius: 0 0 1rem 1rem;
         box-shadow: 0 -12px 30px rgba(0, 0, 0, 0.06);
       }
@@ -2480,6 +2483,7 @@ html {
     @media (max-width: 520px) {
       main {
         padding: 0.55rem 0.75rem;
+        padding: 0.65rem 0.85rem calc(var(--mobile-tab-bar-height) + var(--mobile-safe-bottom) + 0.75rem);
       }
 
       .app-header {
@@ -3233,11 +3237,11 @@ main {
   height: auto;
   max-height: none;
   overflow: hidden;
-  padding-bottom: 0.5rem;
+  padding-bottom: calc(var(--mobile-tab-bar-height, 104px) + var(--mobile-safe-bottom, 0px));
 }
 
   .chat-panel {
-    padding-bottom: calc(var(--mobile-tab-bar-height, 104px) / 2);
+    padding-bottom: calc(var(--mobile-tab-bar-height, 104px) + var(--mobile-safe-bottom, 0px));
   }
 
   .app-footer {
@@ -3286,12 +3290,12 @@ main {
     grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
     gap: 0.35rem;
     row-gap: 0.4rem;
-    padding: 0.5rem 0.75rem;
+    padding: 0.5rem 0.75rem calc(0.5rem + var(--mobile-safe-bottom, 0px));
     background: var(--bg-elevated);
     border-top: 1px solid var(--border-subtle);
     box-shadow: 0 -8px 18px rgba(0, 0, 0, 0.08);
     z-index: 44;
-    min-height: var(--mobile-tab-bar-height, 104px);
+    min-height: calc(var(--mobile-tab-bar-height, 104px) + var(--mobile-safe-bottom, 0px));
   }
 
   .app-mobile-tabs .mobile-tab-btn {
@@ -3436,13 +3440,34 @@ main {
 @media (max-width: 768px) {
 
   .chat-panel {
-    padding-bottom: calc(var(--mobile-tab-bar-height, 104px) + 0.75rem);
+    padding-bottom: calc(var(--mobile-tab-bar-height, 104px) + var(--mobile-safe-bottom, 0px) + 0.75rem);
     max-height: none;
+  }
+
+  /* Room chat: use the full viewport height without stacking bottom paddings */
+  .room-page {
+    padding-bottom: 0;
+  }
+
+  .room-page .layout {
+    padding-bottom: 0;
+  }
+
+  .room-page .chat-panel {
+    padding-bottom: 0.75rem;
   }
 
   .chat-input {
     z-index: 36;
   }
+}
+
+/* Keep chat input pinned to the bottom of the chat pane */
+.chat-pane > .chat-input {
+  margin-top: auto;
+  position: static;
+  inset: auto;
+  margin: 0;
 }
 
 .user-menu {
