@@ -44,7 +44,7 @@
       --message-out: #1b1b27;
       --scroll-track: #0f0f0f;
       --scroll-thumb: #3a3a4d;
-      --notify: #d1d5db;
+      --notify: #2563eb;
       --ok: #c5ced8;
       --bad: #e5e7eb;
       --btn-blue-bg: #1b1d25;
@@ -557,7 +557,7 @@ html {
 .message-ban-form {
   position: absolute;
   top: 0.3rem;
-  right: -1.85rem;
+  right: calc(-1.85rem - 5px);
   opacity: 0.15;
   transform: translateX(22px);
   transition: opacity 0.12s ease-out, transform 0.18s ease-out;
@@ -601,6 +601,9 @@ html {
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
+  background: var(--bg-elevated);
+  border-radius: 0 0 1rem 1rem;
+  box-shadow: 0 -8px 18px rgba(15, 23, 42, 0.08);
 }
 
 .chat-send-options {
@@ -985,21 +988,30 @@ html {
     .queue-item.queue-item-new {
       cursor: pointer;
       animation: queue-pulse 1.2s ease-in-out infinite;
+      border-color: var(--notify);
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+      background: color-mix(in srgb, var(--accent-soft) 70%, var(--bg-elevated) 30%);
+    }
+
+    [data-theme="dark"] .queue-item.queue-item-new {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.35);
+      background: rgba(37, 99, 235, 0.14);
     }
 
     .queue-item.queue-item-new:hover {
       transform: translateY(-1px);
     }
 
-    @keyframes queue-pulse {
-      0% {
-        transform: translateY(0);
-        border-color: var(--border-subtle);
-      }
-      50% {
-        transform: translateY(-2px);
-        border-color: var(--accent);
-      }
+@keyframes queue-pulse {
+  0% {
+    transform: translateY(0);
+    border-color: var(--border-subtle);
+  }
+  50% {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+  }
       100% {
         transform: translateY(0);
         border-color: var(--border-subtle);
@@ -1055,7 +1067,9 @@ html {
 
     [data-theme="dark"] .status-new {
       border-color: var(--accent);
-      color: var(--accent-strong);
+      color: #e5edff;
+      background: rgba(37, 99, 235, 0.15);
+      font-weight: 700;
     }
 
     [data-theme="dark"] .status-later {
@@ -1277,6 +1291,11 @@ html {
 .queue-panel.has-new {
       border-color: var(--notify);
       box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.28);
+    }
+
+    [data-theme="dark"] .queue-panel.has-new {
+      border-color: var(--notify);
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.35);
     }
 
     .history-panel.hidden {
@@ -1757,18 +1776,6 @@ html {
     padding-bottom: 0.5rem;
   }
 
-  /* Keep chat input sticky at the bottom */
-  .chat-input {
-    position: sticky;
-    bottom: 0;
-    background: var(--bg-elevated);
-    border-top: 1px solid var(--border-subtle);
-    padding: 0.5rem 0.75rem 0.6rem;
-    margin: 0 -0.75rem -0.6rem;
-    border-radius: 0 0 1rem 1rem;
-    gap: 0.35rem;
-  }
-
   .chat-input-row {
     grid-template-columns: 1fr auto;
     gap: 0.35rem;
@@ -2026,15 +2033,6 @@ html {
         max-width: 82%;
       }
 
-      .chat-input {
-        margin: 0;
-        padding: 0.45rem 0.7rem 0.55rem;
-        border-radius: 0 0 0.85rem 0.85rem;
-        border-top: 1px solid var(--border-subtle);
-        box-shadow: 0 -8px 18px rgba(15, 23, 42, 0.08);
-        background: #fff;
-      }
-
       .chat-textarea {
         min-height: 3rem;
         padding: 0.55rem 0.65rem;
@@ -2283,17 +2281,6 @@ html {
   overflow-y: auto;
 }
 
-      .chat-input {
-        position: sticky;
-        bottom: calc(var(--mobile-tab-bar-height) + var(--mobile-safe-bottom, 0px));
-        background: inherit;
-        border-top: 1px solid var(--border-subtle);
-        margin: 0 -0.75rem -0.05rem;
-        padding: 0.55rem 0.75rem calc(0.7rem + var(--mobile-safe-bottom, 0px));
-        border-radius: 0 0 1rem 1rem;
-        box-shadow: 0 -12px 30px rgba(0, 0, 0, 0.06);
-      }
-
       .chat-input-row {
         align-items: center;
       }
@@ -2513,9 +2500,6 @@ html {
         padding: 0.6rem 0.7rem 0;
       }
 
-      .chat-input {
-        margin: 0 -0.7rem -0.05rem;
-      }
     }
 
     /* Dark theme refresh */
@@ -2745,12 +2729,6 @@ html {
       color: #e5e7eb;
       box-shadow: none;
     }
-
-      [data-theme="dark"] .chat-input {
-        background: var(--bg-elevated);
-        border-color: var(--border-strong);
-        box-shadow: 0 -10px 22px rgba(0, 0, 0, 0.26);
-      }
 
       [data-theme="dark"] .room-info {
         background: var(--bg-elevated);
