@@ -102,7 +102,7 @@ class RoomController extends Controller
 
         return redirect()
             ->route('rooms.public', $room->slug)
-            ->with('status', ' ');
+            ->with('status', 'Room created.');
     }
 
     public function update(Request $request, Room $room)

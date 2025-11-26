@@ -45,6 +45,8 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
+        $request->session()->flash('onboarding_new_user', true);
+
         return redirect(route('dashboard', absolute: false));
     }
 }

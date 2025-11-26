@@ -13,7 +13,11 @@
         };
     @endphp
 
-    <div class="{{ $isOwner ? 'role-teacher' : 'role-student' }} room-page">
+    <div
+        class="{{ $isOwner ? 'role-teacher' : 'role-student' }} room-page"
+        data-room-role="{{ $isOwner ? 'owner' : 'participant' }}"
+        data-room-id="{{ $room->id }}"
+    >
         <div class="panel room-header">
             @php
                 $hasLongDescription = $room->description && \Illuminate\Support\Str::length($room->description) > 255;
@@ -158,14 +162,14 @@
                         <button class="chat-tab-btn active" type="button" data-chat-tab="chat">
                             <span>Chat</span>
                         </button>
-                        <button class="chat-tab-btn" type="button" data-chat-tab="bans">
+                        <button class="chat-tab-btn" type="button" data-chat-tab="bans" data-onboarding-target="bans-tab">
                             <span>Bans</span>
                             <span class="pill-soft">{{ $bannedParticipants->count() }}</span>
                         </button>
                     </div>
                 @endif
 
-                <div class="chat-pane" data-chat-panel="chat">
+                <div class="chat-pane" data-chat-panel="chat" data-onboarding-target="chat-pane">
                     <ol class="chat-messages messages-container" id="chatMessages">
                         @forelse($messages as $message)
                             @php
@@ -286,6 +290,7 @@
                                         placeholder="Type your message..."
                                         rows="1"
                                         required
+                                        data-onboarding-target="chat-input"
                                     ></textarea>
                                     <input type="hidden" name="reply_to_id" id="replyToId" value="">
                                     <button type="submit" class="send-btn" id="sendButton" title="Send message">
@@ -385,6 +390,7 @@
                 const currentParticipantId = @json($participant?->id);
                 const publicLink = @json($publicLink);
                 const queueSoundUrl = @json($queueSoundUrl);
+                window.queueSoundUrl = queueSoundUrl;
                 const questionsPanel = document.getElementById('questions-panel');
                 const questionsPanelUrl = @json(route('rooms.questionsPanel', $room));
                 const myQuestionsPanel = document.getElementById('myQuestionsPanel');

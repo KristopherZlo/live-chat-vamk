@@ -33,10 +33,33 @@
     </script>
     <script src="https://unpkg.com/lucide@latest" defer></script>
 
-    @vite(['resources/css/app.css', 'resources/css/design.css', 'resources/js/app.js', 'resources/js/design.js'])
+    @vite([
+        'resources/css/app.css',
+        'resources/css/design.css',
+        'resources/css/onboarding.css',
+        'resources/js/app.js',
+        'resources/js/design.js',
+        'resources/js/onboarding.js'
+    ])
 </head>
+@php
+    $authUser = Auth::user();
+    $hasRooms = $authUser ? $authUser->rooms()->exists() : false;
+    $onboardingNewUser = $authUser
+        ? (session('onboarding_new_user') || (!$hasRooms && $authUser->created_at && $authUser->created_at->gt(now()->subDay())))
+        : false;
+    $routeName = \Illuminate\Support\Facades\Route::currentRouteName();
+@endphp
 @php($pageClass = $pageClass ?? $attributes->get('page-class'))
-<body class="app{{ $pageClass ? ' ' . $pageClass : '' }}">
+<body
+    class="app{{ $pageClass ? ' ' . $pageClass : '' }}"
+    data-route-name="{{ $routeName }}"
+    data-onboarding-new-user="{{ $onboardingNewUser ? '1' : '0' }}"
+    data-onboarding-has-rooms="{{ $hasRooms ? '1' : '0' }}"
+    @if($authUser)
+        data-user-name="{{ $authUser->name }}"
+    @endif
+>
 <div class="app-shell">
     @include('layouts.navigation')
 

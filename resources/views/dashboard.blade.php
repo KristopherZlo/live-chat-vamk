@@ -43,7 +43,7 @@
             </div>
             <div class="panel-actions">
                 <span class="panel-subtitle">{{ $rooms->count() }} total | {{ $totalMessages }} messages | {{ $totalQuestions }} questions</span>
-                <a href="{{ route('rooms.create') }}" class="btn btn-sm btn-primary">Create room</a>
+                <a href="{{ route('rooms.create') }}" class="btn btn-sm btn-primary" data-onboarding-target="dashboard-create-room">Create room</a>
             </div>
         </div>
 
@@ -52,7 +52,7 @@
                 <div class="empty-state">
                     <div>No rooms yet.</div>
                     <div class="empty-actions">
-                        <a class="btn btn-primary" href="{{ route('rooms.create') }}">Create the first room</a>
+                        <a class="btn btn-primary" href="{{ route('rooms.create') }}" data-onboarding-target="dashboard-create-room">Create the first room</a>
                     </div>
                 </div>
             @else
