@@ -9,6 +9,7 @@
   id="queuePanel"
   data-room-id="{{ $room->id }}"
   data-viewer-id="{{ auth()->id() ?? 'guest' }}"
+  data-onboarding-target="queue-panel"
 >
   <div class="panel-header">
     <div>
@@ -16,10 +17,10 @@
         <i data-lucide="list-ordered"></i>
         <span>Question queue</span>
       </div>
-      <div class="panel-subtitle">New questions from participants</div>
+    <div class="panel-subtitle">New questions from participants</div>
     </div>
     <div class="queue-header-extra">
-      <button class="btn btn-sm btn-ghost history-open-btn" type="button" data-toggle-history>
+      <button class="btn btn-sm btn-ghost history-open-btn" type="button" data-toggle-history data-onboarding-target="queue-history">
         <i data-lucide="clock"></i>
         <span>Open history</span>
       </button>

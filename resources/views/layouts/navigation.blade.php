@@ -17,7 +17,7 @@
     <nav class="app-nav">
       @auth
         <a class="btn btn-sm btn-ghost" href="{{ route('dashboard') }}">Dashboard</a>
-        <a class="btn btn-sm btn-ghost" href="{{ route('rooms.create') }}">New room</a>
+        <a class="btn btn-sm btn-ghost" href="{{ route('rooms.create') }}" data-onboarding-target="create-room-nav">New room</a>
       @endauth
     </nav>
 
@@ -27,16 +27,16 @@
 
     @auth
       <details class="user-menu">
-        <summary class="btn btn-sm btn-ghost user-menu-trigger">
+        <summary class="btn btn-sm btn-ghost user-menu-trigger" data-onboarding-target="user-menu-trigger">
           <span>{{ Auth::user()->name }}</span>
           <i data-lucide="chevron-down" aria-hidden="true"></i>
         </summary>
         <div class="user-menu-dropdown">
-          <button type="button" class="dropdown-link setting" data-queue-sound-toggle>
+          <button type="button" class="dropdown-link setting" data-queue-sound-toggle data-onboarding-target="sound-toggle">
             <span>Question sound</span>
             <span class="pill" data-sound-state>On</span>
           </button>
-          <a class="dropdown-link" href="{{ route('profile.edit') }}">Profile</a>
+          <a class="dropdown-link" href="{{ route('profile.edit') }}" data-onboarding-target="profile-link">Profile</a>
           <form method="POST" action="{{ route('logout') }}">
             @csrf
             <button type="submit" class="dropdown-link danger">Log out</button>

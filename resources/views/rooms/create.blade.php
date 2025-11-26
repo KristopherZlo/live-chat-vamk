@@ -34,6 +34,7 @@
                         placeholder="Example: Databases Q&A, Week 6"
                         required
                         autofocus
+                        data-onboarding-target="room-title"
                     >
                 </label>
 
@@ -43,12 +44,14 @@
                     name="description"
                     rows="3"
                     class="field-control"
-                    placeholder="Add a short agenda or instructions (optional)">{{ old('description') }}</textarea>
+                    placeholder="Add a short agenda or instructions (optional)"
+                    data-onboarding-target="room-description"
+                >{{ old('description') }}</textarea>
             </label>
 
                 <div class="form-footer">
                     <span class="panel-subtitle">Instantly appears on your dashboard.</span>
-                    <button type="submit" class="btn btn-primary">Create room</button>
+                    <button type="submit" class="btn btn-primary" data-onboarding-target="room-submit">Create room</button>
                 </div>
             </form>
         </div>
