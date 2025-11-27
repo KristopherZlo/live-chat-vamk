@@ -73,13 +73,14 @@ function persistQueueSeenState(storageKey, seenIds) {
 
 function updateQueueBadge(queuePanel = getQueuePanel()) {
   if (!queuePanel) return;
+  const doc = queuePanel.ownerDocument || document;
   const hasNew = queuePanel.querySelector('.queue-item.queue-item-new');
-  let badge = document.getElementById('queueNewBadge');
+  let badge = doc.getElementById('queueNewBadge');
 
   queuePanel.classList.toggle('has-new', !!hasNew);
 
   if (hasNew && !badge) {
-    badge = document.createElement('span');
+    badge = doc.createElement('span');
     badge.id = 'queueNewBadge';
     badge.className = 'queue-new-badge';
     badge.innerHTML = '<span>New</span>';
@@ -234,10 +235,49 @@ function initQueueSoundPlayer(url) {
   setupSoundPriming(url);
 }
 
-function refreshLucideIcons() {
-  if (window.lucide && typeof window.lucide.createIcons === 'function') {
-    window.lucide.createIcons();
+function refreshLucideIcons(root = document) {
+  if (!window.lucide) return;
+
+  const target = root instanceof Element
+    ? root
+    : (root && root.documentElement) || document;
+
+  if (typeof window.lucide.createIcons === 'function') {
+    try {
+      window.lucide.createIcons({ icons: window.lucide.icons }, target);
+      return;
+    } catch (e) {
+      /* fallback to manual rendering below */
+    }
   }
+
+  const doc = target.ownerDocument || document;
+  const icons = window.lucide.icons || {};
+  const nodes = typeof target.querySelectorAll === 'function'
+    ? target.querySelectorAll('[data-lucide]')
+    : [];
+
+  nodes.forEach((node) => {
+    const name = node.getAttribute('data-lucide');
+    const iconDef = icons[name];
+    if (!iconDef || typeof iconDef.toSvg !== 'function') return;
+
+    const wrapper = doc.createElement('div');
+    wrapper.innerHTML = iconDef.toSvg();
+    const svg = wrapper.firstElementChild;
+    if (!svg) return;
+
+    const attrs = node.getAttributeNames();
+    attrs.forEach((attr) => {
+      if (attr === 'data-lucide') return;
+      const value = node.getAttribute(attr);
+      if (value !== null) {
+        svg.setAttribute(attr, value);
+      }
+    });
+    svg.classList.add(...node.classList);
+    node.replaceWith(svg);
+  });
 }
 window.refreshLucideIcons = refreshLucideIcons;
 
@@ -708,14 +748,21 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 window.rebindQueuePanels = (root = document) => {
-  setupHistoryOpener(root);
+  const doc = root?.ownerDocument || root;
+  const isExternalDoc = doc && doc.defaultView && doc.defaultView !== window;
+
+  if (!isExternalDoc) {
+    setupHistoryOpener(root);
+    setupFlashMessages(root);
+    setupRoomDescriptions(root);
+  }
+
   setupQueueNewHandlers(root);
-  setupFlashMessages(root);
-  setupRoomDescriptions(root);
-  refreshLucideIcons();
+  refreshLucideIcons(root);
 };
 
 window.markQueueHasNew = markQueueHasNew;
 window.playQueueSound = playQueueSound;
 window.initQueueSoundPlayer = initQueueSoundPlayer;
 window.isQueueSoundEnabled = isQueueSoundEnabled;
+window.setupQueueNewHandlers = setupQueueNewHandlers;

@@ -396,6 +396,27 @@
                 const myQuestionsPanel = document.getElementById('myQuestionsPanel');
                 const myQuestionsPanelUrl = @json(route('rooms.myQuestionsPanel', $room));
                 const banStoreUrl = @json(route('rooms.bans.store', $room));
+                const queuePipButton = document.querySelector('[data-queue-pip]');
+                const supportsDocumentPip = Boolean(window.documentPictureInPicture && window.documentPictureInPicture.requestWindow);
+                let queuePipWindow = null;
+                let queuePipSyncTimer = null;
+                let queuePipStylesCloned = false;
+                const normalizeId = (value) => {
+                    const num = Number(value);
+                    return Number.isFinite(num) ? num : null;
+                };
+                const markMainQueueItemSeen = (questionId) => {
+                    if (!questionId) return;
+                    const mainItem = document.querySelector(`#queuePanel .queue-item[data-question-id=\"${questionId}\"]`);
+                    if (mainItem) {
+                        mainItem.classList.remove('queue-item-new');
+                    }
+                    if (typeof window.setupQueueNewHandlers === 'function') {
+                        window.setupQueueNewHandlers();
+                    } else if (typeof window.markQueueHasNew === 'function') {
+                        window.markQueueHasNew();
+                    }
+                };
                 let queueNeedsNew = false;
                 let questionsPollTimer = null;
                 let myQuestionsPollTimer = null;
@@ -784,8 +805,149 @@
                       if (qrOverlay?.classList.contains('show')) {
                           drawStyledQr(publicLink);
                       }
+                      syncQueuePipTheme(queuePipWindow?.document);
                   });
                   themeObserver.observe(document.body, { attributes: true, attributeFilter: ['data-theme'] });
+
+                function syncQueuePipTheme(targetDoc) {
+                    if (!targetDoc) return;
+                    const theme = document.body?.dataset.theme || 'light';
+                    targetDoc.body.dataset.theme = theme;
+                    targetDoc.documentElement.dataset.theme = theme;
+                }
+
+                function cloneStylesToDocument(targetDoc) {
+                    if (!targetDoc || !targetDoc.head || queuePipStylesCloned) return;
+                    const styles = document.querySelectorAll('link[rel=\"stylesheet\"], style');
+                    targetDoc.head.innerHTML = '';
+                    styles.forEach((node) => {
+                        targetDoc.head.appendChild(node.cloneNode(true));
+                    });
+                    queuePipStylesCloned = true;
+                }
+
+                function bindPipQueueForms(root) {
+                    if (!root) return;
+                    const handler = (event) => {
+                        const form = event.target.closest('form[data-remote=\"questions-panel\"]');
+                        if (!form) return;
+                        event.preventDefault();
+                        submitRemoteForm(form, () => {
+                            reloadQuestionsPanel();
+                            renderQueuePipContent();
+                        });
+                        const item = form.closest('.queue-item');
+                        const statusInput = form.querySelector('input[name=\"status\"]');
+                        if (statusInput && statusInput.value === 'answered') {
+                            const id = normalizeId(item?.dataset.questionId);
+                            if (id) {
+                                markMainQueueItemSeen(id);
+                            }
+                        }
+                    };
+                    root.addEventListener('submit', handler, { capture: true });
+                }
+
+                function renderQueuePipContent() {
+                    if (!queuePipWindow || queuePipWindow.closed) {
+                        closeQueuePip();
+                        return;
+                    }
+                    const sourceQueue = document.querySelector('#queuePanel');
+                    if (!sourceQueue) return;
+                    const pipDoc = queuePipWindow.document;
+                    cloneStylesToDocument(pipDoc);
+                    syncQueuePipTheme(pipDoc);
+                    pipDoc.body.className = 'queue-pip-body';
+                    const shell = pipDoc.createElement('div');
+                    shell.className = 'queue-pip-shell';
+                    if (!supportsDocumentPip) {
+                        const fallbackNote = pipDoc.createElement('div');
+                        fallbackNote.className = 'queue-pip-fallback';
+                        fallbackNote.textContent = 'Picture-in-picture is not available. Using a regular window instead.';
+                        shell.appendChild(fallbackNote);
+                    }
+                    const queueClone = sourceQueue.cloneNode(true);
+                    queueClone.querySelectorAll('[data-queue-pip]').forEach((btn) => btn.remove());
+                    queueClone.querySelectorAll('[data-toggle-history]').forEach((btn) => btn.remove());
+                    shell.appendChild(queueClone);
+                    pipDoc.body.innerHTML = '';
+                    pipDoc.body.appendChild(shell);
+                    if (window.refreshLucideIcons) {
+                        window.refreshLucideIcons(queueClone);
+                    }
+                    if (typeof window.setupQueueNewHandlers === 'function') {
+                        window.setupQueueNewHandlers(queueClone);
+                    }
+                    bindPipQueueForms(queueClone);
+                    queueClone.addEventListener('click', (event) => {
+                        const item = event.target.closest('.queue-item');
+                        if (!item) return;
+                        const id = normalizeId(item.dataset.questionId);
+                        if (!id) return;
+                        if (item.classList.contains('queue-item-new')) {
+                            item.classList.remove('queue-item-new');
+                            markMainQueueItemSeen(id);
+                        }
+                    });
+                }
+
+                function closeQueuePip() {
+                    if (queuePipSyncTimer) {
+                        clearInterval(queuePipSyncTimer);
+                        queuePipSyncTimer = null;
+                    }
+                    if (queuePipWindow && !queuePipWindow.closed) {
+                        try {
+                            queuePipWindow.close();
+                        } catch (e) {
+                            /* ignore */
+                        }
+                    }
+                    queuePipWindow = null;
+                    queuePipStylesCloned = false;
+                    if (queuePipButton) {
+                        queuePipButton.classList.remove('active');
+                    }
+                }
+
+                async function openQueuePip() {
+                    const sourceQueue = document.querySelector('#queuePanel');
+                    if (!sourceQueue) return;
+                    if (queuePipWindow && !queuePipWindow.closed) {
+                        queuePipWindow.focus();
+                        renderQueuePipContent();
+                        return;
+                    }
+
+                    try {
+                        if (supportsDocumentPip) {
+                            queuePipWindow = await window.documentPictureInPicture.requestWindow({
+                                width: 420,
+                                height: 640,
+                            });
+                        } else {
+                            queuePipWindow = window.open('', 'queuePipFallback', 'width=420,height=640,resizable=yes');
+                        }
+                    } catch (error) {
+                        console.error('Cannot open picture-in-picture window', error);
+                        return;
+                    }
+
+                    if (!queuePipWindow) return;
+                    queuePipStylesCloned = false;
+                    if (window.lucide) {
+                        queuePipWindow.lucide = window.lucide;
+                    }
+                    queuePipWindow.document.title = 'Question queue';
+                    queuePipWindow.addEventListener('pagehide', closeQueuePip);
+                    queuePipWindow.addEventListener('beforeunload', closeQueuePip);
+                    renderQueuePipContent();
+                    queuePipSyncTimer = setInterval(renderQueuePipContent, 6000);
+                    if (queuePipButton) {
+                        queuePipButton.classList.add('active');
+                    }
+                }
 
                 function bindQueueInteractions(scope = document) {
                     if (!scope) return;
@@ -797,8 +959,30 @@
                     bindQueueInteractions();
                 }
 
+                if (queuePipButton) {
+                    queuePipButton.addEventListener('click', () => {
+                        if (queuePipWindow && !queuePipWindow.closed) {
+                            closeQueuePip();
+                        } else {
+                            openQueuePip();
+                        }
+                    });
+
+                    if (!supportsDocumentPip) {
+                        queuePipButton.title = 'Picture-in-picture is not fully supported in this browser.';
+                    }
+                }
+
+                const buildFormData = (form) => {
+                    const view = form?.ownerDocument?.defaultView;
+                    if (view && typeof view.FormData === 'function') {
+                        return new view.FormData(form);
+                    }
+                    return new FormData(form);
+                };
+
                 const submitRemoteForm = async (form, onDone) => {
-                    const formData = new FormData(form);
+                    const formData = buildFormData(form);
                     let method = (form.getAttribute('method') || 'POST').toUpperCase();
                     const override = formData.get('_method');
                     if (override) {
@@ -874,6 +1058,7 @@
                         const html = await response.text();
                         questionsPanel.innerHTML = html;
                         bindQueueInteractions(questionsPanel);
+                        renderQueuePipContent();
                         const hasNewItems = questionsPanel.querySelector('.queue-item.queue-item-new');
                         bindBanForms(questionsPanel);
                         if ((queueNeedsNew || hasNewItems) && typeof window.markQueueHasNew === 'function') {

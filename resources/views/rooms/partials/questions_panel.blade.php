@@ -20,6 +20,11 @@
     <div class="panel-subtitle">New questions from participants</div>
     </div>
     <div class="queue-header-extra">
+      @auth
+        <button class="btn btn-sm btn-ghost queue-pip-btn" type="button" data-queue-pip aria-label="Picture in picture">
+          <i data-lucide="picture-in-picture"></i>
+        </button>
+      @endauth
       <button class="btn btn-sm btn-ghost history-open-btn" type="button" data-toggle-history data-onboarding-target="queue-history">
         <i data-lucide="clock"></i>
         <span>Open history</span>

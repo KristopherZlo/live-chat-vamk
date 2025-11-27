@@ -31,9 +31,8 @@
             document.documentElement.style.backgroundColor = theme === 'dark' ? '#000000' : '#ffffff';
         })();
     </script>
-    <script src="https://unpkg.com/lucide@latest" defer></script>
-
     @vite([
+        'resources/js/lucide.js',
         'resources/css/app.css',
         'resources/css/design.css',
         'resources/css/onboarding.css',
