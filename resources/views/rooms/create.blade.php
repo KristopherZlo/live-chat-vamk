@@ -6,7 +6,7 @@
                 <span>Create a room</span>
             </div>
             <a class="btn btn-sm btn-ghost" href="{{ route('dashboard') }}">
-                <i data-lucide="layout-dashboard"></i>
+                <i data-lucide="arrow-left"></i>
                 <span>Back</span>
             </a>
         </div>
