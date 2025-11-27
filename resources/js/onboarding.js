@@ -998,13 +998,29 @@ function bootstrapOnboarding() {
         return;
     }
 
-    ensureDemoRoomData(ctx);
-    setupDemoActionHandlers();
     let state = readState();
+
+    if (!ctx.newUser) {
+        if (state.status !== 'completed' && state.status !== 'skipped') {
+            state = updateState({ status: 'skipped', stepIndex: 0 });
+        }
+        return;
+    }
 
     if (state.status === 'completed' || state.status === 'skipped') {
         return;
     }
+
+    const shouldInjectRoomLiveDemo = state.status === 'active'
+        && state.stage === 'roomLive'
+        && ctx.routeName === ONBOARDING_STAGES.roomLive.route
+        && ctx.roomRole === 'owner';
+
+    if (shouldInjectRoomLiveDemo) {
+        ensureDemoRoomData(ctx);
+    }
+
+    setupDemoActionHandlers();
 
     const currentStage = ONBOARDING_STAGES[state.stage] ?? ONBOARDING_STAGES.intro;
 
