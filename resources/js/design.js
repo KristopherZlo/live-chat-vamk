@@ -1,6 +1,7 @@
 const THEME_KEY = 'lc-theme';
 const QUEUE_SEEN_KEY_PREFIX = 'lc-queue-seen';
 const QUEUE_SOUND_KEY = 'lc-queue-sound';
+const HOUR_MS = 60 * 60 * 1000;
 
 let queueSoundPlayer = null;
 let queueSoundPlayerSrc = null;
@@ -656,6 +657,34 @@ function setupRoomDeleteModals() {
   });
 }
 
+function getGreetingByHour(date = new Date()) {
+  const hour = date.getHours();
+  if (hour >= 5 && hour < 12) return 'Good morning';
+  if (hour >= 12 && hour < 17) return 'Good afternoon';
+  if (hour >= 17 && hour < 22) return 'Good evening';
+  return 'Good night';
+}
+
+function updateDashboardGreeting() {
+  const greetingEl = document.getElementById('dashboardGreeting');
+  if (!greetingEl) return;
+  const name = greetingEl.dataset.username || '';
+  const greeting = getGreetingByHour();
+  greetingEl.textContent = name ? `${greeting}, ${name}` : greeting;
+}
+
+function scheduleGreetingRefresh() {
+  if (!document.getElementById('dashboardGreeting')) return;
+  const now = new Date();
+  const msElapsedThisHour = now.getMinutes() * 60 * 1000 + now.getSeconds() * 1000 + now.getMilliseconds();
+  const msToNextHour = Math.max(HOUR_MS - msElapsedThisHour, 0);
+
+  setTimeout(() => {
+    updateDashboardGreeting();
+    setInterval(updateDashboardGreeting, HOUR_MS);
+  }, msToNextHour);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   loadQueueSoundSetting();
   initTheme();
@@ -673,6 +702,8 @@ document.addEventListener('DOMContentLoaded', () => {
   setupInlineEditors();
   setupRoomDescriptions();
   setupRoomDeleteModals();
+  updateDashboardGreeting();
+  scheduleGreetingRefresh();
   refreshLucideIcons();
 });
 

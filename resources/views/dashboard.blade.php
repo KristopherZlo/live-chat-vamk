@@ -243,20 +243,3 @@
         </div>
     </section>
 </x-app-layout>
-
-@push('scripts')
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const greetingEl = document.getElementById('dashboardGreeting');
-            if (!greetingEl) return;
-            const name = greetingEl.dataset.username || '';
-            const hour = new Date().getHours();
-            let greeting = 'Good day';
-            if (hour >= 5 && hour < 12) greeting = 'Good morning';
-            else if (hour >= 12 && hour < 17) greeting = 'Good afternoon';
-            else if (hour >= 17 && hour < 22) greeting = 'Good evening';
-            else greeting = 'Good night';
-            greetingEl.textContent = name ? `${greeting}, ${name}` : greeting;
-        });
-    </script>
-@endpush
