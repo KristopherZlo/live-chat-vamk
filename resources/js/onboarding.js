@@ -171,6 +171,13 @@ function getContext() {
     return { body, routeName, newUser, hasRooms, userName, roomRole };
 }
 
+function isMobileViewport() {
+    if (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) {
+        return true;
+    }
+    return window.innerWidth <= 768;
+}
+
 function overlayIsActive() {
     const overlay = document.querySelector('[data-onboarding-overlay]');
     return !!(overlay && overlay.classList.contains('active'));
@@ -987,6 +994,10 @@ function showResume(state, stageKey, ctx) {
 
 function bootstrapOnboarding() {
     const ctx = getContext();
+    if (isMobileViewport()) {
+        return;
+    }
+
     ensureDemoRoomData(ctx);
     setupDemoActionHandlers();
     let state = readState();
