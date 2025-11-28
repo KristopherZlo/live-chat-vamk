@@ -44,6 +44,7 @@ Route::get('/r/{slug}', [RoomController::class, 'showPublic'])
 
 // Отправка сообщения (общий чат + опциональный вопрос)
 Route::post('/rooms/{room}/messages', [MessageController::class, 'store'])
+    ->middleware('throttle:room-messages')
     ->name('rooms.messages.store');
 
 Route::middleware(['auth'])->group(function () {

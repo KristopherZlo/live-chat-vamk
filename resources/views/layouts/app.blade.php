@@ -45,7 +45,7 @@
     $authUser = Auth::user();
     $hasRooms = $authUser ? $authUser->rooms()->exists() : false;
     $onboardingNewUser = $authUser
-        ? (session('onboarding_new_user') || (!$hasRooms && $authUser->created_at && $authUser->created_at->gt(now()->subDay())))
+        ? (session('onboarding_new_user') || !$hasRooms)
         : false;
     $routeName = \Illuminate\Support\Facades\Route::currentRouteName();
 @endphp
