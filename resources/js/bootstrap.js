@@ -17,19 +17,29 @@ import Pusher from 'pusher-js';
 
 window.Pusher = Pusher;
 
+const providedReverbConfig = window.__reverbConfig ?? {};
+const reverbKey = providedReverbConfig.key || import.meta.env.VITE_REVERB_APP_KEY;
+const reverbHost = providedReverbConfig.host || import.meta.env.VITE_REVERB_HOST ?? window.location.hostname;
+const reverbPort = Number(
+    providedReverbConfig.port ?? import.meta.env.VITE_REVERB_PORT ?? 8080
+);
+const reverbScheme = providedReverbConfig.scheme || import.meta.env.VITE_REVERB_SCHEME ?? 'http';
+const forceTLS = reverbScheme === 'https';
+
 window.Echo = new Echo({
     broadcaster: 'reverb',
-    key: import.meta.env.VITE_REVERB_APP_KEY,
-    wsHost: import.meta.env.VITE_REVERB_HOST ?? window.location.hostname,
-    wsPort: Number(import.meta.env.VITE_REVERB_PORT ?? 8080),
-    wssPort: Number(import.meta.env.VITE_REVERB_PORT ?? 8080),
-    forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'http') === 'https',
+    key: reverbKey,
+    wsHost: reverbHost,
+    wsPort: reverbPort,
+    wssPort: reverbPort,
+    forceTLS,
     enabledTransports: ['ws', 'wss'],
 });
 
 console.log('Echo options:', {
-    key: import.meta.env.VITE_REVERB_APP_KEY,
-    host: import.meta.env.VITE_REVERB_HOST,
-    port: import.meta.env.VITE_REVERB_PORT,
-    scheme: import.meta.env.VITE_REVERB_SCHEME,
+    key: reverbKey,
+    host: reverbHost,
+    port: reverbPort,
+    scheme: reverbScheme,
+    source: providedReverbConfig.key ? 'server' : 'env',
 });

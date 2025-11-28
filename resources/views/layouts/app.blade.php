@@ -31,6 +31,22 @@
             document.documentElement.style.backgroundColor = theme === 'dark' ? '#000000' : '#ffffff';
         })();
     </script>
+    @php
+        $reverbConnection = config('broadcasting.connections.reverb', []);
+        $reverbOptions = $reverbConnection['options'] ?? [];
+        $reverbKey = $reverbConnection['key'] ?? '';
+        $reverbHost = $reverbOptions['host'] ?? request()->getHost();
+        $reverbPort = $reverbOptions['port'] ?? 443;
+        $reverbScheme = $reverbOptions['scheme'] ?? 'https';
+    @endphp
+    <script>
+        window.__reverbConfig = {
+            key: @json($reverbKey),
+            host: @json($reverbHost),
+            port: @json($reverbPort),
+            scheme: @json($reverbScheme),
+        };
+    </script>
     @vite([
         'resources/js/lucide.js',
         'resources/css/app.css',
