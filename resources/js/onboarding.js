@@ -401,8 +401,10 @@ function ensureDemoRoomData(ctx) {
     }
 
     ensureHistoryOpen();
-    if (window.lucide?.createIcons) {
-        window.lucide.createIcons();
+    if (typeof window.refreshLucideIcons === 'function') {
+        window.refreshLucideIcons(document);
+    } else if (window.lucide?.createIcons && window.lucide?.icons) {
+        window.lucide.createIcons({ icons: window.lucide.icons });
     }
 }
 
