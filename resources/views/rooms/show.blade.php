@@ -396,6 +396,7 @@
                 const myQuestionsPanel = document.getElementById('myQuestionsPanel');
                 const myQuestionsPanelUrl = @json(route('rooms.myQuestionsPanel', $room));
                 const banStoreUrl = @json(route('rooms.bans.store', $room));
+                const rootWindow = window;
                 const queuePipButton = document.querySelector('[data-queue-pip]');
                 const supportsDocumentPip = Boolean(window.documentPictureInPicture && window.documentPictureInPicture.requestWindow);
                 let queuePipWindow = null;
@@ -406,15 +407,20 @@
                     return Number.isFinite(num) ? num : null;
                 };
                 const markMainQueueItemSeen = (questionId) => {
-                    if (!questionId) return;
-                    const mainItem = document.querySelector(`#queuePanel .queue-item[data-question-id=\"${questionId}\"]`);
+                    const id = normalizeId(questionId);
+                    if (!id) return;
+                    if (typeof rootWindow.markQueueItemSeen === 'function') {
+                        rootWindow.markQueueItemSeen(id, rootWindow.document);
+                        return;
+                    }
+                    const mainItem = rootWindow.document.querySelector(`#queuePanel .queue-item[data-question-id=\"${id}\"]`);
                     if (mainItem) {
                         mainItem.classList.remove('queue-item-new');
                     }
-                    if (typeof window.setupQueueNewHandlers === 'function') {
-                        window.setupQueueNewHandlers();
-                    } else if (typeof window.markQueueHasNew === 'function') {
-                        window.markQueueHasNew();
+                    if (typeof rootWindow.setupQueueNewHandlers === 'function') {
+                        rootWindow.setupQueueNewHandlers();
+                    } else if (typeof rootWindow.markQueueHasNew === 'function') {
+                        rootWindow.markQueueHasNew();
                     }
                 };
                 let queueNeedsNew = false;

@@ -501,10 +501,16 @@ function setupQueueNewHandlers(root = document) {
     return;
   }
 
-  const markSeen = (id) => {
-    if (!id || seenIds.has(id)) return;
+  const persistSeen = (id) => {
+    if (!id || seenIds.has(id)) return false;
     seenIds.add(id);
     persistQueueSeenState(storageKey, seenIds);
+    return true;
+  };
+
+  const markSeen = (id) => {
+    if (!persistSeen(id)) return;
+    updateQueueBadge(queuePanel);
   };
 
   queueItems.forEach((item) => {
@@ -523,11 +529,28 @@ function setupQueueNewHandlers(root = document) {
       if (!id || !item.classList.contains('queue-item-new')) return;
       item.classList.remove('queue-item-new');
       markSeen(id);
-      updateQueueBadge(queuePanel);
     });
   });
 
   updateQueueBadge(queuePanel);
+}
+
+function markQueueItemSeen(questionId, root = document) {
+  const queuePanel = getQueuePanel(root);
+  const { storageKey, seenIds } = loadQueueSeenState(queuePanel);
+  const id = normalizeId(questionId);
+  if (!id || !seenIds || seenIds.has(id)) return;
+
+  seenIds.add(id);
+  persistQueueSeenState(storageKey, seenIds);
+
+  if (queuePanel) {
+    const item = queuePanel.querySelector(`.queue-item[data-question-id="${id}"]`);
+    if (item) {
+      item.classList.remove('queue-item-new');
+    }
+    updateQueueBadge(queuePanel);
+  }
 }
 
 function markQueueHasNew() {
@@ -766,3 +789,4 @@ window.playQueueSound = playQueueSound;
 window.initQueueSoundPlayer = initQueueSoundPlayer;
 window.isQueueSoundEnabled = isQueueSoundEnabled;
 window.setupQueueNewHandlers = setupQueueNewHandlers;
+window.markQueueItemSeen = markQueueItemSeen;
