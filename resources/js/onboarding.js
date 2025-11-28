@@ -1000,7 +1000,17 @@ function bootstrapOnboarding() {
 
     let state = readState();
 
-    if (!ctx.newUser) {
+    if (!ctx.hasRooms && (state.status === 'completed' || state.status === 'skipped')) {
+        state = updateState({
+            status: ONBOARDING_DEFAULT_STATE.status,
+            stage: ONBOARDING_DEFAULT_STATE.stage,
+            stepIndex: ONBOARDING_DEFAULT_STATE.stepIndex,
+        });
+    }
+
+    const activeOnboarding = state.status === 'active';
+
+    if (!ctx.newUser && !activeOnboarding) {
         if (state.status !== 'completed' && state.status !== 'skipped') {
             state = updateState({ status: 'skipped', stepIndex: 0 });
         }

@@ -15,6 +15,11 @@ use Illuminate\Validation\Rule;
 
 class RoomController extends Controller
 {
+    private const MAX_MESSAGES = 200;
+    private const MAX_QUEUE_ITEMS = 200;
+    private const MAX_HISTORY_ITEMS = 500;
+    private const MAX_MY_QUESTIONS = 200;
+
     public function landing()
     {
         if (Auth::check()) {
@@ -183,8 +188,11 @@ class RoomController extends Controller
 
         $messages = $room->messages()
             ->with(['participant', 'user', 'question', 'replyTo.user', 'replyTo.participant'])
-            ->orderBy('created_at')
-            ->get();
+            ->orderByDesc('created_at')
+            ->limit(self::MAX_MESSAGES)
+            ->get()
+            ->reverse()
+            ->values();
 
         $isOwner = $this->isOwner($room);
         $isBanned = false;
@@ -200,6 +208,7 @@ class RoomController extends Controller
                 ->whereNull('deleted_by_owner_at')
                 ->whereNull('deleted_by_participant_at')
                 ->orderBy('created_at')
+                ->limit(self::MAX_QUEUE_ITEMS)
                 ->get();
 
             $historyQuestions = $room->questions()
@@ -210,6 +219,7 @@ class RoomController extends Controller
                     ->orWhereNotNull('deleted_by_owner_at');
                 })
                 ->orderBy('created_at', 'desc')
+                ->limit(self::MAX_HISTORY_ITEMS)
                 ->get();
 
             $bannedParticipants = $room->bans()
@@ -230,6 +240,7 @@ class RoomController extends Controller
                     $query->where('participant_id', $participant->id);
                 }])
                 ->orderBy('created_at', 'desc')
+                ->limit(self::MAX_MY_QUESTIONS)
                 ->get();
         }
 
@@ -324,6 +335,7 @@ class RoomController extends Controller
             ->whereNull('deleted_by_owner_at')
             ->whereNull('deleted_by_participant_at')
             ->orderBy('created_at')
+            ->limit(self::MAX_QUEUE_ITEMS)
             ->get();
 
         $historyQuestions = $room->questions()
@@ -334,6 +346,7 @@ class RoomController extends Controller
                 ->orWhereNotNull('deleted_by_owner_at');
             })
             ->orderByDesc('created_at')
+            ->limit(self::MAX_HISTORY_ITEMS)
             ->get();
 
         return view('rooms.partials.questions_panel', [
@@ -363,6 +376,7 @@ class RoomController extends Controller
                 $query->where('participant_id', $participant->id);
             }])
             ->orderBy('created_at', 'desc')
+            ->limit(self::MAX_MY_QUESTIONS)
             ->get();
 
         return view('rooms.partials.my_questions_panel', [
