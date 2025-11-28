@@ -18,8 +18,15 @@ import Pusher from 'pusher-js';
 window.Pusher = Pusher;
 
 const providedReverbConfig = window.__reverbConfig || {};
-const env = (typeof import !== 'undefined' && import.meta && import.meta.env) ? import.meta.env : {};
-const pickFirst = (...values) => values.find((v) => v !== undefined && v !== null && v !== '') ?? '';
+const env = (typeof import.meta !== 'undefined' && import.meta && import.meta.env) ? import.meta.env : {};
+const pickFirst = (...values) => {
+    for (const v of values) {
+        if (v !== undefined && v !== null && v !== '') {
+            return v;
+        }
+    }
+    return '';
+};
 
 const reverbKey = pickFirst(providedReverbConfig.key, env.VITE_REVERB_APP_KEY, '');
 const reverbHost = pickFirst(providedReverbConfig.host, env.VITE_REVERB_HOST, window.location.hostname);
