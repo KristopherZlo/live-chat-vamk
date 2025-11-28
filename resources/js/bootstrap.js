@@ -17,13 +17,14 @@ import Pusher from 'pusher-js';
 
 window.Pusher = Pusher;
 
-const providedReverbConfig = window.__reverbConfig ?? {};
-const reverbKey = providedReverbConfig.key || import.meta.env.VITE_REVERB_APP_KEY;
-const reverbHost = providedReverbConfig.host || import.meta.env.VITE_REVERB_HOST ?? window.location.hostname;
-const reverbPort = Number(
-    providedReverbConfig.port ?? import.meta.env.VITE_REVERB_PORT ?? 8080
-);
-const reverbScheme = providedReverbConfig.scheme || import.meta.env.VITE_REVERB_SCHEME ?? 'http';
+const providedReverbConfig = window.__reverbConfig || {};
+const env = (typeof import !== 'undefined' && import.meta && import.meta.env) ? import.meta.env : {};
+const pickFirst = (...values) => values.find((v) => v !== undefined && v !== null && v !== '') ?? '';
+
+const reverbKey = pickFirst(providedReverbConfig.key, env.VITE_REVERB_APP_KEY, '');
+const reverbHost = pickFirst(providedReverbConfig.host, env.VITE_REVERB_HOST, window.location.hostname);
+const reverbPort = Number(pickFirst(providedReverbConfig.port, env.VITE_REVERB_PORT, 8080));
+const reverbScheme = pickFirst(providedReverbConfig.scheme, env.VITE_REVERB_SCHEME, 'http');
 const forceTLS = reverbScheme === 'https';
 
 window.Echo = new Echo({
