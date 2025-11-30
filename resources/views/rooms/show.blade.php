@@ -908,11 +908,17 @@
                         }
 
                         const payload = await response.json();
-                        const reactions = payload.reactions || [];
-                        const mine = Array.isArray(payload.your_reactions)
+                        const reactions = Array.isArray(payload.reactions) ? payload.reactions : null;
+                        const mineRaw = Array.isArray(payload.your_reactions)
                             ? payload.your_reactions
                             : getMyReactions(messageEl, payload);
-                        renderReactions(messageEl, reactions, mine);
+                        const mine = Array.isArray(mineRaw) ? mineRaw : [];
+                        if (Array.isArray(reactions)) {
+                            renderReactions(messageEl, reactions, mine);
+                        } else {
+                            // Keep optimistic state only when server did not return reaction data
+                            renderReactions(messageEl, previous.reactions, mine.length ? mine : previous.mine);
+                        }
                     } catch (err) {
                         console.error('Reaction error', err);
                         renderReactions(messageEl, previous.reactions, previous.mine);

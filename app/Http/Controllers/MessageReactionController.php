@@ -63,49 +63,41 @@ class MessageReactionController extends Controller
         $yourReactions = [];
 
         DB::transaction(function () use ($message, $emoji, $actorUserId, $actorParticipantId, &$action, &$yourReactions) {
-            $criteria = [
+            $actorScope = function ($query) use ($actorUserId, $actorParticipantId) {
+                if ($actorUserId) {
+                    $query->where('user_id', $actorUserId);
+                } else {
+                    $query->where('participant_id', $actorParticipantId);
+                }
+            };
+
+            $existing = MessageReaction::where('message_id', $message->id)
+                ->where($actorScope)
+                ->lockForUpdate()
+                ->get();
+
+            $hasSameEmoji = $existing->contains(fn ($reaction) => $reaction->emoji === $emoji);
+            $hasDifferentEmoji = $existing->contains(fn ($reaction) => $reaction->emoji !== $emoji);
+
+            MessageReaction::where('message_id', $message->id)
+                ->where($actorScope)
+                ->delete();
+
+            if ($hasSameEmoji && !$hasDifferentEmoji) {
+                $action = 'removed';
+                $yourReactions = [];
+                return;
+            }
+
+            MessageReaction::create([
                 'message_id' => $message->id,
                 'emoji' => $emoji,
-            ];
+                'user_id' => $actorUserId,
+                'participant_id' => $actorParticipantId,
+            ]);
 
-            if ($actorUserId) {
-                $criteria['user_id'] = $actorUserId;
-            } else {
-                $criteria['participant_id'] = $actorParticipantId;
-            }
-
-            $existing = MessageReaction::where($criteria)->lockForUpdate()->first();
-
-            if ($existing) {
-                $existing->delete();
-                $action = 'removed';
-            } else {
-                MessageReaction::where('message_id', $message->id)
-                    ->when($actorUserId, fn ($q) => $q->where('user_id', $actorUserId))
-                    ->when(!$actorUserId, fn ($q) => $q->where('participant_id', $actorParticipantId))
-                    ->where('emoji', '!=', $emoji)
-                    ->delete();
-
-                MessageReaction::create([
-                    'message_id' => $message->id,
-                    'emoji' => $emoji,
-                    'user_id' => $actorUserId,
-                    'participant_id' => $actorParticipantId,
-                ]);
-            }
-
-            $yourReactions = MessageReaction::where('message_id', $message->id)
-                ->where(function ($query) use ($actorUserId, $actorParticipantId) {
-                    if ($actorUserId) {
-                        $query->where('user_id', $actorUserId);
-                    } else {
-                        $query->where('participant_id', $actorParticipantId);
-                    }
-                })
-                ->pluck('emoji')
-                ->unique()
-                ->values()
-                ->toArray();
+            $action = $hasSameEmoji ? 'replaced' : 'added';
+            $yourReactions = [$emoji];
         });
 
         $summary = $this->summarizeReactions($message->id);
