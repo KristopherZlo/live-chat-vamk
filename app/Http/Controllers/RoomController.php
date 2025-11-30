@@ -187,7 +187,7 @@ class RoomController extends Controller
         $participant = $this->getOrCreateParticipant($request, $room, $fingerprint, $ipAddress);
 
         $messages = $room->messages()
-            ->with(['participant', 'user', 'question', 'replyTo.user', 'replyTo.participant'])
+            ->with(['participant', 'user', 'question', 'replyTo.user', 'replyTo.participant', 'reactions'])
             ->orderByDesc('created_at')
             ->limit(self::MAX_MESSAGES)
             ->get()
