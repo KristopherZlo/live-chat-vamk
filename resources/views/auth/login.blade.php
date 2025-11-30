@@ -19,17 +19,6 @@
 
                 <x-auth-session-status class="login-status" :status="session('status')" />
 
-                <button type="button" class="login-provider-button" id="discordLogin">
-                    <span class="login-provider-icon" aria-hidden="true">
-                        <img src="{{ asset('assets/discord-white-icon.svg') }}" alt="" width="22" height="22">
-                    </span>
-                    Continue with Discord
-                </button>
-
-                <div class="login-divider">
-                    <span>or continue with email</span>
-                </div>
-
                 <form method="POST" action="{{ route('login') }}" class="login-form">
                     @csrf
 

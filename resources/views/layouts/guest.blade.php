@@ -1,4 +1,4 @@
-@php($isLoginPage = request()->routeIs('login'))
+@php($isAuthPage = request()->routeIs('login') || request()->routeIs('register'))
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
@@ -11,14 +11,14 @@
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
-    @if($isLoginPage)
+    @if($isAuthPage)
         @vite(['resources/css/login.css', 'resources/js/login.js'])
     @else
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     @endif
 </head>
-<body class="{{ $isLoginPage ? 'login-page' : 'font-sans text-gray-900 antialiased' }}">
-@if($isLoginPage)
+<body class="{{ $isAuthPage ? 'login-page' : 'font-sans text-gray-900 antialiased' }}">
+@if($isAuthPage)
     {{ $slot }}
 @else
     <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gray-100">

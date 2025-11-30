@@ -1,10 +1,13 @@
-<x-app-layout>
+<x-app-layout page-class="page-legal">
     <section class="panel legal-page">
         <header class="panel-header">
             <p class="panel-title">
                 <span>Privacy & terms</span>
             </p>
-            <a class="btn btn-sm btn-ghost" href="{{ route('dashboard') }}">
+            <a
+                class="btn btn-sm btn-ghost legal-back-btn"
+                href="{{ auth()->check() ? route('dashboard') : route('rooms.join') }}"
+            >
                 <i data-lucide="arrow-left"></i>
                 <span>Back</span>
             </a>
