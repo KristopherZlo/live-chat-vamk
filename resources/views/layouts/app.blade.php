@@ -134,11 +134,88 @@
                 <div class="footer-links-list">
                     <span class="footer-muted">Ghost Room - Anonymous live chat for lectures. Send questions without interrupting the class.</span>
                     <span class="footer-muted">Made with 💜 by Zloy</span>
+                    <a class="footer-muted" href="https://github.com/KristopherZlo/live-chat-vamk" target="_blank" rel="noreferrer">GitHub repo</a>
                 </div>
             </div>
         </div>
     </footer>
 </div>
+
+<div
+    x-data="{
+        open: false,
+        init() {
+            const KEY = 'gr_welcome_seen';
+            try {
+                const seen = localStorage.getItem(KEY);
+                this.open = !seen;
+            } catch (e) {
+                this.open = true;
+            }
+        },
+        close() {
+            this.open = false;
+            try {
+                localStorage.setItem('gr_welcome_seen', '1');
+            } catch (e) {}
+        }
+    }"
+    x-init="init()"
+    x-show="open"
+    x-cloak
+    class="modal-overlay"
+    x-bind:class="{ 'show': open }"
+    style="display: none; z-index: 130;"
+    x-transition.opacity
+    x-on:keydown.escape.window="close()"
+    data-welcome-modal
+>
+    <div class="modal-dialog" style="z-index: 140; max-width: 520px;" x-on:click.stop>
+        <div class="modal-header">
+            <div class="modal-title-group">
+                <div class="modal-eyebrow">Welcome</div>
+                <div class="modal-title">Hi, welcome to Ghost Room 👋</div>
+            </div>
+            <button class="modal-close" type="button" x-on:click="close()" data-welcome-close>
+                <i data-lucide="x" aria-hidden="true"></i>
+            </button>
+        </div>
+        <div class="modal-body modal-text">
+            <p>This service was created by a TT2025 student from VAMK and launched in test mode. This is a <span class="text-beta">beta</span> version, and it may have bugs.</p>
+            <p>You can send bug reports, feedback, and other things to my email: <a href="mailto:zloydeveloper.info@gmail.com">zloydeveloper.info@gmail.com</a></p>
+            <p>GitHub repo of the project: <a href="https://github.com/KristopherZlo/live-chat-vamk" target="_blank" rel="noreferrer">https://github.com/KristopherZlo/live-chat-vamk</a></p>
+        </div>
+        <div class="modal-actions" style="justify-content: flex-end; gap: 0.5rem;">
+            <button class="btn btn-ghost" type="button" x-on:click="close()">Got it</button>
+        </div>
+    </div>
+</div>
+<script>
+(() => {
+    const modal = document.querySelector('[data-welcome-modal]');
+    if (!modal) return;
+    // Fallback if Alpine is not available or JS bundle fails.
+    if (window.Alpine) return;
+    const KEY = 'gr_welcome_seen';
+    let seen = false;
+    try {
+        seen = localStorage.getItem(KEY);
+    } catch (e) {}
+    if (seen) return;
+    modal.style.display = 'flex';
+    modal.classList.add('show');
+    const closeBtn = modal.querySelector('[data-welcome-close]');
+    const close = () => {
+        modal.style.display = 'none';
+        modal.classList.remove('show');
+        try { localStorage.setItem(KEY, '1'); } catch (e) {}
+    };
+    closeBtn?.addEventListener('click', close);
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') close();
+    });
+})();
+</script>
 @stack('scripts')
 </body>
 </html>

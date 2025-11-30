@@ -155,8 +155,10 @@ body,html {
   font-size: 0.75rem;
   padding: 0.1rem 0.4rem;
   border-radius: 999px;
-  border: 1px solid var(--border-subtle);
-  color: var(--text-secondary);
+  border: 1px solid rgba(107, 139, 255, 0.5);
+  background: rgba(107, 139, 255, 0.12);
+  color: #6b8bff;
+  font-weight: 600;
 }
 
 .app-controls {
@@ -3266,6 +3268,38 @@ body.modal-open {
 
 .modal-close {
   border-color: var(--border-subtle);
+}
+
+/* Welcome modal readability */
+[data-welcome-modal] .modal-dialog {
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.22);
+}
+
+[data-welcome-modal] .modal-text {
+  color: var(--text-primary);
+  font-size: 1rem;
+  line-height: 1.65;
+  letter-spacing: 0.01em;
+  font-weight: 500;
+}
+
+[data-welcome-modal] .modal-text p {
+  margin: 0.15rem 0 0.45rem;
+}
+
+[data-welcome-modal] .modal-text a {
+  color: #6b8bff;
+  font-weight: 600;
+}
+
+[data-welcome-modal] .modal-text a:hover {
+  color: #4a6fe8;
+}
+
+[data-welcome-modal] .text-beta {
+  color: #6b8bff;
+  font-weight: 600;
 }
 
 .legal-page .panel-body {
