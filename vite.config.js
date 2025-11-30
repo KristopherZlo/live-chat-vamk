@@ -38,6 +38,7 @@ export default defineConfig({
                 'resources/js/design.js',
                 'resources/js/login.js',
                 'resources/js/onboarding.js',
+                'resources/js/lucide.js',
             ],
             refresh: true,
         }),
