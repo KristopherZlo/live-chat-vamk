@@ -12,11 +12,6 @@
             return $avatarPalette[$index];
         };
     @endphp
-    @php
-        $popularReactions = ['👍', '❤️', '😂', '🔥', '🎉', '😮', '😢', '👏'];
-        $currentUserId = auth()->id();
-        $currentParticipantId = $participant?->id;
-    @endphp
 
     <div
         class="{{ $isOwner ? 'role-teacher' : 'role-student' }} room-page"
@@ -185,25 +180,8 @@
                                 $isQuestionMessage = (bool) $message->question;
                                 $replyTo = $message->replyTo;
                                 $avatarBg = $avatarColor($authorName);
-                                $reactionsGrouped = $message->reactions->groupBy('emoji')->map(function ($items, $emoji) use ($currentUserId, $currentParticipantId) {
-                                    return [
-                                        'emoji' => $emoji,
-                                        'count' => $items->count(),
-                                        'reacted' => $items->contains(function ($reaction) use ($currentUserId, $currentParticipantId) {
-                                            return ($currentUserId && $reaction->user_id === $currentUserId)
-                                                || ($currentParticipantId && $reaction->participant_id === $currentParticipantId);
-                                        }),
-                                    ];
-                                })->values();
-                                $myReactions = $reactionsGrouped->where('reacted', true)->pluck('emoji')->values();
                             @endphp
-                            <li
-                                class="message {{ $isOutgoing ? 'message--outgoing' : '' }} {{ $isQuestionMessage ? 'message--question' : '' }}"
-                                data-message-id="{{ $message->id }}"
-                                data-reactions-url="{{ route('rooms.messages.reactions.toggle', [$room, $message]) }}"
-                                data-reactions='@json($reactionsGrouped)'
-                                data-my-reactions='@json($myReactions)'
-                            >
+                            <li class="message {{ $isOutgoing ? 'message--outgoing' : '' }} {{ $isQuestionMessage ? 'message--question' : '' }}">
                                 <div class="message-avatar colorized" style="background: {{ $avatarBg }}; color: #fff; border-color: transparent;">{{ $initials }}</div>
                                 <div class="message-body">
                                     @if($isOwner && $message->participant && !$isOwnerMessage)
@@ -250,21 +228,6 @@
                                         </div>
                                     @endif
                                     <div class="message-text">{{ $message->content }}</div>
-                                    <div class="message-reactions" data-message-reactions>
-                                        <div class="reactions-list" data-reactions-list>
-                                            @foreach($reactionsGrouped as $reaction)
-                                                <button
-                                                    type="button"
-                                                    class="reaction-chip {{ $reaction['reacted'] ? 'is-active' : '' }}"
-                                                    data-reaction-chip
-                                                    data-emoji="{{ $reaction['emoji'] }}"
-                                                >
-                                                    <span class="emoji">{{ $reaction['emoji'] }}</span>
-                                                    <span class="count">{{ $reaction['count'] }}</span>
-                                                </button>
-                                            @endforeach
-                                        </div>
-                                    </div>
                                     <div class="message-actions">
                                         <button
                                             type="button"
@@ -276,12 +239,17 @@
                                             <i data-lucide="corner-up-right"></i>
                                             <span>Reply</span>
                                         </button>
-                                        <button
-                                            type="button"
-                                            class="msg-action msg-action-react"
-                                            data-reaction-trigger
-                                        >
-                                            <i data-lucide="smile-plus"></i>
+                                        <div class="message-reactions" data-reactions data-message-id="{{ $message->id }}">
+                                            @foreach(['👍','❤️','😂','😮','👏','🔥'] as $emoji)
+                                                <button class="reaction-pill" type="button" data-emoji="{{ $emoji }}" hidden>
+                                                    <span class="reaction-emoji">{{ $emoji }}</span>
+                                                    <span class="reaction-count">0</span>
+                                                </button>
+                                            @endforeach
+                                        </div>
+                                        <button type="button" class="reaction-add" data-reaction-trigger>
+                                            <i data-lucide="smile"></i>
+                                            <span>Add reaction</span>
                                         </button>
                                     </div>
                                 </div>
@@ -294,10 +262,6 @@
                             </li>
                         @endforelse
                     </ol>
-                    <div class="reaction-menu" id="reactionMenu" data-reaction-menu hidden>
-                        <div class="reaction-menu-title">Quick reactions</div>
-                        <div class="reaction-menu-grid" data-reaction-grid></div>
-                    </div>
 
                     @if($isBanned)
                         <div class="panel-footer ban-notice">
@@ -330,25 +294,35 @@
                                         <i data-lucide="x"></i>
                                     </button>
                                 </div>
-                                <div class="chat-composer" data-chat-composer>
-                                    <button type="button" class="composer-btn composer-emoji" id="chatEmojiToggle" title="Add emoji">
-                                        <i data-lucide="smile"></i>
+                                <div class="chat-input-row input-modern">
+                                    <button type="button" class="emoji-btn" id="emojiToggle" aria-label="Add emoji">
+                                        <span class="emoji-face">😊</span>
                                     </button>
-                                    <textarea
-                                        name="content"
-                                        id="chatInput"
-                                        class="chat-textarea"
-                                        placeholder="Type your message..."
-                                        rows="1"
-                                        data-onboarding-target="chat-input"
-                                    ></textarea>
+                                    <div class="chat-input-shell">
+                                        <textarea
+                                            name="content"
+                                            id="chatInput"
+                                            class="chat-textarea"
+                                            placeholder="Type your message..."
+                                            rows="1"
+                                            required
+                                            data-onboarding-target="chat-input"
+                                        ></textarea>
+                                        <button type="submit" class="send-btn send-inside" id="sendButton" title="Send message">
+                                            <i data-lucide="send"></i>
+                                        </button>
+                                    </div>
                                     <input type="hidden" name="reply_to_id" id="replyToId" value="">
-                                    <button type="submit" class="composer-btn composer-send" id="sendButton" title="Send message">
-                                        <i data-lucide="send"></i>
-                                    </button>
                                 </div>
-                                <div class="emoji-picker-panel" id="chatEmojiPanel" hidden>
-                                    <emoji-picker id="chatEmojiPicker" class="emoji-picker-element light"></emoji-picker>
+                                <div class="emoji-panel" id="emojiPicker" hidden>
+                                    @foreach([
+                                        '😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','😉','😊','😇','🥰','😍','🤩','😘','😗','😚','😙',
+                                        '😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','🤥',
+                                        '😴','🤒','🤕','🤢','🤮','🤧','🥵','🥶','🥳','🤠','😎','🤓','😕','😟','🙁','☹️','😮','😯','😲','😳',
+                                        '🥺','😢','😭','😤','😠','😡','🤬','🤯','😇','🤡','💩','👍','👎','👏','🙏','💪','🔥','💯','🎉','✨'
+                                    ] as $emoji)
+                                        <button type="button" class="emoji-option" data-emoji="{{ $emoji }}">{{ $emoji }}</button>
+                                    @endforeach
                                 </div>
                             </form>
                         </div>
@@ -434,16 +408,9 @@
         </div>
     </div>
 
-    @push('styles')
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/emoji-picker-element@1.27.0/themes/light.css">
-    @endpush
-
     @push('scripts')
-        <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1.27.0/index.js"></script>
         <script>
             document.addEventListener('DOMContentLoaded', () => {
-                if (window.__chatPageBound) return;
-                window.__chatPageBound = true;
                 const roomId = {{ $room->id }};
                 const isOwnerUser = @json($isOwner);
                 const currentUserId = @json(auth()->id());
@@ -492,29 +459,6 @@
                   const qrCanvas = document.getElementById('qrCanvas');
                 const chatContainer = document.querySelector('.messages-container');
                 const chatInputWrapper = document.querySelector('[data-chat-panel=\"chat\"] .chat-input');
-                const chatInput = document.getElementById('chatInput');
-                const sendButton = document.getElementById('sendButton');
-                const chatEmojiToggle = document.getElementById('chatEmojiToggle');
-                const chatEmojiPanel = document.getElementById('chatEmojiPanel');
-                const chatEmojiPicker = document.getElementById('chatEmojiPicker');
-                const reactionMenu = document.getElementById('reactionMenu');
-                const reactionMenuGrid = reactionMenu?.querySelector('[data-reaction-grid]');
-                const syncEmojiPickerTheme = () => {
-                    const isDark = document.body?.dataset?.theme === 'dark';
-                    if (chatEmojiPicker) {
-                        chatEmojiPicker.classList.remove('dark', 'light');
-                        chatEmojiPicker.classList.add(isDark ? 'dark' : 'light');
-                    }
-                };
-                const updateSendButtonState = () => {
-                    if (!sendButton) return;
-                    const hasContent = (chatInput?.value || '').trim().length > 0;
-                    const isSending = sendButton.classList.contains('sending');
-                    const shouldDisable = isSending || !hasContent;
-                    sendButton.disabled = shouldDisable;
-                    sendButton.classList.toggle('can-send', hasContent && !isSending);
-                    sendButton.setAttribute('aria-disabled', shouldDisable ? 'true' : 'false');
-                };
                 const chatTabButtons = document.querySelectorAll('[data-chat-tab]');
                 const chatPanes = document.querySelectorAll('[data-chat-panel]');
                 const csrfMeta = document.querySelector('meta[name=\"csrf-token\"]');
@@ -525,19 +469,6 @@
                 const replyPreviewText = document.getElementById('replyPreviewText');
                 const replyPreviewCancel = document.getElementById('replyPreviewCancel');
                 const avatarPalette = ['#2563eb', '#0ea5e9', '#6366f1', '#8b5cf6', '#14b8a6', '#f97316', '#f59e0b', '#10b981', '#ef4444'];
-                const reactionUrlTemplate = @json(route('rooms.messages.reactions.toggle', [$room, '__MESSAGE__']));
-                const popularReactions = @json($popularReactions);
-                let activeReactionMessage = null;
-                let emojiPickerMode = 'input';
-                let reactionPickerTarget = null;
-                syncEmojiPickerTheme();
-                if (!window.__themeObserverBound) {
-                    const themeObserver = new MutationObserver(() => syncEmojiPickerTheme());
-                    if (document.body) {
-                        themeObserver.observe(document.body, { attributes: true, attributeFilter: ['data-theme'] });
-                    }
-                    window.__themeObserverBound = true;
-                }
                 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
                     '&': '&amp;',
                     '<': '&lt;',
@@ -551,242 +482,6 @@
                     if (empty) {
                         empty.remove();
                     }
-                };
-                const parseJsonSafe = (raw, fallback = []) => {
-                    if (!raw) return fallback;
-                    try {
-                        const parsed = JSON.parse(raw);
-                        return parsed ?? fallback;
-                    } catch (e) {
-                        return fallback;
-                    }
-                };
-                const getReactionUrl = (messageEl) => {
-                    if (!messageEl) return '';
-                    if (messageEl.dataset.reactionsUrl) {
-                        return messageEl.dataset.reactionsUrl;
-                    }
-                    if (reactionUrlTemplate && messageEl.dataset.messageId) {
-                        return reactionUrlTemplate.replace('__MESSAGE__', messageEl.dataset.messageId);
-                    }
-                    return '';
-                };
-                const renderReactions = (messageEl, reactions = [], myReactions = []) => {
-                    if (!messageEl) return;
-                    const list = messageEl.querySelector('[data-reactions-list]');
-                    if (!list) return;
-                    const mySet = new Set(myReactions || []);
-                    const hasReactions = Array.isArray(reactions) && reactions.length > 0;
-                    list.innerHTML = '';
-                    messageEl.dataset.reactions = JSON.stringify(reactions || []);
-                    messageEl.dataset.myReactions = JSON.stringify(Array.from(mySet));
-                    messageEl.classList.toggle('has-reactions', hasReactions);
-                    if (!hasReactions) return;
-                    reactions.forEach((reaction) => {
-                        if (!reaction || !reaction.emoji) return;
-                        const chip = document.createElement('button');
-                        chip.type = 'button';
-                        chip.className = 'reaction-chip';
-                        chip.dataset.reactionChip = '1';
-                        chip.dataset.emoji = reaction.emoji;
-                        if (mySet.has(reaction.emoji)) {
-                            chip.classList.add('is-active');
-                        }
-                        chip.innerHTML = `
-                            <span class="emoji">${escapeHtml(reaction.emoji)}</span>
-                            <span class="count">${escapeHtml(String(reaction.count ?? 0))}</span>
-                        `;
-                        list.appendChild(chip);
-                    });
-                };
-                const setupInitialReactions = () => {
-                    document.querySelectorAll('.message[data-message-id]').forEach((message) => {
-                        const reactions = parseJsonSafe(message.dataset.reactions, []);
-                        const myReactions = parseJsonSafe(message.dataset.myReactions, []);
-                        renderReactions(message, reactions, myReactions);
-                    });
-                };
-                const renderReactionMenuOptions = () => {
-                    if (!reactionMenuGrid) return;
-                    reactionMenuGrid.innerHTML = '';
-                    if (Array.isArray(popularReactions)) {
-                        popularReactions.forEach((emoji) => {
-                            const btn = document.createElement('button');
-                            btn.type = 'button';
-                            btn.className = 'reaction-menu-btn';
-                            btn.dataset.reactionOption = emoji;
-                            btn.textContent = emoji;
-                            reactionMenuGrid.appendChild(btn);
-                        });
-                    }
-                    const moreBtn = document.createElement('button');
-                    moreBtn.type = 'button';
-                    moreBtn.className = 'reaction-menu-btn reaction-menu-more';
-                    moreBtn.dataset.reactionMore = '1';
-                    moreBtn.innerHTML = '<i data-lucide="sparkles"></i><span>More</span>';
-                    reactionMenuGrid.appendChild(moreBtn);
-                    if (window.refreshLucideIcons) {
-                        window.refreshLucideIcons();
-                    }
-                };
-                const closeReactionMenus = () => {
-                    if (reactionMenu) {
-                        reactionMenu.hidden = true;
-                        reactionMenu.setAttribute('hidden', 'true');
-                        reactionMenu.style.left = '';
-                        reactionMenu.style.top = '';
-                    }
-                    if (activeReactionMessage) {
-                        activeReactionMessage.classList.remove('reaction-menu-open');
-                    }
-                    activeReactionMessage = null;
-                };
-                const positionReactionMenu = (triggerEl) => {
-                    if (!reactionMenu) return;
-                    const viewportPadding = 12;
-                    const triggerRect = triggerEl?.getBoundingClientRect();
-                    reactionMenu.style.visibility = 'hidden';
-                    reactionMenu.hidden = false;
-                    reactionMenu.removeAttribute('hidden');
-                    const menuRect = reactionMenu.getBoundingClientRect();
-                    const fallback = { top: window.innerHeight / 2, left: window.innerWidth / 2, width: 0, height: 0 };
-                    const rect = triggerRect || fallback;
-                    let top = rect.top - menuRect.height - 10;
-                    if (top < viewportPadding) {
-                        top = rect.top + rect.height + 10;
-                    }
-                    let left = rect.left + rect.width / 2 - menuRect.width / 2;
-                    left = Math.min(Math.max(left, viewportPadding), Math.max(viewportPadding, window.innerWidth - menuRect.width - viewportPadding));
-                    if (top + menuRect.height > window.innerHeight - viewportPadding) {
-                        top = Math.max(viewportPadding, window.innerHeight - menuRect.height - viewportPadding);
-                    }
-                    reactionMenu.style.left = `${Math.round(left)}px`;
-                    reactionMenu.style.top = `${Math.round(top)}px`;
-                    reactionMenu.style.visibility = 'visible';
-                };
-                const openReactionMenu = (messageEl, triggerEl = null) => {
-                    if (!messageEl || !reactionMenu) return;
-                    if (activeReactionMessage === messageEl && !reactionMenu.hidden) {
-                        closeReactionMenus();
-                        return;
-                    }
-                    closeReactionMenus();
-                    reactionMenu.removeAttribute('hidden');
-                    reactionMenu.hidden = false;
-                    positionReactionMenu(triggerEl || messageEl);
-                    messageEl.classList.add('reaction-menu-open');
-                    activeReactionMessage = messageEl;
-                    if (window.refreshLucideIcons) {
-                        window.refreshLucideIcons();
-                    }
-                };
-                const handleReactionMenuClick = (event) => {
-                    const option = event.target.closest('[data-reaction-option]');
-                    if (option && activeReactionMessage) {
-                        toggleReaction(activeReactionMessage, option.dataset.reactionOption);
-                        return;
-                    }
-                    const more = event.target.closest('[data-reaction-more]');
-                    if (more && activeReactionMessage) {
-                        closeReactionMenus();
-                        showEmojiPanel('reaction', activeReactionMessage);
-                    }
-                };
-
-                const isPayloadFromMe = (payload) => {
-                    if (!payload) return false;
-                    const actorUserId = payload.actor_user_id ? Number(payload.actor_user_id) : null;
-                    const actorParticipantId = payload.actor_participant_id ? Number(payload.actor_participant_id) : null;
-                    if (actorUserId && currentUserId && Number(currentUserId) === actorUserId) return true;
-                    if (actorParticipantId && currentParticipantId && Number(currentParticipantId) === actorParticipantId) return true;
-                    return false;
-                };
-                const getMyReactions = (messageEl, payload) => {
-                    if (isPayloadFromMe(payload) && payload?.your_reactions && Array.isArray(payload.your_reactions)) {
-                        return payload.your_reactions;
-                    }
-                    return parseJsonSafe(messageEl?.dataset?.myReactions, []);
-                };
-                const toggleReaction = async (messageEl, emoji) => {
-                    if (!messageEl || !emoji) return;
-                    activeReactionMessage = messageEl;
-                    const url = getReactionUrl(messageEl);
-                    if (!url) return;
-                    const formData = new FormData();
-                    formData.append('emoji', emoji);
-                    formData.append('_token', csrfToken);
-                    messageEl.classList.add('reactions-loading');
-
-                    try {
-                        const response = await fetch(url, {
-                            method: 'POST',
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest',
-                                'X-CSRF-TOKEN': csrfToken,
-                            },
-                            body: formData,
-                        });
-
-                        if (!response.ok) {
-                            console.error('Reaction request failed', response.status);
-                            return;
-                        }
-
-                        const payload = await response.json();
-                        const reactions = payload.reactions || [];
-                        const mine = Array.isArray(payload.your_reactions)
-                            ? payload.your_reactions
-                            : getMyReactions(messageEl, payload);
-                        renderReactions(messageEl, reactions, mine);
-                    } catch (err) {
-                        console.error('Reaction error', err);
-                    } finally {
-                        messageEl.classList.remove('reactions-loading');
-                        closeReactionMenus();
-                    }
-                };
-
-                const updateReactionsFromEvent = (messageId, reactions, payload = {}) => {
-                    const messageEl = document.querySelector(`.message[data-message-id="${messageId}"]`);
-                    if (!messageEl) return;
-                    const mine = getMyReactions(messageEl, payload);
-                    renderReactions(messageEl, reactions || [], mine);
-                };
-                const autosizeComposer = () => {
-                    if (!chatInput) return;
-                    chatInput.style.height = 'auto';
-                    const maxHeight = 220;
-                    chatInput.style.height = Math.min(chatInput.scrollHeight, maxHeight) + 'px';
-                };
-                const hideEmojiPanel = () => {
-                    if (!chatEmojiPanel) return;
-                    chatEmojiPanel.hidden = true;
-                    chatEmojiPanel.classList.remove('open');
-                    emojiPickerMode = 'input';
-                    reactionPickerTarget = null;
-                };
-                const showEmojiPanel = (mode = 'input', targetMessage = null) => {
-                    if (!chatEmojiPanel) return;
-                    emojiPickerMode = mode;
-                    reactionPickerTarget = targetMessage;
-                    chatEmojiPanel.hidden = false;
-                    chatEmojiPanel.classList.add('open');
-                    if (window.refreshLucideIcons) {
-                        window.refreshLucideIcons();
-                    }
-                };
-                const insertEmojiIntoInput = (emoji) => {
-                    if (!chatInput || !emoji) return;
-                    const start = chatInput.selectionStart ?? chatInput.value.length;
-                    const end = chatInput.selectionEnd ?? chatInput.value.length;
-                    const value = chatInput.value;
-                    chatInput.value = value.slice(0, start) + emoji + value.slice(end);
-                    const cursor = start + emoji.length;
-                    chatInput.selectionStart = cursor;
-                    chatInput.selectionEnd = cursor;
-                    chatInput.focus();
-                    autosizeComposer();
-                    updateSendButtonState();
                 };
 
                 const showBanState = (messageText = 'You were banned by the host. Chat is locked.') => {
@@ -932,58 +627,6 @@
 
                 setupChatTabs();
                 bindBanForms();
-                setupInitialReactions();
-                renderReactionMenuOptions();
-                autosizeComposer();
-                updateSendButtonState();
-                if (reactionMenu) {
-                    reactionMenu.addEventListener('click', handleReactionMenuClick);
-                }
-
-                if (chatInput) {
-                    chatInput.addEventListener('input', () => {
-                        autosizeComposer();
-                        updateSendButtonState();
-                    });
-                    chatInput.addEventListener('keydown', (event) => {
-                        if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey) {
-                            event.preventDefault();
-                            if ((chatInput.value || '').trim().length === 0) {
-                                return;
-                            }
-                            if (sendButton?.disabled) {
-                                return;
-                            }
-                            sendButton?.click();
-                        }
-                    });
-                }
-
-                if (chatEmojiPicker) {
-                    chatEmojiPicker.addEventListener('emoji-click', (event) => {
-                        const emoji = event.detail?.unicode || event.detail?.emoji || '';
-                        if (!emoji) return;
-                        if (emojiPickerMode === 'reaction' && reactionPickerTarget) {
-                            toggleReaction(reactionPickerTarget, emoji);
-                            closeReactionMenus();
-                        } else {
-                            insertEmojiIntoInput(emoji);
-                        }
-                        hideEmojiPanel();
-                    });
-                }
-
-                if (chatEmojiToggle) {
-                    chatEmojiToggle.addEventListener('click', (event) => {
-                        event.preventDefault();
-                        const isOpen = chatEmojiPanel && !chatEmojiPanel.hidden && emojiPickerMode === 'input';
-                        if (isOpen) {
-                            hideEmojiPanel();
-                        } else {
-                            showEmojiPanel('input', null);
-                        }
-                    });
-                }
 
                   const QR_CANVAS_SIZE = 360;
                   const QR_FETCH_SIZE = 720;
@@ -1517,22 +1160,6 @@
 
                 if (chatContainer) {
                     chatContainer.addEventListener('click', (event) => {
-                        const reactionTrigger = event.target.closest('[data-reaction-trigger]');
-                        if (reactionTrigger) {
-                            const messageEl = reactionTrigger.closest('.message');
-                            if (messageEl) {
-                                openReactionMenu(messageEl, reactionTrigger);
-                            }
-                            return;
-                        }
-
-                        const reactionChip = event.target.closest('[data-reaction-chip]');
-                        if (reactionChip) {
-                            const messageEl = reactionChip.closest('.message');
-                            toggleReaction(messageEl, reactionChip.dataset.emoji);
-                            return;
-                        }
-
                         const btn = event.target.closest('[data-reply-id]');
                         if (!btn) return;
                         event.preventDefault();
@@ -1540,24 +1167,6 @@
                         chatContainer.scrollTop = chatContainer.scrollHeight;
                     });
                 }
-
-                document.addEventListener('click', (event) => {
-                    const reactionMenuEl = event.target.closest('[data-reaction-menu]');
-                    const reactionTrigger = event.target.closest('[data-reaction-trigger]');
-                    if (!reactionMenuEl && !reactionTrigger) {
-                        closeReactionMenus();
-                    }
-                    if (!chatEmojiPanel || chatEmojiPanel.hidden) return;
-                    const insidePicker = event.target.closest('.emoji-picker-panel');
-                    if (insidePicker) return;
-                    const insideComposer = event.target.closest('.chat-composer');
-                    const insideMessage = event.target.closest('.message');
-                    if (emojiPickerMode === 'input' && !insideComposer) {
-                        hideEmojiPanel();
-                    } else if (emojiPickerMode === 'reaction' && !insideMessage) {
-                        hideEmojiPanel();
-                    }
-                });
 
                 if (window.Echo) {
                     const channelName = 'room.' + roomId;
@@ -1577,10 +1186,6 @@
                             const avatarColor = avatarColorFromName(e.author.name);
                             const wrapper = document.createElement('li');
                             wrapper.classList.add('message');
-                            wrapper.dataset.messageId = e.id;
-                            wrapper.dataset.reactionsUrl = reactionUrlTemplate.replace('__MESSAGE__', e.id);
-                            wrapper.dataset.reactions = JSON.stringify(e.reactions || []);
-                            wrapper.dataset.myReactions = JSON.stringify([]);
                             if (isOutgoing) {
                                 wrapper.classList.add('message--outgoing');
                             }
@@ -1618,17 +1223,19 @@
                                     </div>
                                     ${replyHtml}
                                     <div class="message-text">${content}</div>
-                                    <div class="message-reactions" data-message-reactions>
-                                        <div class="reactions-list" data-reactions-list></div>
-                                    </div>
                                     <div class="message-actions">
                                         <button type="button" class="msg-action">
                                             <i data-lucide="corner-up-right"></i>
                                             <span>Reply</span>
                                         </button>
-                                        <button type="button" class="msg-action msg-action-react" data-reaction-trigger>
-                                            <i data-lucide="smile-plus"></i>
-                                        </button>
+                                        <div class="message-reactions" data-reactions data-message-id="${e.id}">
+                                            ${['👍','❤️','😂','😮','👏','🔥'].map((emo) => `
+                                                <button class="reaction-pill" type="button" data-emoji="${emo}">
+                                                    <span class="reaction-emoji">${emo}</span>
+                                                    <span class="reaction-count">0</span>
+                                                </button>
+                                            `).join('')}
+                                        </div>
                                     </div>
                                 </div>`;
 
@@ -1639,16 +1246,13 @@
                                 replyBtn.dataset.replyText = e.content || '';
                             }
 
-                            renderReactions(wrapper, e.reactions || [], []);
                             container.appendChild(wrapper);
                             bindBanForms(wrapper);
+                            bindReactions(wrapper);
                             container.scrollTop = container.scrollHeight;
                             if (window.refreshLucideIcons) {
                                 window.refreshLucideIcons();
                             }
-                        })
-                        .listen('ReactionUpdated', (payload) => {
-                            updateReactionsFromEvent(payload.message_id, payload.reactions, payload);
                         })
                         .listen('QuestionCreated', () => {
                             if (questionsPanel) {
@@ -1680,11 +1284,87 @@
                 }
 
                 const chatForm = document.getElementById('chat-form');
+                const sendButton = document.getElementById('sendButton');
+                const emojiToggle = document.getElementById('emojiToggle');
+                const emojiPicker = document.getElementById('emojiPicker');
+                const chatInput = document.getElementById('chatInput');
+
+                function bindReactions(scope = document) {
+                    const blocks = scope.querySelectorAll('[data-reactions]');
+                    blocks.forEach((block) => {
+                        if (block.dataset.reactionBound === '1') return;
+                        block.dataset.reactionBound = '1';
+                        block.addEventListener('click', (event) => {
+                            const pill = event.target.closest('.reaction-pill');
+                            if (!pill) return;
+                            event.preventDefault();
+                            const countEl = pill.querySelector('.reaction-count');
+                            const current = Number(pill.dataset.count || countEl?.textContent || 0);
+                            const isActive = pill.classList.toggle('active');
+                            const next = Math.max(0, current + (isActive ? 1 : -1));
+                            pill.dataset.count = String(next);
+                            if (countEl) {
+                                countEl.textContent = next;
+                            }
+                        });
+                    });
+                }
+
+                function insertAtCursor(input, text) {
+                    if (!input) return;
+                    const start = input.selectionStart ?? input.value.length;
+                    const end = input.selectionEnd ?? input.value.length;
+                    const before = input.value.slice(0, start);
+                    const after = input.value.slice(end);
+                    input.value = before + text + after;
+                    const pos = start + text.length;
+                    input.setSelectionRange(pos, pos);
+                    input.focus();
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+
+                function setupEmojiPicker() {
+                    if (!emojiToggle || !emojiPicker || !chatInput) return;
+                    let open = false;
+
+                    const close = () => {
+                        open = false;
+                        emojiPicker.hidden = true;
+                        emojiToggle.classList.remove('active');
+                    };
+
+                    const openPicker = () => {
+                        open = true;
+                        emojiPicker.hidden = false;
+                        emojiToggle.classList.add('active');
+                    };
+
+                    emojiToggle.addEventListener('click', () => {
+                        if (open) {
+                            close();
+                        } else {
+                            openPicker();
+                        }
+                    });
+
+                    emojiPicker.addEventListener('click', (event) => {
+                        const btn = event.target.closest('.emoji-option');
+                        if (!btn) return;
+                        const emoji = btn.dataset.emoji || btn.textContent || '';
+                        insertAtCursor(chatInput, emoji + ' ');
+                    });
+
+                    document.addEventListener('click', (event) => {
+                        const inside = event.target === emojiPicker || emojiPicker.contains(event.target) || event.target === emojiToggle || emojiToggle.contains(event.target);
+                        if (!inside) close();
+                    });
+                }
+
                 const setSendingState = (isSending) => {
                     if (!sendButton) return;
+                    sendButton.disabled = isSending;
                     sendButton.classList.toggle('sending', isSending);
                     sendButton.setAttribute('aria-busy', isSending ? 'true' : 'false');
-                    updateSendButtonState();
                 };
 
                 if (chatForm) {
@@ -1692,11 +1372,6 @@
                         event.preventDefault();
 
                         const formData = new FormData(chatForm);
-                        const content = (formData.get('content') || '').toString().trim();
-                        if (!content) {
-                            return;
-                        }
-                        formData.set('content', content);
                         const url = chatForm.action;
 
                         try {
@@ -1725,15 +1400,12 @@
                             if (textarea) {
                                 textarea.value = '';
                                 textarea.style.height = 'auto';
-                                autosizeComposer();
-                                updateSendButtonState();
                             }
                             const questionCheckbox = chatForm.querySelector('input[name="as_question"]');
                             if (questionCheckbox) {
                                 questionCheckbox.checked = false;
                             }
                             clearReplyContext();
-                            hideEmojiPanel();
                         } catch (e) {
                             console.error('Send message error', e);
                         } finally {
@@ -1744,10 +1416,11 @@
 
                 if (chatContainer) {
                     chatContainer.scrollTop = chatContainer.scrollHeight;
+                    bindReactions(chatContainer);
                 }
+
+                setupEmojiPicker();
             });
         </script>
     @endpush
 </x-app-layout>
-
-

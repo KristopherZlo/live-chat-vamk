@@ -4,6 +4,7 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\MessageReactionController;
 use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\RoomBanController;
 
@@ -46,6 +47,9 @@ Route::get('/r/{slug}', [RoomController::class, 'showPublic'])
 Route::post('/rooms/{room}/messages', [MessageController::class, 'store'])
     ->middleware('throttle:room-messages')
     ->name('rooms.messages.store');
+Route::post('/rooms/{room}/messages/{message}/reactions', [MessageReactionController::class, 'toggle'])
+    ->middleware('throttle:room-messages')
+    ->name('rooms.messages.reactions.toggle');
 
 Route::middleware(['auth'])->group(function () {
     // ... тут уже есть dashboard / rooms.create / rooms.store

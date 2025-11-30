@@ -18,7 +18,15 @@ class MessageSent implements ShouldBroadcastNow
 
     public function __construct(Message $message)
     {
-        $this->message = $message->load(['user', 'participant', 'room', 'question', 'replyTo.user', 'replyTo.participant']);
+        $this->message = $message->load([
+            'user',
+            'participant',
+            'room',
+            'question',
+            'replyTo.user',
+            'replyTo.participant',
+            'reactions',
+        ]);
     }
 
     public function broadcastOn(): Channel
@@ -58,6 +66,20 @@ class MessageSent implements ShouldBroadcastNow
                     : ($this->message->replyTo->participant?->display_name ?? 'Guest'),
                 'content' => Str::limit($this->message->replyTo->content, 140),
             ] : null,
+            'reactions' => $this->formatReactions(),
         ];
+    }
+
+    protected function formatReactions(): array
+    {
+        $grouped = $this->message->reactions->groupBy('emoji');
+
+        return $grouped
+            ->map(fn ($items, $emoji) => [
+                'emoji' => $emoji,
+                'count' => $items->count(),
+            ])
+            ->values()
+            ->toArray();
     }
 }
