@@ -80,6 +80,12 @@ class MessageReactionController extends Controller
                 $existing->delete();
                 $action = 'removed';
             } else {
+                MessageReaction::where('message_id', $message->id)
+                    ->when($actorUserId, fn ($q) => $q->where('user_id', $actorUserId))
+                    ->when(!$actorUserId, fn ($q) => $q->where('participant_id', $actorParticipantId))
+                    ->where('emoji', '!=', $emoji)
+                    ->delete();
+
                 MessageReaction::create([
                     'message_id' => $message->id,
                     'emoji' => $emoji,
