@@ -448,6 +448,8 @@
                 const isOwnerUser = @json($isOwner);
                 const currentUserId = @json(auth()->id());
                 const currentParticipantId = @json($participant?->id);
+                const currentUserName = @json(auth()->user()?->name ?? $participant?->display_name ?? 'Guest');
+                const currentParticipantName = @json($participant?->display_name ?? 'Guest');
                 const publicLink = @json($publicLink);
                 const queueSoundUrl = @json($queueSoundUrl);
                 window.queueSoundUrl = queueSoundUrl;
@@ -599,6 +601,175 @@
                         list.appendChild(chip);
                     });
                 };
+                const makeMessageKey = (content, authorUserId, authorParticipantId, replyId = null, asQuestion = false) => {
+                    const normalized = String(content || '').trim();
+                    return [
+                        encodeURIComponent(normalized),
+                        String(authorUserId ?? ''),
+                        String(authorParticipantId ?? ''),
+                        String(replyId ?? ''),
+                        asQuestion ? 'q1' : 'q0',
+                    ].join('|');
+                };
+                const buildMessageElement = (payload, options = {}) => {
+                    const {
+                        id,
+                        content = '',
+                        created_at: createdAt,
+                        author = {},
+                        as_question: asQuestion = false,
+                        reply_to: replyTo = null,
+                        reactions = [],
+                        myReactions = [],
+                    } = payload || {};
+                    const {
+                        pending = false,
+                        allowBan = true,
+                    } = options;
+                    const container = document.createElement('li');
+                    const messageId = id ?? `temp-${Date.now()}`;
+                    const authorUserId = normalizeId(author?.user_id);
+                    const authorParticipantId = normalizeId(author?.participant_id);
+                    const messageKey = makeMessageKey(content, authorUserId, authorParticipantId, replyTo?.id, asQuestion);
+                    container.classList.add('message');
+                    container.dataset.messageId = messageId;
+                    container.dataset.reactionsUrl = reactionUrlTemplate && messageId ? reactionUrlTemplate.replace('__MESSAGE__', messageId) : '';
+                    container.dataset.reactions = JSON.stringify(reactions || []);
+                    container.dataset.myReactions = JSON.stringify(myReactions || []);
+                    if (pending) {
+                        container.classList.add('message--pending');
+                        container.dataset.tempId = messageId;
+                        container.dataset.tempKey = messageKey;
+                    }
+                    const isOwnerAuthor = Boolean(author.is_owner);
+                    const isOutgoing = (currentUserId && authorUserId && Number(currentUserId) === Number(authorUserId))
+                        || (currentParticipantId && authorParticipantId && Number(currentParticipantId) === Number(authorParticipantId));
+                    if (isOutgoing) container.classList.add('message--outgoing');
+                    if (asQuestion) container.classList.add('message--question');
+                    const authorNameRaw = author?.name || currentUserName || 'Guest';
+                    const authorName = escapeHtml(authorNameRaw);
+                    const avatarColor = avatarColorFromName(authorNameRaw);
+                    const initials = escapeHtml((authorNameRaw || '??').slice(0, 2).toUpperCase());
+                    const devBadge = author.is_dev ? '<span class="message-badge message-badge-dev">dev</span>' : '';
+                    const replyHtml = replyTo ? `<div class="message-reply"><span class="reply-author">${escapeHtml(replyTo.author || 'Guest')}</span><span class="reply-text">${escapeHtml(replyTo.content || '')}</span></div>` : '';
+                    const time = createdAt ? new Date(createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const canBan = allowBan && isOwnerUser && !isOwnerAuthor && author.participant_id;
+                    const banButtonHtml = canBan ? `
+                        <form method="POST" action="${banStoreUrl}" class="message-ban-form" data-ban-confirm="1">
+                            <input type="hidden" name="_token" value="${csrfToken}">
+                            <input type="hidden" name="participant_id" value="${author.participant_id}">
+                            <button type="submit" class="message-ban-btn" title="Ban participant">
+                                <i data-lucide="gavel"></i>
+                            </button>
+                        </form>
+                    ` : '';
+                    container.innerHTML = `
+                        <div class="message-avatar colorized" style="background:${avatarColor}; color:#fff; border-color:transparent;">${initials}</div>
+                        <div class="message-body">
+                            ${banButtonHtml}
+                            <div class="message-header">
+                                <span class="message-author">${authorName}${devBadge}</span>
+                                <div class="message-meta">
+                                    <span>${time}</span>
+                                    ${isOwnerAuthor ? '<span class="message-badge message-badge-teacher">Host</span>' : ''}
+                                    ${asQuestion ? '<span class="message-badge message-badge-question">To host</span>' : ''}
+                                    ${replyHtml ? '<span class="message-badge">Reply</span>' : ''}
+                                </div>
+                            </div>
+                            ${replyHtml}
+                            <div class="message-text">${escapeHtml(content)}</div>
+                            <div class="message-reactions" data-message-reactions>
+                                <div class="reactions-list" data-reactions-list></div>
+                            </div>
+                            <div class="message-actions">
+                                <button type="button" class="msg-action">
+                                    <i data-lucide="corner-up-right"></i>
+                                    <span>Reply</span>
+                                </button>
+                                <button type="button" class="msg-action msg-action-react" data-reaction-trigger>
+                                    <i data-lucide="smile-plus"></i>
+                                </button>
+                            </div>
+                        </div>`;
+                        const replyBtn = container.querySelector('.msg-action');
+                        if (replyBtn) {
+                            replyBtn.dataset.replyId = messageId;
+                            replyBtn.dataset.replyAuthor = authorNameRaw || 'Guest';
+                            replyBtn.dataset.replyText = content || '';
+                    }
+                    renderReactions(container, reactions || [], myReactions || []);
+                    return container;
+                };
+                const updateMessageElementFromPayload = (element, payload) => {
+                    if (!element || !payload) return element;
+                    const fresh = buildMessageElement(payload, { pending: false });
+                    element.className = fresh.className;
+                    element.innerHTML = fresh.innerHTML;
+                    // Reset and copy dataset
+                    Object.keys(element.dataset).forEach((key) => delete element.dataset[key]);
+                    Object.entries(fresh.dataset || {}).forEach(([key, value]) => {
+                        element.dataset[key] = value;
+                    });
+                    element.classList.remove('message--pending');
+                    element.removeAttribute('data-temp-id');
+                    element.removeAttribute('data-temp-key');
+                    if (window.refreshLucideIcons) {
+                        window.refreshLucideIcons();
+                    }
+                    return element;
+                };
+                const createMessageElement = (payload, options = {}) => buildMessageElement(payload, options);
+                const getReactionsState = (messageEl) => ({
+                    reactions: parseJsonSafe(messageEl?.dataset?.reactions, []),
+                    mine: parseJsonSafe(messageEl?.dataset?.myReactions, []),
+                });
+                const sortReactions = (list = []) => [...list].sort((a, b) => {
+                    const countDiff = Number(b.count || 0) - Number(a.count || 0);
+                    if (countDiff !== 0) return countDiff;
+                    return String(a.emoji || '').localeCompare(String(b.emoji || ''));
+                });
+                const applyLocalReaction = (messageEl, emoji) => {
+                    const { reactions: currentReactions, mine: currentMine } = getReactionsState(messageEl);
+                    const map = new Map();
+                    currentReactions.forEach((r) => {
+                        if (!r || !r.emoji) return;
+                        map.set(r.emoji, { emoji: r.emoji, count: Number(r.count || 0) });
+                    });
+                    const mineSet = new Set(currentMine || []);
+                    const hasEmoji = mineSet.has(emoji);
+
+                    if (hasEmoji) {
+                        mineSet.delete(emoji);
+                        if (map.has(emoji)) {
+                            const item = map.get(emoji);
+                            item.count = Math.max(0, item.count - 1);
+                            if (item.count <= 0) {
+                                map.delete(emoji);
+                            }
+                        }
+                    } else {
+                        // Single reaction per user: remove previous personal reactions before adding new
+                        mineSet.forEach((prev) => {
+                            if (map.has(prev)) {
+                                const item = map.get(prev);
+                                item.count = Math.max(0, item.count - 1);
+                                if (item.count <= 0) {
+                                    map.delete(prev);
+                                }
+                            }
+                        });
+                        mineSet.clear();
+                        const item = map.get(emoji) || { emoji, count: 0 };
+                        item.count += 1;
+                        map.set(emoji, item);
+                        mineSet.add(emoji);
+                    }
+
+                    const reactions = sortReactions(Array.from(map.values()).filter((r) => r.count > 0));
+                    const mine = Array.from(mineSet);
+                    renderReactions(messageEl, reactions, mine);
+                    return { reactions, mine };
+                };
                 const setupInitialReactions = () => {
                     document.querySelectorAll('.message[data-message-id]').forEach((message) => {
                         const reactions = parseJsonSafe(message.dataset.reactions, []);
@@ -688,8 +859,9 @@
                     }
                     const more = event.target.closest('[data-reaction-more]');
                     if (more && activeReactionMessage) {
+                        const target = activeReactionMessage;
                         closeReactionMenus();
-                        showEmojiPanel('reaction', activeReactionMessage);
+                        showEmojiPanel('reaction', target);
                     }
                 };
 
@@ -712,6 +884,8 @@
                     activeReactionMessage = messageEl;
                     const url = getReactionUrl(messageEl);
                     if (!url) return;
+                    const previous = getReactionsState(messageEl);
+                    applyLocalReaction(messageEl, emoji);
                     const formData = new FormData();
                     formData.append('emoji', emoji);
                     formData.append('_token', csrfToken);
@@ -729,6 +903,7 @@
 
                         if (!response.ok) {
                             console.error('Reaction request failed', response.status);
+                            renderReactions(messageEl, previous.reactions, previous.mine);
                             return;
                         }
 
@@ -740,6 +915,7 @@
                         renderReactions(messageEl, reactions, mine);
                     } catch (err) {
                         console.error('Reaction error', err);
+                        renderReactions(messageEl, previous.reactions, previous.mine);
                     } finally {
                         messageEl.classList.remove('reactions-loading');
                         closeReactionMenus();
@@ -1563,83 +1739,30 @@
                     const channelName = 'room.' + roomId;
                     window.Echo.channel(channelName)
                         .listen('MessageSent', (e) => {
-                            const container = document.querySelector('.messages-container');
-                            if (!container) return;
+                        const container = document.querySelector('.messages-container');
+                        if (!container) return;
+                        const existing = container.querySelector(`.message[data-message-id="${e.id}"]`);
+                        if (existing) {
+                            existing.classList.remove('message--pending');
+                                existing.removeAttribute('data-temp-id');
+                                existing.removeAttribute('data-temp-key');
+                                return;
+                            }
+                            const authorUserId = normalizeId(e.author?.user_id);
+                            const authorParticipantId = normalizeId(e.author?.participant_id);
+                            const tempKey = makeMessageKey(e.content, authorUserId, authorParticipantId, e.reply_to?.id, e.as_question);
+                            const pendingMatch = container.querySelector(`.message--pending[data-temp-key="${tempKey}"]`);
+                            if (pendingMatch) {
+                                updateMessageElementFromPayload(pendingMatch, e);
+                                bindBanForms(pendingMatch);
+                                container.scrollTop = container.scrollHeight;
+                                if (window.refreshLucideIcons) {
+                                    window.refreshLucideIcons();
+                                }
+                                return;
+                            }
                             removeEmptyMessageState();
-
-                            const isOutgoing = (currentUserId && e.author.user_id && Number(currentUserId) === Number(e.author.user_id))
-                                || (currentParticipantId && e.author.participant_id && Number(currentParticipantId) === Number(e.author.participant_id));
-                            const authorNameRaw = e.author?.name || 'Guest';
-                            const authorName = escapeHtml(authorNameRaw);
-                            const content = escapeHtml(e.content || '');
-                            const replyAuthor = escapeHtml(e.reply_to?.author || 'Guest');
-                            const replyContent = escapeHtml(e.reply_to?.content || '');
-                            const avatarColor = avatarColorFromName(e.author.name);
-                            const wrapper = document.createElement('li');
-                            wrapper.classList.add('message');
-                            wrapper.dataset.messageId = e.id;
-                            wrapper.dataset.reactionsUrl = reactionUrlTemplate.replace('__MESSAGE__', e.id);
-                            wrapper.dataset.reactions = JSON.stringify(e.reactions || []);
-                            wrapper.dataset.myReactions = JSON.stringify([]);
-                            if (isOutgoing) {
-                                wrapper.classList.add('message--outgoing');
-                            }
-                            if (e.as_question) {
-                                wrapper.classList.add('message--question');
-                            }
-                            const isOwnerAuthor = Boolean(e.author.is_owner);
-                            const time = new Date(e.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                            const devBadge = e.author.is_dev ? '<span class="message-badge message-badge-dev">dev</span>' : '';
-                            const replyHtml = e.reply_to ? `<div class="message-reply"><span class="reply-author">${replyAuthor}</span><span class="reply-text">${replyContent}</span></div>` : '';
-                            const initials = escapeHtml((authorNameRaw || '??').slice(0,2).toUpperCase());
-                            const canBan = isOwnerUser && !isOwnerAuthor && e.author.participant_id;
-                            const banButtonHtml = canBan ? `
-                                <form method="POST" action="${banStoreUrl}" class="message-ban-form" data-ban-confirm="1">
-                                    <input type="hidden" name="_token" value="${csrfToken}">
-                                    <input type="hidden" name="participant_id" value="${e.author.participant_id}">
-                                    <button type="submit" class="message-ban-btn" title="Ban participant">
-                                        <i data-lucide="gavel"></i>
-                                    </button>
-                                </form>
-                            ` : '';
-
-                            wrapper.innerHTML = `
-                                <div class="message-avatar colorized" style="background:${avatarColor}; color:#fff; border-color:transparent;">${initials}</div>
-                                <div class="message-body">
-                                    ${banButtonHtml}
-                                    <div class="message-header">
-                                        <span class="message-author">${authorName}${devBadge}</span>
-                                        <div class="message-meta">
-                                            <span>${time}</span>
-                                            ${isOwnerAuthor ? '<span class="message-badge message-badge-teacher">Host</span>' : ''}
-                                            ${e.as_question ? '<span class="message-badge message-badge-question">To host</span>' : ''}
-                                            ${replyHtml ? '<span class="message-badge">Reply</span>' : ''}
-                                        </div>
-                                    </div>
-                                    ${replyHtml}
-                                    <div class="message-text">${content}</div>
-                                    <div class="message-reactions" data-message-reactions>
-                                        <div class="reactions-list" data-reactions-list></div>
-                                    </div>
-                                    <div class="message-actions">
-                                        <button type="button" class="msg-action">
-                                            <i data-lucide="corner-up-right"></i>
-                                            <span>Reply</span>
-                                        </button>
-                                        <button type="button" class="msg-action msg-action-react" data-reaction-trigger>
-                                            <i data-lucide="smile-plus"></i>
-                                        </button>
-                                    </div>
-                                </div>`;
-
-                            const replyBtn = wrapper.querySelector('.msg-action');
-                            if (replyBtn) {
-                                replyBtn.dataset.replyId = e.id;
-                                replyBtn.dataset.replyAuthor = authorNameRaw || 'Guest';
-                                replyBtn.dataset.replyText = e.content || '';
-                            }
-
-                            renderReactions(wrapper, e.reactions || [], []);
+                            const wrapper = createMessageElement(e, { pending: false });
                             container.appendChild(wrapper);
                             bindBanForms(wrapper);
                             container.scrollTop = container.scrollHeight;
@@ -1698,6 +1821,41 @@
                         }
                         formData.set('content', content);
                         const url = chatForm.action;
+                        const optimisticId = `temp-${Date.now()}`;
+                        const authorNameForOptimistic = currentUserName || currentParticipantName || 'Guest';
+                        const replyId = replyToInput?.value || '';
+                        const replyData = replyId ? {
+                            id: replyId,
+                            author: replyPreviewAuthor?.textContent || '',
+                            content: replyPreviewText?.textContent || '',
+                        } : null;
+                        const optimisticPayload = {
+                            id: optimisticId,
+                            content,
+                            created_at: new Date().toISOString(),
+                            author: {
+                                name: authorNameForOptimistic,
+                                user_id: currentUserId,
+                                participant_id: currentParticipantId,
+                                is_owner: isOwnerUser,
+                                is_dev: Boolean(@json(auth()->user()?->is_dev)),
+                            },
+                            as_question: Boolean(formData.get('as_question')),
+                            reply_to: replyData,
+                            reactions: [],
+                            myReactions: [],
+                        };
+                        const container = document.querySelector('.messages-container');
+                        let optimisticEl = null;
+                        if (container) {
+                            removeEmptyMessageState();
+                            optimisticEl = createMessageElement(optimisticPayload, { pending: true, allowBan: true });
+                            container.appendChild(optimisticEl);
+                            container.scrollTop = container.scrollHeight;
+                            if (window.refreshLucideIcons) {
+                                window.refreshLucideIcons();
+                            }
+                        }
 
                         try {
                             setSendingState(true);
@@ -1711,15 +1869,46 @@
                             });
 
                             if (response.status === 403) {
+                                if (optimisticEl) optimisticEl.remove();
                                 showBanState('You were banned by the host. Chat is locked.');
                                 return;
                             }
 
                             if (!response.ok) {
+                                if (optimisticEl) optimisticEl.remove();
                                 console.error('Send message failed', response.status);
                                 return;
                             }
 
+                            const payload = await response.json().catch(() => ({}));
+                            if (payload?.message_id) {
+                                const containerEl = document.querySelector('.messages-container');
+                                if (!optimisticEl || !optimisticEl.isConnected) {
+                                    const tmpKey = optimisticPayload
+                                        ? makeMessageKey(
+                                            optimisticPayload.content,
+                                            optimisticPayload.author?.user_id,
+                                            optimisticPayload.author?.participant_id,
+                                            optimisticPayload.reply_to?.id,
+                                            optimisticPayload.as_question
+                                        )
+                                        : null;
+                                    optimisticEl = containerEl?.querySelector(`.message--pending[data-temp-key="${tmpKey}"]`) || containerEl?.querySelector(`.message[data-message-id="${payload.message_id}"]`);
+                                }
+                                if (optimisticEl) {
+                                    const merged = {
+                                        ...optimisticPayload,
+                                        ...payload,
+                                        id: payload.message_id,
+                                    };
+                                    updateMessageElementFromPayload(optimisticEl, merged);
+                                    containerEl?.scrollTo?.(0, containerEl.scrollHeight);
+                                }
+                            }
+                        } catch (e) {
+                            if (optimisticEl) optimisticEl.remove();
+                            console.error('Send message error', e);
+                        } finally {
                             removeEmptyMessageState();
                             const textarea = chatForm.querySelector('textarea[name="content"]');
                             if (textarea) {
@@ -1734,9 +1923,6 @@
                             }
                             clearReplyContext();
                             hideEmojiPanel();
-                        } catch (e) {
-                            console.error('Send message error', e);
-                        } finally {
                             setSendingState(false);
                         }
                     });
