@@ -99,20 +99,19 @@ body.onboarding-locked {
 }
 
 .onboarding-backdrop {
+    position: absolute;
     inset: 0;
     background: transparent;
-}
-
-.onboarding-backdrop,.onboarding-highlight {
-    position: absolute;
     pointer-events: none;
 }
 
 .onboarding-highlight {
+    position: absolute;
     border-radius: 14px;
     border: 2px solid var(--accent);
     box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.08), var(--onboarding-shadow);
     background: rgba(37, 99, 235, 0.05);
+    pointer-events: none;
     transition: transform 160ms ease, width 160ms ease, height 160ms ease, opacity 160ms ease;
 }
 
@@ -121,6 +120,7 @@ body.onboarding-locked {
     max-width: 420px;
     background: var(--bg-elevated);
     color: var(--text-primary);
+    pointer-events: auto;
     border: 1px solid var(--border-subtle);
     border-radius: 16px;
     box-shadow: var(--onboarding-shadow);
@@ -255,11 +255,13 @@ body.onboarding-locked {
     }
 
     .onboarding-callout {
+        right: 0.75rem;
+        left: 0.75rem;
         width: auto;
     }
 
-    .onboarding-callout,.onboarding-hint {
-        right: 0.75rem;
+    .onboarding-hint {
         left: 0.75rem;
+        right: 0.75rem;
     }
 }

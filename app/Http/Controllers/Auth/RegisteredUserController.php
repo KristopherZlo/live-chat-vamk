@@ -3,12 +3,16 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\InviteCode;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rules;
 use Illuminate\View\View;
 
@@ -29,17 +33,42 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $request->validate([
+        $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'invite_code' => [
+                'required',
+                'string',
+                Rule::exists('invite_codes', 'code')->whereNull('used_at'),
+            ],
         ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
+        $user = null;
+
+        DB::transaction(function () use (&$user, $validated) {
+            $invite = InviteCode::where('code', $validated['invite_code'])
+                ->whereNull('used_at')
+                ->lockForUpdate()
+                ->first();
+
+            if (! $invite) {
+                throw ValidationException::withMessages([
+                    'invite_code' => ['This invite code is invalid or has already been used.'],
+                ]);
+            }
+
+            $user = User::create([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'password' => Hash::make($validated['password']),
+            ]);
+
+            $invite->forceFill([
+                'used_by' => $user->id,
+                'used_at' => now(),
+            ])->save();
+        });
 
         event(new Registered($user));
 

@@ -95,11 +95,6 @@
             <span>Contact</span>
           </a>
         </div>
-        <div class="mobile-menu-footer-lang">
-        <button class="footer-lang active" type="button" data-close-menu>FI</button>
-        <button class="footer-lang" type="button" data-close-menu>RU</button>
-        <button class="footer-lang" type="button" data-close-menu>EN</button>
-      </div>
     </div>
   </div>
 </div>
