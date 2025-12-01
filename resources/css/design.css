@@ -1,11 +1,11 @@
 :root {
-  --bg: #e7ebf2;
+  --bg: #ebebeb;
   --bg-elevated: #ffffff;
-  --bg-soft: #dde2ec;
-  --border-subtle: #d4d8e2;
-  --border-strong: #c8cdd8;
-  --text-primary: #111827;
-  --text-secondary: #4b5563;
+  --bg-soft: #f9f9f9;
+  --border-subtle: #e7e7e7;
+  --border-strong: #dbdbdb;
+  --text-primary: #0d0d0d;
+  --text-secondary: #5d5d5d;
   --accent: #2563eb;
   --accent-soft: #dbeafe;
   --accent-strong: #1d4ed8;
@@ -30,25 +30,32 @@
 }
 
 [data-theme="dark"] {
-  --bg: #000000;
-  --bg-elevated: #121212;
-  --bg-soft: #1f1f1f;
-  --border-subtle: #232323;
-  --border-strong: #242424;
-  --text-primary: #f3f4f6;
-  --text-secondary: #b3b6c2;
+  --bg: #141414;              /* нейтральный тёмно-серый */
+  --bg-elevated: #1c1c1c;
+  --bg-soft: #262626;
+
+  --border-subtle: #2e2e2e;
+  --border-strong: #383838;
+
+  --text-primary: #f2f2f2;
+  --text-secondary: #a8a8a8;
+
   --accent: #2563eb;
-  --accent-soft: rgba(37, 99, 235, 0.15);
+  --accent-soft: rgba(37, 99, 235, 0.18);
   --accent-strong: #1d4ed8;
+
   --danger: #ef4444;
-  --muted: #8b8f9c;
-  --message-in: #11111a;
-  --message-out: #1b1b27;
-  --scroll-track: #0f0f0f;
-  --scroll-thumb: #3a3a4d;
+  --muted: #8a8a8a;
+
+  --message-in: #242424;
+  --message-out: #2a2a2a;
+
+  --scroll-track: #1a1a1a;
+  --scroll-thumb: #3d3d3d;
+
   --notify: #2563eb;
-  --ok: #c5ced8;
-  --bad: #e5e7eb;
+  --ok: #4ade80;
+  --bad: #f87171;
   --btn-blue-bg: #1b1d25;
   --btn-blue-border: #7289da;
   --btn-blue-hover: #2b365f;
@@ -351,6 +358,7 @@ main,.layout {
 .panel-subtitle {
   color: var(--text-secondary);
   font-size: 0.75rem;
+  margin-bottom: 5px;
 }
 
 .text-ok {
@@ -1470,8 +1478,7 @@ main,.layout {
   justify-content: center;
   gap: 0.25rem;
   border-radius: 999px;
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-elevated);
+  border: 1px solid var(--btn-gray-border);
   padding: 0.12rem 0.55rem;
   font-size: 0.72rem;
   cursor: pointer;
@@ -2043,7 +2050,7 @@ body[data-theme="dark"] {
 
 [data-theme="dark"] .btn {
   color: var(--text-primary);
-  border-color: var(--btn-blue-border);
+  border-color: var(--btn-gray-border);
 }
 
 [data-theme="dark"] .btn-ghost,
@@ -2130,7 +2137,6 @@ body[data-theme="dark"] {
 }
 
 [data-theme="dark"] .chat-input,[data-theme="dark"] .chat-textarea {
-  background: #1f1f1f;
   border-color: var(--border-strong);
 }
 
