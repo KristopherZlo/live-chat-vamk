@@ -175,6 +175,32 @@ body,html {
   font-size: 0.85rem;
 }
 
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.app-nav-primary,
+.app-nav-room-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.app-nav-room-actions {
+  flex-wrap: wrap;
+}
+
+.app-nav-room-actions:empty {
+  display: none;
+}
+
+#qrButton i {
+  font-size: 0.85rem;
+}
+
 .room-info {
   display: flex;
   flex-direction: column;
@@ -728,12 +754,10 @@ main,.layout {
 .reaction-menu-btn:hover {
   background: color-mix(in srgb, var(--accent-soft) 70%, transparent);
   transform: translateY(-1px);
-  box-shadow: 0 6px 12px rgba(37, 99, 235, 0.08);
 }
 
 .reaction-menu-btn.is-active {
   background: var(--accent-soft);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
   transform: translateY(-1px);
 }
 
@@ -1478,7 +1502,7 @@ main,.layout {
   justify-content: center;
   gap: 0.25rem;
   border-radius: 999px;
-  border: 1px solid var(--btn-gray-border);
+  border: 1px solid var(--border-subtle);
   padding: 0.12rem 0.55rem;
   font-size: 0.72rem;
   cursor: pointer;
@@ -1486,6 +1510,18 @@ main,.layout {
   transition: background-color 0.15s ease-out,
                   border-color 0.15s ease-out,
                   color 0.15s ease-out;
+}
+
+.queue-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  padding: 0.12rem 0.55rem;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  background: var(--bg-soft);
 }
 
 .queue-ban-btn {
@@ -1512,6 +1548,11 @@ main,.layout {
   transition: background-color 0.15s ease-out,
               border-color 0.15s ease-out,
               color 0.15s ease-out;
+}
+
+.btn.queue-ban-btn,
+.btn.queue-delete-btn {
+  color: var(--text-secondary);
 }
 
 .queue-action-answered {
@@ -2053,6 +2094,18 @@ body[data-theme="dark"] {
   border-color: var(--btn-gray-border);
 }
 
+[data-theme="dark"] .btn.queue-ban-btn,
+[data-theme="dark"] .btn.queue-delete-btn {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .btn.queue-ban-btn:hover,
+[data-theme="dark"] .btn.queue-ban-btn:focus-visible,
+[data-theme="dark"] .btn.queue-delete-btn:hover,
+[data-theme="dark"] .btn.queue-delete-btn:focus-visible {
+  color: var(--danger);
+}
+
 [data-theme="dark"] .btn-ghost,
     [data-theme="dark"] .icon-btn {
   background: var(--btn-gray-bg);
@@ -2176,7 +2229,7 @@ body[data-theme="dark"] {
 }
 
 [data-theme="dark"] .reaction-chip {
-  background: var(--bg);
+  background: var(--bg-elevated);
   border-color: var(--border-strong);
 }
 
@@ -2416,10 +2469,11 @@ body.app, .app {
 }
 
 .room-header .panel-header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  display: flex;
   align-items: flex-start;
+  justify-content: space-between;
   gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .room-header-bar {
@@ -2428,8 +2482,8 @@ body.app, .app {
 
 .room-header-main {
   gap: 0.4rem;
-  width: min(50%, 680px);
-  min-width: 320px;
+  flex: 1 1 320px;
+  min-width: 280px;
 }
 
 .room-header-main,.room-title-stack {
@@ -2447,7 +2501,8 @@ body.app, .app {
   flex-direction: column;
   align-items: flex-end;
   gap: 0.5rem;
-  min-width: 260px;
+  min-width: 200px;
+  flex: 0 0 auto;
 }
 
 .room-header .panel-actions {
@@ -3717,6 +3772,9 @@ body.modal-open {
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
+  max-height: 45vh;
+  overflow-y: auto;
+  padding-right: 0.25rem;
 }
 
 .whats-new-section {

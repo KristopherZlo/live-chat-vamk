@@ -10,7 +10,7 @@
         </div>
         <div class="panel-subtitle">Questions sent to the host</div>
     </div>
-    <span class="queue-action">{{ $myQuestionsCount }}</span>
+    <span class="queue-count-badge">{{ $myQuestionsCount }}</span>
 </div>
 <div class="panel-body">
     @if(isset($myQuestions) && $myQuestions->isNotEmpty())
