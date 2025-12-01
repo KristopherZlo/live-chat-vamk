@@ -20,7 +20,14 @@
 
 html,
 body {
+    width: 100%;
+    max-width: 100%;
+}
+
+html,
+body,body.login-page {
     min-height: 100vh;
+    overflow-x: hidden;
 }
 
 body.login-page {
@@ -29,11 +36,11 @@ body.login-page {
     color: var(--login-text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
-    padding: 1rem;
+    padding: 1.25rem 1rem calc(1.25rem + env(safe-area-inset-bottom, 0px));
     position: relative;
-    overflow: hidden;
+    overflow-y: auto;
 }
 
 body.login-page a {
@@ -71,15 +78,17 @@ body.login-page input:focus-visible {
 .login-blur-2 {
     width: 520px;
     height: 520px;
-    background: rgba(37, 99, 235, 0.12);
     bottom: -200px;
     right: -220px;
+}
+
+.login-blur-2,.login-blur-3 {
+    background: rgba(37, 99, 235, 0.12);
 }
 
 .login-blur-3 {
     width: 320px;
     height: 320px;
-    background: rgba(37, 99, 235, 0.12);
     top: 45%;
     left: 50%;
     transform: translate(-50%, -50%);
@@ -91,6 +100,7 @@ body.login-page input:focus-visible {
     border-radius: 24px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     width: min(960px, 98vw);
+    margin: 0 auto 1rem;
     backdrop-filter: blur(30px);
     position: relative;
     z-index: 1;
@@ -112,16 +122,17 @@ body.login-page input:focus-visible {
 }
 
 .login-logo-wrap {
-    width: 64px;
-    height: 64px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
 }
 
-.login-logo {
+.login-logo-wrap,.login-logo {
     width: 64px;
     height: 64px;
+}
+
+.login-logo {
     display: block;
 }
 
@@ -223,14 +234,15 @@ body.login-page input:focus-visible {
 }
 
 .login-form {
-    display: flex;
-    flex-direction: column;
     gap: 0.9rem;
 }
 
-.login-field {
+.login-form,.login-field {
     display: flex;
     flex-direction: column;
+}
+
+.login-field {
     gap: 0.4rem;
 }
 
@@ -329,7 +341,7 @@ body.login-page input:focus-visible {
     transition: color 0.2s ease;
 }
 
-.login-link:hover {
+.login-link:hover,.login-submit {
     color: var(--login-text);
 }
 
@@ -337,7 +349,6 @@ body.login-page input:focus-visible {
     border: none;
     border-radius: 14px;
     background: linear-gradient(135deg, var(--login-accent), var(--login-accent-2));
-    color: var(--login-text);
     height: 50px;
     font-size: 1rem;
     font-weight: 700;
@@ -390,6 +401,40 @@ body.login-page input:focus-visible {
     display: block;
 }
 
+.register-modal .login-text h2 {
+    font-size: 1.6rem;
+}
+
+.register-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.register-meta,.register-modal .login-submit {
+    width: 100%;
+}
+
+.register-modal .login-form {
+    max-width: 500px;
+}
+
+.register-modal .login-muted {
+    color: var(--login-muted);
+    margin: 0;
+}
+
+.register-modal .login-link {
+    font-size: 0.95rem;
+    color: #dbeafe;
+}
+
+.register-modal .login-link:hover {
+    color: #ffffff;
+}
+
 @media (max-width: 900px) {
     .login-modal-content {
         padding: 2.25rem 1.5rem;
@@ -398,7 +443,8 @@ body.login-page input:focus-visible {
 
 @media (max-width: 768px) {
     .login-modal {
-        max-width: 420px;
+        width: 100%;
+        max-width: 480px;
     }
 
     .login-modal-split {

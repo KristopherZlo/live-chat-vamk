@@ -181,15 +181,16 @@ body,html {
 }
 
 .app-controls {
-  display: flex;
-  align-items: center;
   gap: 0.75rem;
   font-size: 0.85rem;
 }
 
-.app-nav {
+.app-controls,.app-nav {
   display: flex;
   align-items: center;
+}
+
+.app-nav {
   gap: 0.5rem;
   flex-wrap: wrap;
 }
@@ -225,28 +226,27 @@ body,html {
 }
 
 .room-code {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.8rem;
   color: var(--text-secondary);
   padding: 0.2rem 0.65rem;
   border-radius: 999px;
   background: var(--bg-soft);
+}
+
+.room-code,.btn,
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
   border: 1px solid var(--border-subtle);
 }
 
 .btn,
 .icon-btn {
-  border: 1px solid var(--border-subtle);
   background: transparent;
   color: var(--text-primary);
-  font-size: 0.8rem;
   padding: 0.4rem 0.7rem;
   border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
   cursor: pointer;
 }
 
@@ -605,13 +605,6 @@ main,.layout {
   pointer-events: auto;
 }
 
-@media (hover: none) {
-  .message-actions {
-    opacity: 1;
-    pointer-events: auto;
-  }
-}
-
 .msg-action {
   border: none;
   background: transparent;
@@ -723,18 +716,19 @@ main,.layout {
 }
 
 .reaction-menu-title {
-  font-size: 0.78rem;
-  color: var(--text-secondary);
   margin-bottom: 0.15rem;
   letter-spacing: 0.01em;
+}
+
+.reaction-menu-title,.reaction-menu-current {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
 }
 
 .reaction-menu-current {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  font-size: 0.78rem;
-  color: var(--text-secondary);
   padding: 0.3rem 0.4rem;
   border-radius: 0.6rem;
   background: color-mix(in srgb, var(--bg-soft) 80%, transparent);
@@ -807,14 +801,6 @@ main,.layout {
   --button-hover-background: color-mix(in srgb, var(--bg-soft) 80%, transparent);
   --focus-indicator: var(--accent);
   max-height: 240px;
-}
-
-@media (max-width: 640px) {
-  .reaction-menu {
-    transform: none;
-    max-width: 95vw;
-    padding: 0.55rem 0.65rem;
-  }
 }
 
 .message.reactions-loading .reaction-chip,
@@ -1058,24 +1044,24 @@ main,.layout {
   height: 2rem;
   min-width: 2rem;
   border-color: var(--border-subtle);
-  background: transparent;
   color: var(--text-secondary);
+}
+
+.reply-preview .icon-btn,.chat-textarea {
+  background: transparent;
   box-shadow: none;
 }
 
 .chat-textarea {
   width: 100%;
   border: none;
-  background: transparent;
   padding: 0.55rem 0.35rem;
   font-size: 0.85rem;
   resize: none;
   min-height: 2.8rem;
   max-height: 10rem;
   color: var(--text-primary);
-  background: transparent;
   outline: none;
-  box-shadow: none;
   caret-color: var(--text-primary);
   line-height: 1.4;
   font-family: inherit;
@@ -1516,22 +1502,14 @@ main,.layout {
 }
 
 .queue-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   gap: 0.25rem;
-  border-radius: 999px;
-  border: 1px solid var(--border-subtle);
-  padding: 0.12rem 0.55rem;
-  font-size: 0.72rem;
   cursor: pointer;
-  color: var(--text-secondary);
   transition: background-color 0.15s ease-out,
                   border-color 0.15s ease-out,
                   color 0.15s ease-out;
 }
 
-.queue-count-badge {
+.queue-action,.queue-count-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1540,23 +1518,13 @@ main,.layout {
   padding: 0.12rem 0.55rem;
   font-size: 0.72rem;
   color: var(--text-secondary);
+}
+
+.queue-count-badge {
   background: var(--bg-soft);
 }
 
-.queue-ban-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  border-color: var(--border-subtle);
-  background: var(--bg-soft);
-  color: var(--text-secondary);
-  border-radius: 999px;
-  transition: background-color 0.15s ease-out,
-              border-color 0.15s ease-out,
-              color 0.15s ease-out;
-}
-
-.queue-delete-btn {
+.queue-ban-btn,.queue-delete-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
@@ -2239,22 +2207,16 @@ body[data-theme="dark"] {
 
 [data-theme="dark"] .reaction-menu {
   background: var(--bg-elevated);
-  border-color: var(--border-strong);
-}
-
-[data-theme="dark"] .reaction-menu {
   background: var(--bg);
   border-color: var(--border-strong);
 }
 
-[data-theme="dark"] .reaction-chip {
+[data-theme="dark"] .reaction-chip,[data-theme="dark"] .reply-preview {
   background: var(--bg-elevated);
   border-color: var(--border-strong);
 }
 
 [data-theme="dark"] .reply-preview {
-  background: var(--bg-elevated);
-  border-color: var(--border-strong);
   border-left-color: var(--accent);
   box-shadow: none;
 }
@@ -2876,6 +2838,13 @@ body.app, .app {
   margin: 0;
   font-size: 1.6rem;
   line-height: 1.2;
+  word-break: break-word;
+  white-space: normal;
+}
+
+.dashboard-hero .panel-subtitle {
+  word-break: break-word;
+  white-space: normal;
 }
 
 .dashboard-hero__actions {
@@ -3200,6 +3169,10 @@ body.app, .app {
   margin: 0.15rem 0 0;
   font-size: 0.92rem;
   line-height: 1.45;
+  display: block;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .room-card-stats {
@@ -3847,16 +3820,13 @@ body.modal-open {
 }
 
 .whats-new-items {
-  margin: 0;
   padding-left: 1rem;
-  color: var(--text-secondary);
-  line-height: 1.5;
 }
 
-  .whats-new-section-text {
-    margin: 0;
-    color: var(--text-secondary);
-    line-height: 1.5;
+  .whats-new-items,.whats-new-section-text {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.5;
   }
   
   /* Welcome modal readability */
@@ -3918,13 +3888,6 @@ body.modal-open {
   min-width: 0;
 }
 
-@media (max-width: 768px) {
-  .legal-page .legal-back-btn {
-    padding: 0.4rem 0.65rem;
-    font-size: 0.78rem;
-  }
-}
-
 *::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -3969,265 +3932,47 @@ body.modal-open {
   display: flex !important;
 }
 
-@media (max-width: 560px) {
-  .reply-preview {
-    padding: 0.6rem 0.65rem;
-    row-gap: 0.4rem;
-  }
-  
-  .reply-preview .icon-btn {
-    width: 1.9rem;
-    height: 1.9rem;
-  }
-  
-  .reply-preview-label {
-    flex-wrap: wrap;
-  }
-  
-  .reply-preview-text {
-    font-size: 0.83rem;
-  }
-}
-
-@media (max-width: 520px) {
-  .qr-card {
-    max-width: 100%;
-    padding: 1.1rem 1.15rem;
-  }
-  
-  .qr-body {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .qr-box {
-    width: min(260px, 90vw);
+@media (hover: none) {
+  .message-actions {
+    opacity: 1;
+    pointer-events: auto;
   }
 }
 
 @media (max-width: 640px) {
+  .reaction-menu {
+    transform: none;
+    max-width: 95vw;
+    padding: 0.55rem 0.65rem;
+  }
   .app-footer {
     flex-direction: column;
     align-items: flex-start;
   }
-}
-
-@media (max-width: 1024px) {
-  .layout {
-    height: auto;
-    max-height: none;
+  .error-panel {
+    padding: 1.1rem 1.1rem 1.3rem;
   }
   
-  .layout,.layout.teacher {
-    grid-template-columns: 1.7fr 1.3fr;
+  .error-title {
+    font-size: 1.6rem;
   }
   
-  .layout.teacher {
-    grid-template-rows: auto auto;
-  }
-  
-  .layout.teacher .panel.history-panel {
-    grid-column: 1 / -1;
-  }
-}
-
-@media (max-width: 800px) {
-  html,
-    body {
-    height: var(--app-viewport-height);
-    min-height: var(--app-viewport-height);
-  }
-  
-  main {
-    flex: 1;
-    padding: 0.5rem 0.75rem 0.75rem;
-  }
-  
-  .layout,
-    .layout.teacher {
-    display: flex;
+  .error-actions {
     flex-direction: column;
-    gap: 0.75rem;
-    height: auto;
-    max-height: none;
+    align-items: stretch;
   }
   
-  .panel {
-    max-height: none;
-  }
-  
-  .app-header {
-    padding: 0.6rem 0.75rem;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.4rem;
-  }
-  
-  .app-header-left {
+  .error-actions .btn {
     width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-  }
-  
-  .app-title {
-    font-size: 0.95rem;
-  }
-  
-  .app-controls {
-    width: 100%;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    row-gap: 0.3rem;
-  }
-  
-  .room-info {
-    text-align: left;
-  }
-  
-  .chat-panel {
-    display: flex;
-    flex-direction: column;
-    border-radius: 1rem;
-    padding: 0.6rem 0.75rem 0;
-  }
-  
-  .chat-panel .panel-header {
-    padding-bottom: 0.3rem;
-  }
-  
-  .chat-panel .panel-subtitle {
-    display: none;
-  }
-  
-  .chat-panel .panel-body,.chat-messages {
-    flex: 1;
-    min-height: 0;
-  }
-  
-  .chat-messages {
-    padding: 0.4rem 0.2rem 1rem;
-    gap: 0.35rem;
-    flex: 1 1 auto;
-    min-height: 0;
-    height: auto;
-    overflow-y: auto;
-  }
-
-  .chat-panel.mobile-panel.mobile-active .chat-messages {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-  }
-  
-  .chat-input-row {
-    grid-template-columns: 1fr auto;
-    gap: 0.35rem;
-  }
-  
-  .chat-textarea {
-    min-height: 2.6rem;
-    font-size: 0.85rem;
-    padding: 0.5rem 0.75rem;
-  }
-  
-  .send-btn {
-    height: 3rem;
-    min-width: 3rem;
-    padding: 0 0.75rem;
-    border-radius: 0.75rem;
-    width: 3rem;
-    min-height: 3rem;
-  }
-  
-  .send-btn svg {
-    width: 1.1rem;
-    height: 1.1rem;
-  }
-  
-  .message-body {
-    max-width: 85%;
-  }
-  
-  .panel:not(.chat-panel) {
-    padding: 0.6rem 0.75rem 0.65rem;
-    border-radius: 0.9rem;
-  }
-  
-  .panel-header {
-    padding-bottom: 0.35rem;
-  }
-}
-
-@media (max-width: 600px) {
-  body {
-    font-size: 14px;
-  }
-  
-  .app-header {
-    padding-inline: 0.75rem;
-  }
-  
-  .app-title .badge {
-    display: none;
-  }
-  
-  .app-controls {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .room-info,.btn-group {
-    width: 100%;
-  }
-  
-  .btn-group {
-    justify-content: space-between;
-  }
-  
-  .btn-group button {
-    flex: 1 1 0;
-    text-align: center;
-  }
-  
-  .panel-subtitle {
-    font-size: 0.72rem;
-  }
-  
-  .chat-textarea {
-    font-size: 0.8rem;
-  }
-  
-  .send-btn {
-    min-width: 2.7rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .app-footer {
-    padding-inline: 0.75rem;
-  }
-  
-  .app-footer-right {
-    flex-wrap: wrap;
-    gap: 0.3rem;
-  }
-  
-  .footer-lang {
-    flex: 1 1 calc(33% - 0.4rem);
-    text-align: center;
-    padding-block: 0.2rem;
-  }
-}
-
-@media (max-width: 1024px) {
-  .layout.teacher.history-hidden {
-    grid-template-columns: 1.7fr 1.3fr;
+    justify-content: center;
   }
 }
 
 @media (max-width: 768px) {
+  .legal-page .legal-back-btn {
+    padding: 0.4rem 0.65rem;
+    font-size: 0.78rem;
+  }
   :root {
     --mobile-tab-bar-height: 76px;
     --mobile-safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -4311,10 +4056,9 @@ body.modal-open {
 
   .room-page {
     min-height: 100vh;
-    overflow: hidden;
   }
 
-  .layout {
+  .room-page,.layout {
     overflow: hidden;
   }
   
@@ -4354,9 +4098,12 @@ body.modal-open {
   
   .chat-panel {
     padding: 0.65rem 0.75rem calc(var(--mobile-tab-bar-height) + var(--mobile-safe-bottom, 0px));
+    gap: 0.2rem;
+  }
+
+  .chat-panel,.chat-panel .panel-body {
     flex: 1;
     min-height: 0;
-    gap: 0.2rem;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -4364,11 +4111,6 @@ body.modal-open {
 
   .chat-panel .panel-body {
     padding-top: 0.1rem;
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
   }
 
   .chat-messages {
@@ -4591,16 +4333,6 @@ body.modal-open {
     min-height: 0;
   }
   
-  .mobile-panel.mobile-active {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 auto;
-    min-height: 0;
-    height: auto;
-    max-height: none;
-    overflow: hidden;
-  }
-  
   .chat-panel .panel-header {
     position: sticky;
     top: 0;
@@ -4778,42 +4510,6 @@ body.modal-open {
     top: 0.55rem;
     right: 0.75rem;
   }
-}
-
-@media (max-width: 520px) {
-  main {
-    padding: 0.65rem 0.85rem calc(var(--mobile-tab-bar-height) + var(--mobile-safe-bottom) + 0.75rem);
-  }
-  
-  .app-header {
-    padding: 0.8rem 0.85rem 0.6rem;
-    gap: 0.5rem;
-  }
-  
-  .app-controls {
-    grid-template-columns: 1fr;
-    align-items: stretch;
-  }
-  
-  .room-info {
-    order: -1;
-  }
-  
-  .btn,
-        .icon-btn {
-    width: 100%;
-  }
-  
-  .mobile-tabs {
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-  }
-  
-  .chat-panel {
-    padding: 0.6rem 0.7rem 0;
-  }
-}
-
-@media (max-width: 768px) {
   
   body[data-theme="dark"],[data-theme="dark"] .app {
     background: var(--bg);
@@ -4825,14 +4521,15 @@ body.modal-open {
   }
   
   [data-theme="dark"] .mobile-tabs {
-    background: var(--bg-elevated);
-    border-color: var(--border-strong);
     box-shadow: 0 -8px 18px rgba(0, 0, 0, 0.24);
   }
   
-  [data-theme="dark"] .panel {
+  [data-theme="dark"] .mobile-tabs,[data-theme="dark"] .panel {
     background: var(--bg-elevated);
     border-color: var(--border-strong);
+  }
+  
+  [data-theme="dark"] .panel {
     box-shadow: 0 10px 22px rgba(0, 0, 0, 0.26);
   }
   
@@ -4896,68 +4593,6 @@ body.modal-open {
     border-color: var(--accent);
     background: rgba(255, 255, 255, 0.08);
   }
-}
-
-@media (max-width: 1100px) {
-  .layout.teacher .teacher-panels {
-    grid-column: 1 / -1;
-  }
-}
-
-@media (max-width: 900px) {
-  .layout.teacher .teacher-panels {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 980px) {
-  .room-header .panel-header {
-    grid-template-columns: 1fr;
-  }
-  
-  .room-header-main {
-    width: 100%;
-    min-width: 0;
-  }
-  
-  .room-header-aside {
-    width: 100%;
-    align-items: flex-start;
-  }
-  
-  .room-description-block {
-    display: flex;
-    width: 100%;
-  }
-  
-  .room-description-block .inline-edit-display,
-    .room-description-block .inline-edit-form {
-    width: 100%;
-  }
-  
-  .room-status {
-    align-self: flex-start;
-  }
-  
-  .room-header .panel-actions {
-    justify-content: flex-start;
-  }
-}
-
-@media (max-width: 800px) {
-  .layout,
-    .layout.teacher {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 0;
-    min-height: 0;
-    height: auto;
-    max-height: none;
-    gap: 0.75rem;
-  }
-}
-
-@media (max-width: 768px) {
   
   .layout,
     .layout.teacher,.layout .panel,
@@ -5120,77 +4755,13 @@ body.modal-open {
   .profile-container .panel-body form {
     gap: 0.75rem;
   }
-}
-
-@media (max-width: 900px) {
-  .app-controls {
-    display: none;
-  }
-  
-  .page-join .app-controls,
-    .error-page-shell .app-controls {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  
-  .page-join .app-controls .app-nav,
-    .error-page-shell .app-controls .app-nav {
-    display: none;
-  }
-  
-  .mobile-menu-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.6rem;
-    height: 2.6rem;
-    border-radius: 0.9rem;
-    border: 1px solid var(--border-subtle);
-    background: var(--bg-elevated);
-    color: var(--text-primary);
-    cursor: pointer;
-    gap: 0.3rem;
-  }
-}
-
-@media (min-width: 801px) {
-  .role-teacher,
-    .role-student {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    flex: 1 1 auto;
-    min-height: 0;
-    width: 100%;
-  }
-  
-  .role-teacher .room-header,
-    .role-student .room-header {
-    margin-bottom: 0;
-    flex-shrink: 0;
-  }
-  
-  #layoutRoot {
-    flex: 1 1 auto;
-    min-height: 0;
-  }
-  
-  #layoutRoot .panel,
-    #layoutRoot .teacher-panels,
-    #layoutRoot .teacher-panels .panel {
-    height: 100%;
-    min-height: 0;
-  }
-}
-
-@media (max-width: 768px) {
   .chat-panel {
     max-height: none;
   }
   
   .room-page,.room-page .layout {
     padding-bottom: 0;
+    margin-bottom: 40px;
   }
   
   .room-page .chat-panel {
@@ -5214,9 +4785,6 @@ body.modal-open {
     .mobile-menu-footer-lang {
     gap: 0.55rem;
   }
-}
-
-@media (max-width: 768px) {
   .panel.student-panel,
   .panel.queue-panel,
   .panel.history-panel,
@@ -5248,129 +4816,6 @@ body.modal-open {
     overflow-y: auto;
     padding-right: 0.25rem;
   }
-}
-@media (max-width: 960px) {
-  .create-layout {
-    grid-template-columns: 1fr;
-  }
-  
-  .form-footer {
-    align-items: stretch;
-  }
-}
-
-@media (max-width: 640px) {
-  .error-panel {
-    padding: 1.1rem 1.1rem 1.3rem;
-  }
-  
-  .error-title {
-    font-size: 1.6rem;
-  }
-  
-  .error-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .error-actions .btn {
-    width: 100%;
-    justify-content: center;
-  }
-}
-
-@media (max-width: 1200px) {
-  .rooms-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 720px) {
-  .rooms-grid {
-    grid-template-columns: 1fr;
-  }
-  .dashboard-hero {
-    padding: 1rem 1rem 1.1rem;
-  }
-  
-  .dashboard-hero__title {
-    font-size: 1.35rem;
-  }
-  
-  .dashboard-hero__actions {
-    flex-direction: column;
-    align-items: stretch;
-    width: 100%;
-  }
-  
-  .dashboard-hero__actions .btn {
-    width: 100%;
-    justify-content: center;
-  }
-  
-  .room-card {
-    padding: 0.75rem 0.8rem 0.85rem;
-  }
-  
-  .room-card-actions .btn {
-    width: 100%;
-  }
-}
-
-@media (max-width: 720px) {
-  .chat-composer {
-    align-items: flex-start;
-  }
-  .chat-composer .composer-btn {
-    align-self: flex-start;
-  }
-}
-
-@media (max-width: 900px) {
-  .app-footer {
-    padding: 1rem 1.1rem;
-  }
-  
-  .footer-grid {
-    grid-template-columns: 1fr;
-    gap: 0.6rem;
-    text-align: left;
-  }
-  
-  .footer-meta {
-    align-items: flex-start;
-  }
-  
-  .footer-links {
-    justify-content: flex-start;
-    gap: 1rem;
-  }
-
-  .student-panel {
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    flex: 1 1 auto;
-    min-height: 0;
-  }
-
-  .student-panel .panel-body {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  .questions-list {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    padding-right: 0.25rem;
-  }
-}
-
-@media (max-width: 768px) {
   .app-footer {
     padding: 0.8rem 1rem 0.95rem;
     font-size: 0.82rem;
@@ -5419,5 +4864,481 @@ body.modal-open {
   .page-join .footer-grid,
     .error-page-shell .footer-grid {
     gap: 0.5rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .reply-preview {
+    padding: 0.6rem 0.65rem;
+    row-gap: 0.4rem;
+  }
+  
+  .reply-preview .icon-btn {
+    width: 1.9rem;
+    height: 1.9rem;
+  }
+  
+  .reply-preview-label {
+    flex-wrap: wrap;
+  }
+  
+  .reply-preview-text {
+    font-size: 0.83rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .qr-card {
+    max-width: 100%;
+    padding: 1.1rem 1.15rem;
+  }
+  
+  .qr-body {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .qr-box {
+    width: min(260px, 90vw);
+  }
+  main {
+    padding: 0.65rem 0.85rem calc(var(--mobile-tab-bar-height) + var(--mobile-safe-bottom) + 0.75rem);
+  }
+  
+  .app-header {
+    padding: 0.8rem 0.85rem 0.6rem;
+    gap: 0.5rem;
+  }
+  
+  .app-controls {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+  
+  .room-info {
+    order: -1;
+  }
+  
+  .btn,
+        .icon-btn {
+    width: 100%;
+  }
+  
+  .mobile-tabs {
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  }
+  
+  .chat-panel {
+    padding: 0.6rem 0.7rem 0;
+  }
+}
+
+@media (max-width: 1024px) {
+  .layout {
+    height: auto;
+    max-height: none;
+  }
+  
+  .layout,.layout.teacher {
+    grid-template-columns: 1.7fr 1.3fr;
+  }
+  
+  .layout.teacher {
+    grid-template-rows: auto auto;
+  }
+  
+  .layout.teacher .panel.history-panel {
+    grid-column: 1 / -1;
+  }
+  .layout.teacher.history-hidden {
+    grid-template-columns: 1.7fr 1.3fr;
+  }
+}
+
+@media (max-width: 800px) {
+  html,
+    body {
+    height: var(--app-viewport-height);
+    min-height: var(--app-viewport-height);
+  }
+  
+  main {
+    flex: 1;
+    padding: 0.5rem 0.75rem 0.75rem;
+  }
+  
+  .panel {
+    max-height: none;
+  }
+  
+  .app-header {
+    padding: 0.6rem 0.75rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4rem;
+  }
+  
+  .app-header-left {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  
+  .app-title {
+    font-size: 0.95rem;
+  }
+  
+  .app-controls {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    row-gap: 0.3rem;
+  }
+  
+  .room-info {
+    text-align: left;
+  }
+  
+  .chat-panel {
+    display: flex;
+    flex-direction: column;
+    border-radius: 1rem;
+    padding: 0.6rem 0.75rem 0;
+  }
+  
+  .chat-panel .panel-header {
+    padding-bottom: 0.3rem;
+  }
+  
+  .chat-panel .panel-subtitle {
+    display: none;
+  }
+  
+  .chat-panel .panel-body,.chat-messages {
+    flex: 1;
+    min-height: 0;
+  }
+  
+  .chat-messages {
+    padding: 0.4rem 0.2rem 1rem;
+    gap: 0.35rem;
+    height: auto;
+  }
+
+  .chat-messages,.chat-panel.mobile-panel.mobile-active .chat-messages {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  
+  .chat-input-row {
+    grid-template-columns: 1fr auto;
+    gap: 0.35rem;
+  }
+  
+  .chat-textarea {
+    min-height: 2.6rem;
+    font-size: 0.85rem;
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .send-btn {
+    height: 3rem;
+    min-width: 3rem;
+    padding: 0 0.75rem;
+    border-radius: 0.75rem;
+    width: 3rem;
+    min-height: 3rem;
+  }
+  
+  .send-btn svg {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+  
+  .message-body {
+    max-width: 85%;
+  }
+  
+  .panel:not(.chat-panel) {
+    padding: 0.6rem 0.75rem 0.65rem;
+    border-radius: 0.9rem;
+  }
+  
+  .panel-header {
+    padding-bottom: 0.35rem;
+  }
+  .layout,
+    .layout.teacher {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+    height: auto;
+    max-height: none;
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 600px) {
+  body {
+    font-size: 14px;
+  }
+  
+  .app-header {
+    padding-inline: 0.75rem;
+  }
+  
+  .app-title .badge {
+    display: none;
+  }
+  
+  .app-controls {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .room-info,.btn-group {
+    width: 100%;
+  }
+  
+  .btn-group {
+    justify-content: space-between;
+  }
+  
+  .btn-group button {
+    flex: 1 1 0;
+    text-align: center;
+  }
+  
+  .panel-subtitle {
+    font-size: 0.72rem;
+  }
+  
+  .chat-textarea {
+    font-size: 0.8rem;
+  }
+  
+  .send-btn {
+    min-width: 2.7rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-footer {
+    padding-inline: 0.75rem;
+  }
+  
+  .app-footer-right {
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+  
+  .footer-lang {
+    flex: 1 1 calc(33% - 0.4rem);
+    text-align: center;
+    padding-block: 0.2rem;
+  }
+}
+
+@media (max-width: 1100px) {
+  .layout.teacher .teacher-panels {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 900px) {
+  .layout.teacher .teacher-panels {
+    grid-template-columns: 1fr;
+  }
+  .app-controls {
+    display: none;
+  }
+  
+  .page-join .app-controls,
+    .error-page-shell .app-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .page-join .app-controls .app-nav,
+    .error-page-shell .app-controls .app-nav {
+    display: none;
+  }
+  
+  .mobile-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.6rem;
+    height: 2.6rem;
+    border-radius: 0.9rem;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    cursor: pointer;
+    gap: 0.3rem;
+  }
+  .app-footer {
+    padding: 1rem 1.1rem;
+  }
+  
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+    text-align: left;
+  }
+  
+  .footer-meta {
+    align-items: flex-start;
+  }
+  
+  .footer-links {
+    justify-content: flex-start;
+    gap: 1rem;
+  }
+
+  .student-panel {
+    flex-direction: column;
+    flex: 1 1 auto;
+  }
+
+  .student-panel,.student-panel .panel-body {
+    display: flex;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .student-panel .panel-body {
+    flex: 1;
+    flex-direction: column;
+  }
+
+  .questions-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+  }
+}
+
+@media (max-width: 980px) {
+  .room-header .panel-header {
+    grid-template-columns: 1fr;
+  }
+  
+  .room-header-main {
+    width: 100%;
+    min-width: 0;
+  }
+  
+  .room-header-aside {
+    width: 100%;
+    align-items: flex-start;
+  }
+  
+  .room-description-block {
+    display: flex;
+    width: 100%;
+  }
+  
+  .room-description-block .inline-edit-display,
+    .room-description-block .inline-edit-form {
+    width: 100%;
+  }
+  
+  .room-status {
+    align-self: flex-start;
+  }
+  
+  .room-header .panel-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (min-width: 801px) {
+  .role-teacher,
+    .role-student {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+  }
+  
+  .role-teacher .room-header,
+    .role-student .room-header {
+    margin-bottom: 0;
+    flex-shrink: 0;
+  }
+  
+  #layoutRoot {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  
+  #layoutRoot .panel,
+    #layoutRoot .teacher-panels,
+    #layoutRoot .teacher-panels .panel {
+    height: 100%;
+    min-height: 0;
+  }
+}
+
+@media (max-width: 960px) {
+  .create-layout {
+    grid-template-columns: 1fr;
+  }
+  
+  .form-footer {
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 1200px) {
+  .rooms-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .rooms-grid {
+    grid-template-columns: 1fr;
+  }
+  .dashboard-hero {
+    padding: 1rem 1rem 1.1rem;
+  }
+  
+  .dashboard-hero__title {
+    font-size: 1.35rem;
+  }
+  
+  .dashboard-hero__actions {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+  
+  .dashboard-hero__actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .room-card {
+    padding: 0.75rem 0.8rem 0.85rem;
+  }
+  
+  .room-card-actions .btn {
+    width: 100%;
+  }
+  .chat-composer {
+    align-items: flex-start;
+  }
+  .chat-composer .composer-btn {
+    align-self: flex-start;
   }
 }

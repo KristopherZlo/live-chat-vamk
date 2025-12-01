@@ -20,9 +20,13 @@
 
 html,
 body {
-    min-height: 100vh;
     width: 100%;
     max-width: 100%;
+}
+
+html,
+body,body.login-page {
+    min-height: 100vh;
     overflow-x: hidden;
 }
 
@@ -36,8 +40,6 @@ body.login-page {
     justify-content: center;
     padding: 1.25rem 1rem calc(1.25rem + env(safe-area-inset-bottom, 0px));
     position: relative;
-    min-height: 100vh;
-    overflow-x: hidden;
     overflow-y: auto;
 }
 
@@ -404,7 +406,6 @@ body.login-page input:focus-visible {
 }
 
 .register-meta {
-    width: 100%;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -412,7 +413,7 @@ body.login-page input:focus-visible {
     flex-wrap: wrap;
 }
 
-.register-modal .login-submit {
+.register-meta,.register-modal .login-submit {
     width: 100%;
 }
 
