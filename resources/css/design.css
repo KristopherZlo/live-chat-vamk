@@ -33,6 +33,7 @@
   --bg: #141414;              /* нейтральный тёмно-серый */
   --bg-elevated: #1c1c1c;
   --bg-soft: #262626;
+  --panel-header: #202020;
 
   --border-subtle: #2e2e2e;
   --border-strong: #383838;
@@ -128,6 +129,17 @@ body,html {
   gap: 0.65rem;
 }
 
+.app-title-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.app-subtitle {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
 .app-logo {
   width: 2.8rem;
   display: flex;
@@ -213,8 +225,15 @@ body,html {
 }
 
 .room-code {
-  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   font-size: 0.8rem;
+  color: var(--text-secondary);
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border-subtle);
 }
 
 .btn,
@@ -2177,7 +2196,7 @@ body[data-theme="dark"] {
 
 [data-theme="dark"] .panel-header,
     [data-theme="dark"] .panel-footer {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--panel-header);
   border-color: var(--border-subtle);
 }
 
@@ -2252,7 +2271,7 @@ body[data-theme="dark"] {
 }
 
 [data-theme="dark"] .mobile-tab-btn.mobile-tab-more {
-  background: rgba(23, 32, 55, 0.96);
+  background: var(--accent-soft);
   border-color: var(--border-strong);
   color: var(--text-primary);
 }
@@ -2481,7 +2500,7 @@ body.app, .app {
 }
 
 .room-header-main {
-  gap: 0.4rem;
+  gap: 0.2rem;
   flex: 1 1 320px;
   min-width: 280px;
 }
@@ -2491,6 +2510,36 @@ body.app, .app {
   flex-direction: column;
 }
 
+.inline-edit-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.inline-edit-trigger.active {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.room-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.room-title-icon {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 0.9rem;
+  background: var(--bg-soft);
+  border: 1px solid var(--border-subtle);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
 .room-title-stack {
   gap: 0.2rem;
   min-width: 0;
@@ -2498,9 +2547,9 @@ body.app, .app {
 
 .room-header-aside {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.5rem;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.65rem;
   min-width: 200px;
   flex: 0 0 auto;
 }
@@ -2516,11 +2565,13 @@ body.app, .app {
 }
 
 .room-status {
-  align-self: flex-end;
+  align-self: center;
+  font-weight: 600;
 }
 
 .room-header .panel-title {
   align-items: center;
+  margin-bottom: 0.1rem;
 }
 
 .room-header .panel-title i {
@@ -2530,6 +2581,32 @@ body.app, .app {
 .room-description {
   position: relative;
   line-height: 1.45;
+  white-space: pre-line;
+  word-break: break-word;
+}
+
+.room-description-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-top: -0.1rem;
+}
+
+.room-description-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.room-description-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.room-description-block .inline-edit-form {
+  width: 100%;
+  margin: 0;
 }
 
 .room-description.is-collapsible {
@@ -2555,42 +2632,11 @@ body.app, .app {
 }
 
 [data-theme="dark"] .room-description.is-collapsible::after {
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0), var(--bg-elevated));
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0), var(--panel-header));
 }
 
 .room-description.is-collapsible.is-collapsed::after {
   opacity: 1;
-}
-
-.room-description.is-collapsible::before {
-  content: "";
-  position: absolute;
-  right: 0;
-  bottom: 0.2rem;
-  font-size: 0.75rem;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
-  border-radius: 0.6rem;
-  padding: 0.15rem 0.5rem;
-  color: var(--text-secondary);
-  opacity: 0;
-  transform: translateY(2px);
-  transition: opacity 0.12s ease, transform 0.12s ease;
-  pointer-events: none;
-}
-
-.room-description.is-collapsible.is-collapsed::before {
-  content: "Expand";
-}
-
-.room-description.is-collapsible:not(.is-collapsed)::before {
-  content: "Collapse";
-}
-
-.room-description.is-collapsible:hover::before,
-.room-description.is-collapsible:focus-visible::before {
-  opacity: 1;
-  transform: translateY(0);
 }
 
 .room-description.is-collapsible:focus-visible {
@@ -2598,6 +2644,7 @@ body.app, .app {
   outline-offset: 2px;
   border-radius: 0.5rem;
 }
+
 
 .app-mobile-tabs {
   display: none;
@@ -4763,19 +4810,19 @@ body.modal-open {
   
   [data-theme="dark"] .mobile-tabs {
     background: var(--bg-elevated);
-    border-color: #111827;
+    border-color: var(--border-strong);
     box-shadow: 0 -8px 18px rgba(0, 0, 0, 0.24);
   }
   
   [data-theme="dark"] .panel {
     background: var(--bg-elevated);
-    border-color: #111827;
+    border-color: var(--border-strong);
     box-shadow: 0 10px 22px rgba(0, 0, 0, 0.26);
   }
   
   [data-theme="dark"] .mobile-tab-btn {
     background: var(--bg-elevated);
-    border-color: #111827;
+    border-color: var(--border-strong);
     color: #cbd5f5;
   }
   
@@ -4792,11 +4839,11 @@ body.modal-open {
   
   [data-theme="dark"] .room-info,[data-theme="dark"] .mobile-menu-card {
     background: var(--bg-elevated);
-    border-color: #111827;
+    border-color: var(--border-strong);
   }
   
   [data-theme="dark"] .mobile-menu-handle {
-    background: #111827;
+    background: var(--border-strong);
   }
   
   [data-theme="dark"] .mobile-menu-overlay {
@@ -4806,14 +4853,14 @@ body.modal-open {
   [data-theme="dark"] .mobile-menu-row .btn.btn-ghost,
         [data-theme="dark"] .mobile-menu-row .icon-btn {
     background: var(--bg-elevated);
-    border-color: #111827;
+    border-color: var(--border-strong);
     color: #e5e7eb;
   }
   
   [data-theme="dark"] .mobile-menu-row .footer-lang {
     background: rgba(15, 23, 42, 0.9);
     color: #e5e7eb;
-    border-color: #111827;
+    border-color: var(--border-strong);
   }
   
   [data-theme="dark"] .mobile-menu-row .footer-lang.active {
@@ -4824,7 +4871,7 @@ body.modal-open {
   
   [data-theme="dark"] .mobile-menu-links a {
     background: rgba(15, 23, 42, 0.92);
-    border-color: #111827;
+    border-color: var(--border-strong);
     color: #cbd5f5;
   }
   

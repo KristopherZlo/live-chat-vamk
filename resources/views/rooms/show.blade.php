@@ -42,52 +42,55 @@
                 <div class="room-header-main">
                     <div class="panel-title">
                         <i data-lucide="messages-square"></i>
-                        <div class="room-title-stack">
-                            <div class="inline-editable" data-inline-edit>
-                                <div class="inline-edit-display room-name">{{ $room->title }}</div>
-                                @if($isOwner)
-                                    <button class="icon-btn inline-edit-trigger" type="button" aria-label="Edit title" data-inline-trigger>
-                                        <i data-lucide="pencil"></i>
-                                    </button>
-                                    <form class="inline-edit-form" method="POST" action="{{ route('rooms.update', $room) }}" hidden>
-                                        @csrf
-                                        @method('PATCH')
-                                        <input
-                                            type="text"
-                                            name="title"
-                                            class="field-control inline-edit-input"
-                                            value="{{ $room->title }}"
-                                            required
-                                        >
-                                        <div class="inline-edit-actions">
-                                            <button type="submit" class="btn btn-sm btn-primary">Save</button>
-                                            <button type="button" class="btn btn-sm btn-ghost" data-inline-cancel>Cancel</button>
-                                        </div>
-                                    </form>
-                                @endif
-                            </div>
-                            <div class="room-code">Room code: {{ $room->slug }}</div>
+                        <div class="inline-editable inline-edit-inline" data-inline-edit>
+                            <div class="inline-edit-display room-name">{{ $room->title }}</div>
+                            @if($isOwner)
+                                <button class="icon-btn inline-edit-trigger" type="button" aria-label="Edit title" data-inline-trigger>
+                                    <i data-lucide="pencil"></i>
+                                </button>
+                                <form class="inline-edit-form" method="POST" action="{{ route('rooms.update', $room) }}" hidden>
+                                    @csrf
+                                    @method('PATCH')
+                                    <input
+                                        type="text"
+                                        name="title"
+                                        class="field-control inline-edit-input"
+                                        value="{{ $room->title }}"
+                                        required
+                                    >
+                                    <div class="inline-edit-actions">
+                                        <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                                        <button type="button" class="btn btn-sm btn-ghost" data-inline-cancel>Cancel</button>
+                                    </div>
+                                </form>
+                            @endif
                         </div>
                     </div>
 
                     <div class="inline-editable room-description-block" data-inline-edit>
-                        <div
-                            class="inline-edit-display panel-subtitle room-description {{ $hasLongDescription ? 'is-collapsible is-collapsed' : '' }}"
-                            @if($hasLongDescription)
-                                data-room-description
-                                data-collapsed="true"
-                                tabindex="0"
-                                role="button"
-                                aria-expanded="false"
-                                aria-label="Toggle room description"
+                        <div class="room-description-row">
+                            <div
+                                class="inline-edit-display panel-subtitle room-description {{ $hasLongDescription ? 'is-collapsible is-collapsed' : '' }}"
+                                @if($hasLongDescription)
+                                    data-room-description
+                                    data-collapsed="true"
+                                    tabindex="0"
+                                    role="button"
+                                    aria-expanded="false"
+                                    aria-label="Toggle room description"
+                                @endif
+                            >
+                                {{ $roomDescription }}
+                            </div>
+                            @if($isOwner)
+                                <div class="room-description-actions">
+                                    <button class="icon-btn inline-edit-trigger" type="button" aria-label="Edit description" data-inline-trigger>
+                                        <i data-lucide="pencil"></i>
+                                    </button>
+                                </div>
                             @endif
-                        >
-                            {{ $roomDescription }}
                         </div>
                         @if($isOwner)
-                            <button class="icon-btn inline-edit-trigger" type="button" aria-label="Edit description" data-inline-trigger>
-                                <i data-lucide="pencil"></i>
-                            </button>
                             <form class="inline-edit-form" method="POST" action="{{ route('rooms.update', $room) }}" hidden>
                                 @csrf
                                 @method('PATCH')
@@ -106,6 +109,7 @@
                     </div>
                 </div>
                 <div class="room-header-aside">
+                    <span class="room-code">Room code: {{ $room->slug }}</span>
                     <span class="status-pill status-{{ $room->status }} room-status">{{ ucfirst($room->status) }}</span>
                 </div>
             </div>
