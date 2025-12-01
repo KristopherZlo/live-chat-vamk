@@ -330,13 +330,43 @@ function setupCopyButtons() {
     btn.addEventListener('click', () => {
       const value = btn.dataset.copy;
       if (!value) return;
+      const notify = (success) => {
+        showFlashNotification(success ? 'Link copied to clipboard' : 'Unable to copy link', {
+          type: success ? 'success' : 'danger',
+          source: 'room-copy-link',
+        });
+      };
+
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(value).catch(() => {});
+        navigator.clipboard.writeText(value)
+          .then(() => notify(true))
+          .catch(() => {
+            fallbackCopy(value, notify);
+          });
+      } else {
+        fallbackCopy(value, notify);
       }
       btn.classList.add('pulse');
       setTimeout(() => btn.classList.remove('pulse'), 300);
     });
   });
+}
+
+function fallbackCopy(value, notify) {
+  try {
+    const textarea = document.createElement('textarea');
+    textarea.value = value;
+    textarea.setAttribute('readonly', 'true');
+    textarea.style.position = 'absolute';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    textarea.remove();
+    if (typeof notify === 'function') notify(true);
+  } catch (e) {
+    if (typeof notify === 'function') notify(false);
+  }
 }
 
 function setupMobileMenu() {
@@ -565,7 +595,11 @@ function markQueueHasNew() {
 }
 
 function setupFlashMessages(root = document) {
-  const flashes = root.querySelectorAll('[data-flash]');
+  const flashes = [];
+  if (root instanceof Element && root.matches('[data-flash]')) {
+    flashes.push(root);
+  }
+  flashes.push(...Array.from(root.querySelectorAll('[data-flash]')));
   flashes.forEach((flash) => {
     const closeBtn = flash.querySelector('[data-flash-close]');
     const hide = () => {
@@ -577,6 +611,60 @@ function setupFlashMessages(root = document) {
     }
     setTimeout(hide, 3500);
   });
+}
+
+function showFlashNotification(message, options = {}) {
+  const {
+    type = 'success',
+    host = document.querySelector('.room-header') || document.querySelector('.app-header') || document.body,
+    source,
+  } = options;
+
+  const container = host && host.parentNode ? host.parentNode : document.body;
+  if (source) {
+    const existing = container.querySelector(`[data-flash-source="${source}"]`);
+    if (existing) {
+      const span = existing.querySelector('span');
+      if (span) {
+        span.textContent = message;
+      } else {
+        const newSpan = document.createElement('span');
+        newSpan.textContent = message;
+        existing.prepend(newSpan);
+      }
+      existing.className = `flash flash-${type}`;
+      setupFlashMessages(existing);
+      if (window.refreshLucideIcons) {
+        refreshLucideIcons(existing);
+      }
+      return existing;
+    }
+  }
+
+  const flash = document.createElement('div');
+  flash.className = `flash flash-${type}`;
+  flash.dataset.flash = '1';
+  if (source) {
+    flash.dataset.flashSource = source;
+  }
+  flash.innerHTML = `
+    <span>${message}</span>
+    <button class="icon-btn flash-close" type="button" aria-label="Close" data-flash-close>
+      <i data-lucide="x"></i>
+    </button>
+  `;
+
+  if (host && host.parentNode) {
+    host.parentNode.insertBefore(flash, host.nextSibling);
+  } else {
+    container.appendChild(flash);
+  }
+
+  setupFlashMessages(flash);
+  if (window.refreshLucideIcons) {
+    refreshLucideIcons(flash);
+  }
+  return flash;
 }
 
 function setupInlineEditors(root = document) {
