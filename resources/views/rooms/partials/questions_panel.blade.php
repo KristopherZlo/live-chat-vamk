@@ -82,7 +82,7 @@
                     >
                       @csrf
                       <input type="hidden" name="participant_id" value="{{ $question->participant->id }}">
-                      <button class="btn btn-sm btn-ghost" type="submit">
+                      <button class="btn btn-sm queue-ban-btn" type="submit">
                         <i data-lucide="gavel"></i>
                         <span>Ban participant</span>
                       </button>
@@ -91,7 +91,10 @@
                   <form method="POST" action="{{ route('questions.ownerDelete', $question) }}" onsubmit="return confirm('Delete this question permanently?');" data-remote="questions-panel">
                     @csrf
                     @method('DELETE')
-                    <button class="btn btn-sm btn-danger" type="submit">Delete</button>
+                    <button class="btn btn-sm queue-delete-btn" type="submit">
+                      <i data-lucide="trash-2"></i>
+                      <span>Delete</span>
+                    </button>
                   </form>
                 </div>
               @else
@@ -167,7 +170,10 @@
                     <form method="POST" action="{{ route('questions.updateStatus', $question) }}" data-remote="questions-panel">
                       @csrf
                       <input type="hidden" name="status" value="new">
-                      <button type="submit" class="queue-action">Move to queue</button>
+                      <button type="submit" class="queue-action">
+                        <i data-lucide="corner-up-left"></i>
+                        <span>Move to queue</span>
+                      </button>
                     </form>
                   @endif
                 </div>
@@ -180,7 +186,7 @@
                     >
                       @csrf
                       <input type="hidden" name="participant_id" value="{{ $question->participant->id }}">
-                      <button type="submit" class="btn btn-sm btn-ghost">
+                    <button type="submit" class="btn btn-sm queue-ban-btn">
                         <i data-lucide="gavel"></i>
                         <span>Ban participant</span>
                       </button>
@@ -189,7 +195,10 @@
                   <form method="POST" action="{{ route('questions.destroy', $question) }}" onsubmit="return confirm('Delete this record for good?');" data-remote="questions-panel">
                     @csrf
                     @method('DELETE')
-                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    <button type="submit" class="btn btn-sm queue-delete-btn">
+                      <i data-lucide="trash-2"></i>
+                      <span>Delete</span>
+                    </button>
                   </form>
                 </div>
               @else

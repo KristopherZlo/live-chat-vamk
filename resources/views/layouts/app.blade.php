@@ -134,7 +134,12 @@
                 <div class="footer-links-list">
                     <span class="footer-muted">Ghost Room - Anonymous live chat for lectures. Send questions without interrupting the class.</span>
                     <span class="footer-muted">Made with 💜 by Zloy</span>
-                    <a class="footer-muted" href="https://github.com/KristopherZlo/live-chat-vamk" target="_blank" rel="noreferrer">GitHub repo</a>
+                    <a class="footer-muted" href="https://github.com/KristopherZlo/live-chat-vamk" target="_blank" rel="noreferrer">
+                        GitHub repository
+                    </a>
+                    <span class="footer-muted footer-version">
+                        v{{ config('app.version', '1.0.0') }}
+                    </span>
                 </div>
             </div>
         </div>
@@ -183,7 +188,7 @@
         <div class="modal-body modal-text">
             <p>This service was created by a TT2025 student from VAMK and launched in test mode. This is a <span class="text-beta">beta</span> version, and it may have bugs.</p>
             <p>You can send bug reports, feedback, and other things to my email: <a href="mailto:zloydeveloper.info@gmail.com">zloydeveloper.info@gmail.com</a></p>
-            <p>GitHub repo of the project: <a href="https://github.com/KristopherZlo/live-chat-vamk" target="_blank" rel="noreferrer">https://github.com/KristopherZlo/live-chat-vamk</a></p>
+            <p>GitHub repository of the project: <a href="https://github.com/KristopherZlo/live-chat-vamk" target="_blank" rel="noreferrer">https://github.com/KristopherZlo/live-chat-vamk</a></p>
         </div>
         <div class="modal-actions" style="justify-content: flex-end; gap: 0.5rem;">
             <button class="btn btn-ghost" type="button" x-on:click="close()">Got it</button>
