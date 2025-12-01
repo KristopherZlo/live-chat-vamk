@@ -2594,14 +2594,20 @@ body.app, .app {
 
 .room-description-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: flex-start;
+  justify-content: flex-start;
   gap: 0.5rem;
+}
+
+.room-description-row .room-description {
+  flex: 1;
+  text-align: left;
 }
 
 .room-description-actions {
   display: flex;
   gap: 0.4rem;
+  margin-left: auto;
 }
 
 .room-description-block .inline-edit-form {
@@ -3536,10 +3542,11 @@ body.app, .app {
 
 .inline-editable {
   position: relative;
-  display: inline-flex;
-  align-items: center;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
   gap: 0.35rem;
-  max-width: 100%;
+  width: 100%;
 }
 
 .inline-edit-trigger {
@@ -4100,9 +4107,18 @@ body.modal-open {
   }
   
   .chat-messages {
-    max-height: none;
-    padding-right: 0.2rem;
-    padding-bottom: 0.5rem;
+    padding: 0.4rem 0.2rem 1rem;
+    gap: 0.35rem;
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
+    overflow-y: auto;
+  }
+
+  .chat-panel.mobile-panel.mobile-active .chat-messages {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
   }
   
   .chat-input-row {
@@ -4962,10 +4978,6 @@ body.modal-open {
     overflow: hidden;
   }
 
-  .mobile-panel.mobile-active,.chat-panel {
-    padding-bottom: calc(var(--mobile-tab-bar-height, 104px) + var(--mobile-safe-bottom, 0px));
-  }
-
   /* Force chat to scroll inside the panel on mobile */
   .chat-panel.mobile-panel.mobile-active {
     height: calc(100vh - var(--mobile-tab-bar-height, 104px));
@@ -5174,7 +5186,6 @@ body.modal-open {
 
 @media (max-width: 768px) {
   .chat-panel {
-    padding-bottom: calc(var(--mobile-tab-bar-height, 104px) + var(--mobile-safe-bottom, 0px) + 0.75rem);
     max-height: none;
   }
   
@@ -5206,8 +5217,38 @@ body.modal-open {
 }
 
 @media (max-width: 768px) {
-}
+  .panel.student-panel,
+  .panel.queue-panel,
+  .panel.history-panel,
+  .panel.chat-panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
 
+  .student-panel .panel-body,
+  .queue-panel .panel-body,
+  .history-panel .panel-body,
+  .chat-panel .panel-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .questions-list,
+  .queue-list,
+  .history-list,
+  .chat-messages {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+  }
+}
 @media (max-width: 960px) {
   .create-layout {
     grid-template-columns: 1fr;
@@ -5303,6 +5344,29 @@ body.modal-open {
   .footer-links {
     justify-content: flex-start;
     gap: 1rem;
+  }
+
+  .student-panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .student-panel .panel-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .questions-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 0.25rem;
   }
 }
 
