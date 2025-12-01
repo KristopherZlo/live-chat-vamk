@@ -58,7 +58,11 @@ class MessageReactionController extends Controller
             return response()->json(['message' => 'Unknown participant.'], 403);
         }
 
-        $emoji = $data['emoji'];
+        $emoji = trim($data['emoji']);
+        if (!$this->isValidEmoji($emoji)) {
+            return response()->json(['message' => 'Invalid reaction emoji.'], 422);
+        }
+
         $action = 'added';
         $yourReactions = [];
 
@@ -74,18 +78,20 @@ class MessageReactionController extends Controller
             $existing = MessageReaction::where('message_id', $message->id)
                 ->where($actorScope)
                 ->lockForUpdate()
-                ->get();
+                ->first();
 
-            $hasSameEmoji = $existing->contains(fn ($reaction) => $reaction->emoji === $emoji);
-            $hasDifferentEmoji = $existing->contains(fn ($reaction) => $reaction->emoji !== $emoji);
+            if ($existing) {
+                if ($existing->emoji === $emoji) {
+                    $existing->delete();
+                    $action = 'removed';
+                    $yourReactions = [];
+                    return;
+                }
 
-            MessageReaction::where('message_id', $message->id)
-                ->where($actorScope)
-                ->delete();
-
-            if ($hasSameEmoji && !$hasDifferentEmoji) {
-                $action = 'removed';
-                $yourReactions = [];
+                $existing->emoji = $emoji;
+                $existing->save();
+                $action = 'updated';
+                $yourReactions = [$emoji];
                 return;
             }
 
@@ -95,8 +101,7 @@ class MessageReactionController extends Controller
                 'user_id' => $actorUserId,
                 'participant_id' => $actorParticipantId,
             ]);
-
-            $action = $hasSameEmoji ? 'replaced' : 'added';
+            $action = 'added';
             $yourReactions = [$emoji];
         });
 
@@ -126,19 +131,39 @@ class MessageReactionController extends Controller
         ]);
     }
 
+    protected function isValidEmoji(string $value): bool
+    {
+        if ($value === '') {
+            return false;
+        }
+
+        // Reject plain text/letters/numbers
+        if (preg_match('/[\\p{L}\\p{N}]/u', $value)) {
+            return false;
+        }
+
+        // Require at least one pictographic/emoji-like codepoint
+        return (bool) preg_match('/[\\x{1F300}-\\x{1FAFF}\\x{1F1E6}-\\x{1F1FF}\\x{2600}-\\x{27BF}]/u', $value);
+    }
+
     protected function summarizeReactions(int $messageId): array
     {
-        return MessageReaction::select('emoji', DB::raw('count(*) as count'))
-            ->where('message_id', $messageId)
-            ->groupBy('emoji')
-            ->orderByDesc('count')
-            ->orderBy('emoji')
-            ->get()
-            ->map(fn ($row) => [
-                'emoji' => $row->emoji,
-                'count' => (int) $row->count,
-            ])
-            ->values()
-            ->toArray();
+        $reactions = MessageReaction::where('message_id', $messageId)->get();
+        $grouped = $reactions->groupBy('emoji')->map(function ($group, $emoji) {
+            return [
+                'emoji' => $emoji,
+                'count' => $group->count(),
+            ];
+        })->values();
+
+        $sorted = $grouped->sort(function ($a, $b) {
+            $countDiff = $b['count'] <=> $a['count'];
+            if ($countDiff !== 0) {
+                return $countDiff;
+            }
+            return strcasecmp($a['emoji'], $b['emoji']);
+        });
+
+        return $sorted->values()->toArray();
     }
 }

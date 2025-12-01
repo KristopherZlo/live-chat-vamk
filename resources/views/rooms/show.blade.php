@@ -296,7 +296,12 @@
                     </ol>
                     <div class="reaction-menu" id="reactionMenu" data-reaction-menu hidden>
                         <div class="reaction-menu-title">Quick reactions</div>
+                        <div class="reaction-menu-current" data-reaction-current hidden>
+                            <span class="label">Your reaction:</span>
+                            <span data-reaction-current-emoji></span>
+                        </div>
                         <div class="reaction-menu-grid" data-reaction-grid></div>
+                        <div class="reaction-menu-more-panel" data-reaction-more-panel hidden></div>
                     </div>
 
                     @if($isBanned)
@@ -501,11 +506,19 @@
                 const chatEmojiPicker = document.getElementById('chatEmojiPicker');
                 const reactionMenu = document.getElementById('reactionMenu');
                 const reactionMenuGrid = reactionMenu?.querySelector('[data-reaction-grid]');
+                const reactionMenuMorePanel = reactionMenu?.querySelector('[data-reaction-more-panel]');
+                const reactionMenuCurrent = reactionMenu?.querySelector('[data-reaction-current]');
+                const reactionMenuCurrentEmoji = reactionMenu?.querySelector('[data-reaction-current-emoji]');
+                let reactionEmojiPicker = null;
                 const syncEmojiPickerTheme = () => {
                     const isDark = document.body?.dataset?.theme === 'dark';
                     if (chatEmojiPicker) {
                         chatEmojiPicker.classList.remove('dark', 'light');
                         chatEmojiPicker.classList.add(isDark ? 'dark' : 'light');
+                    }
+                    if (reactionEmojiPicker) {
+                        reactionEmojiPicker.classList.remove('dark', 'light');
+                        reactionEmojiPicker.classList.add(isDark ? 'dark' : 'light');
                     }
                 };
                 const updateSendButtonState = () => {
@@ -742,25 +755,30 @@
                         mineSet.delete(emoji);
                         if (map.has(emoji)) {
                             const item = map.get(emoji);
-                            item.count = Math.max(0, item.count - 1);
+                            item.count = Math.max(0, Number(item.count || 0) - 1);
                             if (item.count <= 0) {
                                 map.delete(emoji);
+                            } else {
+                                map.set(emoji, item);
                             }
                         }
                     } else {
-                        // Single reaction per user: remove previous personal reactions before adding new
-                        mineSet.forEach((prev) => {
-                            if (map.has(prev)) {
-                                const item = map.get(prev);
-                                item.count = Math.max(0, item.count - 1);
-                                if (item.count <= 0) {
-                                    map.delete(prev);
+                        if (mineSet.size) {
+                            mineSet.forEach((prev) => {
+                                if (map.has(prev)) {
+                                    const item = map.get(prev);
+                                    item.count = Math.max(0, Number(item.count || 0) - 1);
+                                    if (item.count <= 0) {
+                                        map.delete(prev);
+                                    } else {
+                                        map.set(prev, item);
+                                    }
                                 }
-                            }
-                        });
-                        mineSet.clear();
+                            });
+                            mineSet.clear();
+                        }
                         const item = map.get(emoji) || { emoji, count: 0 };
-                        item.count += 1;
+                        item.count = Number(item.count || 0) + 1;
                         map.set(emoji, item);
                         mineSet.add(emoji);
                     }
@@ -768,7 +786,54 @@
                     const reactions = sortReactions(Array.from(map.values()).filter((r) => r.count > 0));
                     const mine = Array.from(mineSet);
                     renderReactions(messageEl, reactions, mine);
+                    if (activeReactionMessage === messageEl) {
+                        setReactionMenuActive(messageEl);
+                    }
                     return { reactions, mine };
+                };
+                const setReactionMenuActive = (messageEl) => {
+                    if (!reactionMenuGrid || !messageEl) return;
+                    const mine = parseJsonSafe(messageEl.dataset.myReactions, []);
+                    const mineSet = new Set(mine);
+                    reactionMenuGrid.querySelectorAll('[data-reaction-option]').forEach((btn) => {
+                        const emoji = btn.dataset.reactionOption;
+                        const isActive = emoji && mineSet.has(emoji);
+                        btn.classList.toggle('is-active', Boolean(isActive));
+                    });
+                    if (reactionMenuCurrent && reactionMenuCurrentEmoji) {
+                        const activeEmoji = mine[0] || '';
+                        reactionMenuCurrent.hidden = !activeEmoji;
+                        if (activeEmoji) {
+                            reactionMenuCurrent.removeAttribute('hidden');
+                            reactionMenuCurrentEmoji.textContent = activeEmoji;
+                        } else {
+                            reactionMenuCurrent.setAttribute('hidden', 'true');
+                            reactionMenuCurrentEmoji.textContent = '';
+                        }
+                    }
+                    if (reactionMenuMorePanel) {
+                        reactionMenuMorePanel.hidden = true;
+                        reactionMenuMorePanel.classList.remove('open');
+                    }
+                };
+                const ensureReactionPicker = () => {
+                    if (!reactionMenuMorePanel) return null;
+                    if (reactionEmojiPicker) return reactionEmojiPicker;
+                    const picker = document.createElement('emoji-picker');
+                    picker.id = 'reactionEmojiPicker';
+                    picker.className = 'emoji-picker-element compact';
+                    picker.dataset.reactionPicker = '1';
+                    picker.addEventListener('emoji-click', (event) => {
+                        const emoji = event.detail?.unicode || event.detail?.emoji || '';
+                        if (!emoji || !activeReactionMessage) return;
+                        toggleReaction(activeReactionMessage, emoji);
+                        reactionMenuMorePanel.hidden = true;
+                        reactionMenuMorePanel.classList.remove('open');
+                    });
+                    reactionMenuMorePanel.appendChild(picker);
+                    reactionEmojiPicker = picker;
+                    syncEmojiPickerTheme();
+                    return picker;
                 };
                 const setupInitialReactions = () => {
                     document.querySelectorAll('.message[data-message-id]').forEach((message) => {
@@ -794,11 +859,8 @@
                     moreBtn.type = 'button';
                     moreBtn.className = 'reaction-menu-btn reaction-menu-more';
                     moreBtn.dataset.reactionMore = '1';
-                    moreBtn.innerHTML = '<i data-lucide="sparkles"></i><span>More</span>';
+                    moreBtn.textContent = '…';
                     reactionMenuGrid.appendChild(moreBtn);
-                    if (window.refreshLucideIcons) {
-                        window.refreshLucideIcons();
-                    }
                 };
                 const closeReactionMenus = () => {
                     if (reactionMenu) {
@@ -806,6 +868,10 @@
                         reactionMenu.setAttribute('hidden', 'true');
                         reactionMenu.style.left = '';
                         reactionMenu.style.top = '';
+                        if (reactionMenuMorePanel) {
+                            reactionMenuMorePanel.hidden = true;
+                            reactionMenuMorePanel.classList.remove('open');
+                        }
                     }
                     if (activeReactionMessage) {
                         activeReactionMessage.classList.remove('reaction-menu-open');
@@ -847,9 +913,8 @@
                     positionReactionMenu(triggerEl || messageEl);
                     messageEl.classList.add('reaction-menu-open');
                     activeReactionMessage = messageEl;
-                    if (window.refreshLucideIcons) {
-                        window.refreshLucideIcons();
-                    }
+                    setReactionMenuActive(messageEl);
+                    syncEmojiPickerTheme();
                 };
                 const handleReactionMenuClick = (event) => {
                     const option = event.target.closest('[data-reaction-option]');
@@ -859,9 +924,12 @@
                     }
                     const more = event.target.closest('[data-reaction-more]');
                     if (more && activeReactionMessage) {
-                        const target = activeReactionMessage;
-                        closeReactionMenus();
-                        showEmojiPanel('reaction', target);
+                        const picker = ensureReactionPicker();
+                        if (!picker) return;
+                        if (!reactionMenuMorePanel) return;
+                        const isOpen = !reactionMenuMorePanel.hidden;
+                        reactionMenuMorePanel.hidden = isOpen;
+                        reactionMenuMorePanel.classList.toggle('open', !isOpen);
                     }
                 };
 
@@ -904,6 +972,9 @@
                         if (!response.ok) {
                             console.error('Reaction request failed', response.status);
                             renderReactions(messageEl, previous.reactions, previous.mine);
+                            if (activeReactionMessage === messageEl) {
+                                setReactionMenuActive(messageEl);
+                            }
                             return;
                         }
 
@@ -919,9 +990,15 @@
                             // Keep optimistic state only when server did not return reaction data
                             renderReactions(messageEl, previous.reactions, mine.length ? mine : previous.mine);
                         }
+                        if (activeReactionMessage === messageEl) {
+                            setReactionMenuActive(messageEl);
+                        }
                     } catch (err) {
                         console.error('Reaction error', err);
                         renderReactions(messageEl, previous.reactions, previous.mine);
+                        if (activeReactionMessage === messageEl) {
+                            setReactionMenuActive(messageEl);
+                        }
                     } finally {
                         messageEl.classList.remove('reactions-loading');
                         closeReactionMenus();
@@ -933,6 +1010,9 @@
                     if (!messageEl) return;
                     const mine = getMyReactions(messageEl, payload);
                     renderReactions(messageEl, reactions || [], mine);
+                    if (activeReactionMessage === messageEl) {
+                        setReactionMenuActive(messageEl);
+                    }
                 };
                 const autosizeComposer = () => {
                     if (!chatInput) return;
@@ -1941,5 +2021,3 @@
         </script>
     @endpush
 </x-app-layout>
-
-
