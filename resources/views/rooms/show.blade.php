@@ -498,6 +498,10 @@
                   const qrClose = document.getElementById('qrClose');
                   const qrCanvas = document.getElementById('qrCanvas');
                 const chatContainer = document.querySelector('.messages-container');
+                const scrollChatToBottom = () => {
+                    if (!chatContainer) return;
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                };
                 const chatInputWrapper = document.querySelector('[data-chat-panel=\"chat\"] .chat-input');
                 const chatInput = document.getElementById('chatInput');
                 const sendButton = document.getElementById('sendButton');
@@ -510,6 +514,7 @@
                 const reactionMenuCurrent = reactionMenu?.querySelector('[data-reaction-current]');
                 const reactionMenuCurrentEmoji = reactionMenu?.querySelector('[data-reaction-current-emoji]');
                 let reactionEmojiPicker = null;
+                const isMobileViewport = () => window.matchMedia('(max-width: 640px)').matches;
                 const syncEmojiPickerTheme = () => {
                     const isDark = document.body?.dataset?.theme === 'dark';
                     if (chatEmojiPicker) {
@@ -543,6 +548,7 @@
                 const reactionUrlTemplate = @json(route('rooms.messages.reactions.toggle', [$room, '__MESSAGE__']));
                 const popularReactions = @json($popularReactions);
                 let activeReactionMessage = null;
+                let activeReactionTrigger = null;
                 let emojiPickerMode = 'input';
                 let reactionPickerTarget = null;
                 syncEmojiPickerTheme();
@@ -868,6 +874,7 @@
                         reactionMenu.setAttribute('hidden', 'true');
                         reactionMenu.style.left = '';
                         reactionMenu.style.top = '';
+                        reactionMenu.style.visibility = '';
                         if (reactionMenuMorePanel) {
                             reactionMenuMorePanel.hidden = true;
                             reactionMenuMorePanel.classList.remove('open');
@@ -877,6 +884,7 @@
                         activeReactionMessage.classList.remove('reaction-menu-open');
                     }
                     activeReactionMessage = null;
+                    activeReactionTrigger = null;
                 };
                 const positionReactionMenu = (triggerEl) => {
                     if (!reactionMenu) return;
@@ -888,18 +896,36 @@
                     const menuRect = reactionMenu.getBoundingClientRect();
                     const fallback = { top: window.innerHeight / 2, left: window.innerWidth / 2, width: 0, height: 0 };
                     const rect = triggerRect || fallback;
-                    let top = rect.top - menuRect.height - 10;
-                    if (top < viewportPadding) {
-                        top = rect.top + rect.height + 10;
+                    const isOutgoing = activeReactionMessage?.classList?.contains('message--outgoing');
+
+                    const spaceAbove = rect.top - viewportPadding;
+                    const spaceBelow = window.innerHeight - rect.bottom - viewportPadding;
+                    const shouldPlaceBelow = spaceBelow >= menuRect.height || spaceBelow >= spaceAbove;
+
+                    let top = shouldPlaceBelow
+                        ? rect.bottom + 8
+                        : rect.top - menuRect.height - 8;
+
+                    // Clamp vertically into the viewport
+                    top = Math.min(Math.max(top, viewportPadding), Math.max(viewportPadding, window.innerHeight - menuRect.height - viewportPadding));
+
+                    let left;
+                    if (isMobileViewport()) {
+                        left = Math.max(viewportPadding, (window.innerWidth - menuRect.width) / 2);
+                    } else if (isOutgoing) {
+                        left = rect.right - menuRect.width; // align to the right edge of outgoing messages
+                    } else {
+                        left = rect.left; // align to the left edge of incoming messages
                     }
-                    let left = rect.left + rect.width / 2 - menuRect.width / 2;
                     left = Math.min(Math.max(left, viewportPadding), Math.max(viewportPadding, window.innerWidth - menuRect.width - viewportPadding));
-                    if (top + menuRect.height > window.innerHeight - viewportPadding) {
-                        top = Math.max(viewportPadding, window.innerHeight - menuRect.height - viewportPadding);
-                    }
+
                     reactionMenu.style.left = `${Math.round(left)}px`;
                     reactionMenu.style.top = `${Math.round(top)}px`;
                     reactionMenu.style.visibility = 'visible';
+                };
+                const repositionReactionMenu = () => {
+                    if (!reactionMenu || reactionMenu.hidden || !activeReactionMessage) return;
+                    positionReactionMenu(activeReactionTrigger || activeReactionMessage);
                 };
                 const openReactionMenu = (messageEl, triggerEl = null) => {
                     if (!messageEl || !reactionMenu) return;
@@ -908,11 +934,12 @@
                         return;
                     }
                     closeReactionMenus();
+                    activeReactionMessage = messageEl;
+                    activeReactionTrigger = triggerEl || messageEl;
                     reactionMenu.removeAttribute('hidden');
                     reactionMenu.hidden = false;
-                    positionReactionMenu(triggerEl || messageEl);
+                    positionReactionMenu(activeReactionTrigger);
                     messageEl.classList.add('reaction-menu-open');
-                    activeReactionMessage = messageEl;
                     setReactionMenuActive(messageEl);
                     syncEmojiPickerTheme();
                 };
@@ -930,6 +957,7 @@
                         const isOpen = !reactionMenuMorePanel.hidden;
                         reactionMenuMorePanel.hidden = isOpen;
                         reactionMenuMorePanel.classList.toggle('open', !isOpen);
+                        requestAnimationFrame(repositionReactionMenu);
                     }
                 };
 
@@ -1198,6 +1226,7 @@
                 renderReactionMenuOptions();
                 autosizeComposer();
                 updateSendButtonState();
+                scrollChatToBottom();
                 if (reactionMenu) {
                     reactionMenu.addEventListener('click', handleReactionMenuClick);
                 }
@@ -1799,7 +1828,7 @@
                         if (!btn) return;
                         event.preventDefault();
                         setReplyContext(btn.dataset.replyAuthor, btn.dataset.replyText, btn.dataset.replyId);
-                        chatContainer.scrollTop = chatContainer.scrollHeight;
+                        scrollChatToBottom();
                     });
                 }
 
@@ -1819,6 +1848,9 @@
                     } else if (emojiPickerMode === 'reaction' && !insideMessage) {
                         hideEmojiPanel();
                     }
+                });
+                window.addEventListener('resize', () => {
+                    requestAnimationFrame(repositionReactionMenu);
                 });
 
                 if (window.Echo) {
@@ -1841,7 +1873,7 @@
                             if (pendingMatch) {
                                 updateMessageElementFromPayload(pendingMatch, e);
                                 bindBanForms(pendingMatch);
-                                container.scrollTop = container.scrollHeight;
+                                scrollChatToBottom();
                                 if (window.refreshLucideIcons) {
                                     window.refreshLucideIcons();
                                 }
@@ -1851,7 +1883,7 @@
                             const wrapper = createMessageElement(e, { pending: false });
                             container.appendChild(wrapper);
                             bindBanForms(wrapper);
-                            container.scrollTop = container.scrollHeight;
+                            scrollChatToBottom();
                             if (window.refreshLucideIcons) {
                                 window.refreshLucideIcons();
                             }
@@ -1937,7 +1969,7 @@
                             removeEmptyMessageState();
                             optimisticEl = createMessageElement(optimisticPayload, { pending: true, allowBan: true });
                             container.appendChild(optimisticEl);
-                            container.scrollTop = container.scrollHeight;
+                            scrollChatToBottom();
                             if (window.refreshLucideIcons) {
                                 window.refreshLucideIcons();
                             }
@@ -2015,9 +2047,82 @@
                 }
 
                 if (chatContainer) {
-                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                    scrollChatToBottom();
                 }
             });
         </script>
     @endpush
+    @php
+        $whatsNewVersion = config('app.version');
+        $whatsNewRelease = $whatsNewVersion
+            ? (config('whatsnew.releases')[$whatsNewVersion] ?? null)
+            : null;
+    @endphp
+
+    @if ($whatsNewRelease)
+        @php
+            $whatsNewImageUrl = $whatsNewRelease['image']
+                ? asset($whatsNewRelease['image'])
+                : null;
+        @endphp
+        <div
+            class="modal-overlay"
+            data-whats-new-modal
+            data-whats-new-version="{{ $whatsNewVersion }}"
+            hidden
+            tabindex="-1"
+        >
+            <div
+                class="modal-dialog"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="whatsNewTitle"
+            >
+                <div class="modal-header">
+                    <div class="modal-title-group">
+                        <span class="modal-eyebrow">what's new?</span>
+                        <h2 id="whatsNewTitle" class="modal-title">Version {{ $whatsNewVersion }}</h2>
+                        @if (!empty($whatsNewRelease['date']))
+                            <p class="modal-text">Released {{ $whatsNewRelease['date'] }}</p>
+                        @endif
+                    </div>
+                </div>
+                <div class="modal-body whats-new-body">
+                    @if ($whatsNewImageUrl)
+                        <div class="whats-new-media">
+                            <img
+                                src="{{ $whatsNewImageUrl }}"
+                                alt="{{ $whatsNewRelease['image_alt'] ?? 'Update preview' }}"
+                                loading="lazy"
+                            >
+                        </div>
+                    @endif
+                    @if (!empty($whatsNewRelease['sections']))
+                        <div class="whats-new-text">
+                            <div class="whats-new-sections">
+                                @foreach ($whatsNewRelease['sections'] as $section)
+                                    <div class="whats-new-section">
+                                        <h3 class="whats-new-section-title">{{ $section['title'] }}</h3>
+                                        @if (!empty($section['items']))
+                                            <ul class="whats-new-items">
+                                                @foreach ($section['items'] as $item)
+                                                    <li>{{ $item }}</li>
+                                                @endforeach
+                                            </ul>
+                                        @elseif (!empty($section['text']))
+                                            <p class="whats-new-section-text">{{ $section['text'] }}</p>
+                                        @endif
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+                </div>
+                <div class="modal-actions sticky">
+                    <button class="btn btn-primary" type="button" data-whats-new-close>Got it!</button>
+                </div>
+            </div>
+        </div>
+    @endif
+
 </x-app-layout>
