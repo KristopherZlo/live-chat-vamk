@@ -50,6 +50,15 @@
             scheme: @json($reverbScheme),
         };
     </script>
+    @php
+        $whatsNewVersion = config('app.version');
+        $whatsNewRelease = $whatsNewVersion
+            ? (config('whatsnew.releases')[$whatsNewVersion] ?? null)
+            : null;
+        $whatsNewImageUrl = $whatsNewRelease && $whatsNewRelease['image']
+            ? asset($whatsNewRelease['image'])
+            : null;
+    @endphp
     @vite([
         'resources/js/lucide.js',
         'resources/css/app.css',
@@ -221,6 +230,64 @@
     });
 })();
 </script>
+@if ($whatsNewRelease)
+    <div
+        class="modal-overlay"
+        data-whats-new-modal
+        data-whats-new-version="{{ $whatsNewVersion }}"
+        hidden
+        tabindex="-1"
+    >
+        <div
+            class="modal-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="whatsNewTitle"
+        >
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span class="modal-eyebrow">what's new?</span>
+                    <h2 id="whatsNewTitle" class="modal-title">Version {{ $whatsNewVersion }}</h2>
+                    @if (!empty($whatsNewRelease['date']))
+                        <p class="modal-text">Released {{ $whatsNewRelease['date'] }}</p>
+                    @endif
+                </div>
+            </div>
+            <div class="modal-body whats-new-body">
+                @if ($whatsNewImageUrl)
+                    <div class="whats-new-media">
+                        <img
+                            src="{{ $whatsNewImageUrl }}"
+                            alt="{{ $whatsNewRelease['image_alt'] ?? 'Update preview' }}"
+                            loading="lazy"
+                        >
+                    </div>
+                @endif
+                @if (!empty($whatsNewRelease['sections']))
+                    <div class="whats-new-sections">
+                        @foreach ($whatsNewRelease['sections'] as $section)
+                            <div class="whats-new-section">
+                                <h3 class="whats-new-section-title">{{ $section['title'] }}</h3>
+                                @if (!empty($section['items']))
+                                    <ul class="whats-new-items">
+                                        @foreach ($section['items'] as $item)
+                                            <li>{{ $item }}</li>
+                                        @endforeach
+                                    </ul>
+                                @elseif (!empty($section['text']))
+                                    <p class="whats-new-section-text">{{ $section['text'] }}</p>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-primary" type="button" data-whats-new-close>Got it!</button>
+            </div>
+        </div>
+    </div>
+@endif
 @stack('scripts')
 </body>
 </html>
