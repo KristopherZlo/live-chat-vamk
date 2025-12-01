@@ -650,14 +650,14 @@ main,.layout {
   position: fixed;
   left: 0;
   top: 0;
-  min-width: 240px;
-  max-width: min(420px, 92vw);
-  background: color-mix(in srgb, var(--bg-elevated) 88%, transparent);
-  border: 1px solid var(--border-subtle);
-  border-radius: 1rem;
-  padding: 0.6rem 0.7rem;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.22);
-  backdrop-filter: blur(8px);
+  min-width: 200px;
+  max-width: min(360px, 92vw);
+  background: color-mix(in srgb, var(--bg-elevated) 94%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-subtle) 70%, transparent);
+  border-radius: 0.9rem;
+  padding: 0.5rem 0.55rem 0.45rem;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.16);
+  backdrop-filter: blur(10px);
   z-index: 50;
 }
 
@@ -668,50 +668,90 @@ main,.layout {
 .reaction-menu-title {
   font-size: 0.78rem;
   color: var(--text-secondary);
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.15rem;
   letter-spacing: 0.01em;
+}
+
+.reaction-menu-current {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  padding: 0.3rem 0.4rem;
+  border-radius: 0.6rem;
+  background: color-mix(in srgb, var(--bg-soft) 80%, transparent);
+  margin-bottom: 0.35rem;
+}
+
+.reaction-menu-current .label {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.68rem;
+  color: var(--text-tertiary);
 }
 
 .reaction-menu-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(46px, 1fr));
-  gap: 0.35rem;
+  grid-template-columns: repeat(auto-fit, minmax(38px, 1fr));
+  gap: 0.2rem;
   justify-items: center;
 }
 
 .reaction-menu-btn {
-  border: 1px solid var(--border-subtle);
-  background: color-mix(in srgb, var(--bg-soft) 85%, transparent);
-  border-radius: 0.95rem;
-  width: 46px;
-  height: 46px;
-  font-size: 1.1rem;
+  border: none;
+  background: transparent;
+  border-radius: 0.75rem;
+  width: 38px;
+  height: 38px;
+  font-size: 1.25rem;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.25rem;
   color: var(--text-primary);
-  transition: transform 0.12s ease-out, border-color 0.12s ease-out, background-color 0.12s ease-out, box-shadow 0.12s ease-out;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: transform 0.12s ease-out, background-color 0.12s ease-out, box-shadow 0.12s ease-out;
 }
 
 .reaction-menu-btn:hover {
-  border-color: var(--accent);
-  background: var(--accent-soft);
+  background: color-mix(in srgb, var(--accent-soft) 70%, transparent);
   transform: translateY(-1px);
-  box-shadow: 0 6px 12px rgba(37, 99, 235, 0.12);
+  box-shadow: 0 6px 12px rgba(37, 99, 235, 0.08);
+}
+
+.reaction-menu-btn.is-active {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
+  transform: translateY(-1px);
 }
 
 .reaction-menu-more {
-  font-size: 0.85rem;
+  font-size: 1.05rem;
   grid-column: 1 / -1;
   width: 100%;
+  justify-content: center;
+  background: color-mix(in srgb, var(--bg-soft) 85%, transparent);
 }
 
-.reaction-menu-more svg {
-  width: 1rem;
-  height: 1rem;
+.reaction-menu-more-panel {
+  margin-top: 0.35rem;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.reaction-menu-more-panel[hidden] {
+  display: none;
+}
+
+.reaction-menu-more-panel emoji-picker {
+  width: 100%;
+  --background: var(--bg-elevated);
+  --border-color: transparent;
+  --button-hover-background: color-mix(in srgb, var(--bg-soft) 80%, transparent);
+  --focus-indicator: var(--accent);
+  max-height: 240px;
 }
 
 @media (max-width: 640px) {
