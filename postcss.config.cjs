@@ -4,5 +4,6 @@ module.exports = {
     require('postcss-discard-overridden'),
     require('postcss-merge-longhand'),
     require('postcss-merge-rules'),
+    require('postcss-combine-media-query'),
   ],
 };
