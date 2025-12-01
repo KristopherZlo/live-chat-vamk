@@ -9,7 +9,7 @@
     </div>
     <div class="app-title-text">
       <a href="{{ route('dashboard') }}" class="room-name">Ghost Room</a>
-      <div class="room-code">Instant feedback</div>
+      <div class="app-subtitle">Instant feedback</div>
     </div>
     <span class="badge">beta</span>
   </div>
