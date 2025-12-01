@@ -29,7 +29,7 @@
         <i data-lucide="clock"></i>
         <span>Open history</span>
       </button>
-      <span class="queue-action">{{ $queueCount }} open</span>
+      <span class="queue-count-badge">{{ $queueCount }} open</span>
     </div>
   </div>
 
@@ -122,7 +122,7 @@
       </div>
       <div class="panel-subtitle">All questions for this room</div>
     </div>
-    <span class="queue-action">{{ $historyCount }} total</span>
+    <span class="queue-count-badge">{{ $historyCount }} total</span>
   </div>
 
   <div class="panel-body">

@@ -17,8 +17,13 @@
   <div class="app-controls">
     <nav class="app-nav">
       @auth
-        <a class="btn btn-sm btn-ghost" href="{{ route('dashboard') }}">Dashboard</a>
-        <a class="btn btn-sm btn-ghost" href="{{ route('rooms.create') }}" data-onboarding-target="create-room-nav">New room</a>
+        <div class="app-nav-primary">
+          <a class="btn btn-sm btn-ghost" href="{{ route('dashboard') }}">Dashboard</a>
+          <a class="btn btn-sm btn-ghost" href="{{ route('rooms.create') }}" data-onboarding-target="create-room-nav">New room</a>
+        </div>
+        <div class="app-nav-room-actions">
+          @stack('room-header-actions')
+        </div>
       @endauth
     </nav>
 

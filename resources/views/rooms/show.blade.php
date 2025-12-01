@@ -13,10 +13,20 @@
         };
     @endphp
     @php
-        $popularReactions = ['👍', '❤️', '😂', '🔥', '🎉', '😮', '😢', '👏'];
+        $popularReactions = ['❤️', '👍', '👎', '🔥', '🙏', '😁', '😭', '🤔'];
         $currentUserId = auth()->id();
         $currentParticipantId = $participant?->id;
     @endphp
+
+    @if($isOwner)
+        @push('room-header-actions')
+            <button class="btn btn-sm btn-ghost" type="button" data-copy="{{ $publicLink }}">Copy link</button>
+            <button class="btn btn-sm btn-ghost" type="button" id="qrButton">
+                <i data-lucide="qr-code"></i>
+                <span>Show QR-code</span>
+            </button>
+        @endpush
+    @endif
 
     <div
         class="{{ $isOwner ? 'role-teacher' : 'role-student' }} room-page"
@@ -97,15 +107,6 @@
                 </div>
                 <div class="room-header-aside">
                     <span class="status-pill status-{{ $room->status }} room-status">{{ ucfirst($room->status) }}</span>
-                    @if($isOwner)
-                        <div class="panel-actions">
-                            <button class="btn btn-sm btn-ghost" type="button" data-copy="{{ $publicLink }}">Copy link</button>
-                            <button class="btn btn-sm btn-ghost" type="button" id="qrButton">
-                                <i data-lucide="qr-code"></i>
-                                <span>Show QR-code</span>
-                            </button>
-                        </div>
-                    @endif
                 </div>
             </div>
         </div>
@@ -2098,27 +2099,25 @@
                         </div>
                     @endif
                     @if (!empty($whatsNewRelease['sections']))
-                        <div class="whats-new-text">
-                            <div class="whats-new-sections">
-                                @foreach ($whatsNewRelease['sections'] as $section)
-                                    <div class="whats-new-section">
-                                        <h3 class="whats-new-section-title">{{ $section['title'] }}</h3>
-                                        @if (!empty($section['items']))
-                                            <ul class="whats-new-items">
-                                                @foreach ($section['items'] as $item)
-                                                    <li>{{ $item }}</li>
-                                                @endforeach
-                                            </ul>
-                                        @elseif (!empty($section['text']))
-                                            <p class="whats-new-section-text">{{ $section['text'] }}</p>
-                                        @endif
-                                    </div>
-                                @endforeach
-                            </div>
+                        <div class="whats-new-sections">
+                            @foreach ($whatsNewRelease['sections'] as $section)
+                                <div class="whats-new-section">
+                                    <h3 class="whats-new-section-title">{{ $section['title'] }}</h3>
+                                    @if (!empty($section['items']))
+                                        <ul class="whats-new-items">
+                                            @foreach ($section['items'] as $item)
+                                                <li>{{ $item }}</li>
+                                            @endforeach
+                                        </ul>
+                                    @elseif (!empty($section['text']))
+                                        <p class="whats-new-section-text">{{ $section['text'] }}</p>
+                                    @endif
+                                </div>
+                            @endforeach
                         </div>
                     @endif
                 </div>
-                <div class="modal-actions sticky">
+                <div class="modal-actions">
                     <button class="btn btn-primary" type="button" data-whats-new-close>Got it!</button>
                 </div>
             </div>
