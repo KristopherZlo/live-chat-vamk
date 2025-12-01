@@ -5277,6 +5277,12 @@ body.modal-open {
 }
 
 @media (max-width: 720px) {
+  .chat-composer {
+    align-items: flex-start;
+  }
+  .chat-composer .composer-btn {
+    align-self: flex-start;
+  }
 }
 
 @media (max-width: 900px) {
