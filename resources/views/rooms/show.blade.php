@@ -324,7 +324,7 @@
                                             <span class="switch-track">
                                               <span class="switch-thumb"></span>
                                             </span>
-                                            <span class="switch-label">Send to host</span>
+                                            <span class="switch-label">Send as a question</span>
                                         </label>
                                     @endunless
                                     <span class="panel-subtitle">Press Enter to send, Shift+Enter for a new line</span>
