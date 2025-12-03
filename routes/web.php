@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\LandingController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\MessageController;
@@ -9,6 +10,9 @@ use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\RoomBanController;
 
 Route::get('/', [RoomController::class, 'landing'])->name('home');
+Route::get('/presentation', LandingController::class)->name('presentation');
+Route::get('/live-chat-vamk/presentation', LandingController::class);
+Route::get('/live-chat-vamk/live-chat-vamk/presentation', LandingController::class);
 
 Route::get('/join', [RoomController::class, 'joinForm'])->name('rooms.join');
 Route::post('/join', [RoomController::class, 'joinSubmit'])->name('rooms.join.submit');
