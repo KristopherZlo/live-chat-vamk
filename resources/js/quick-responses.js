@@ -171,6 +171,12 @@ document.addEventListener('DOMContentLoaded', () => {
         input.maxLength = 200;
         input.placeholder = 'Type a quick reply';
         input.value = value;
+        // Keep quick response inputs from triggering global shortcuts when typing space/enter.
+        input.addEventListener('keydown', (event) => {
+            if (event.key === ' ' || event.key === 'Enter') {
+                event.stopPropagation();
+            }
+        });
 
         label.appendChild(title);
         label.appendChild(input);

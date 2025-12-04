@@ -234,6 +234,7 @@
                     </button>
                     <button class="chat-tab-btn" type="button" data-chat-tab="replies">
                         <span>Replies</span>
+                        <span class="pill-soft" data-replies-unread hidden>0</span>
                     </button>
                     @if($isOwner)
                         <button class="chat-tab-btn" type="button" data-chat-tab="bans" data-onboarding-target="bans-tab">
@@ -272,6 +273,13 @@
                                 data-reactions-url="{{ route('rooms.messages.reactions.toggle', [$room, $message]) }}"
                                 data-reactions='@json($reactionsGrouped)'
                                 data-my-reactions='@json($myReactions)'
+                                data-user-id="{{ $message->user_id ?? '' }}"
+                                data-participant-id="{{ $message->participant_id ?? '' }}"
+                                data-author="{{ e($authorName) }}"
+                                data-content="{{ e($message->content) }}"
+                                data-question="{{ $isQuestionMessage ? '1' : '0' }}"
+                                data-time="{{ $message->created_at?->format('H:i') }}"
+                                data-created="{{ $message->created_at?->toIso8601String() }}"
                             >
                                 <div class="message-avatar colorized" style="background: {{ $avatarBg }}; color: #fff; border-color: transparent;">{{ $initials }}</div>
                                 <div class="message-body">
@@ -313,7 +321,7 @@
                                         @php
                                             $replyAuthor = $replyTo->user?->name ?? $replyTo->participant?->display_name ?? 'Guest';
                                         @endphp
-                                        <div class="message-reply">
+                                        <div class="message-reply" data-reply-target="{{ $replyTo->id }}">
                                             <span class="reply-author">{{ $replyAuthor }}</span>
                                             <span class="reply-text">{{ \Illuminate\Support\Str::limit($replyTo->content, 120) }}</span>
                                         </div>
@@ -502,6 +510,8 @@
                                         data-reply-thread-trigger
                                         data-reply-parent="{{ $parent['id'] }}"
                                         data-reply-thread='@json($thread)'
+                                        data-reply-count="{{ $replyCount }}"
+                                        data-reply-unread="0"
                                     >
                                         <div class="reply-inbox-top">
                                             <span class="reply-inbox-author">{{ $parent['author'] }}</span>
@@ -518,6 +528,7 @@
                                         <div class="reply-inbox-meta">
                                             <span class="pill-soft">{{ $replyCount }}</span>
                                             <span class="reply-inbox-meta-label">{{ \Illuminate\Support\Str::plural('reply', $replyCount) }}</span>
+                                            <span class="reply-inbox-new" aria-hidden="true"></span>
                                         </div>
                                     </li>
                                 @empty
@@ -736,6 +747,11 @@
                 const replyDetailBody = document.querySelector('[data-reply-thread-view]');
                 const replyDetailEmpty = document.querySelector('[data-replies-empty]');
                 const repliesPane = document.querySelector('[data-chat-panel=\"replies\"]');
+                const repliesLayout = document.querySelector('.replies-layout');
+                const repliesBadge = document.querySelector('[data-replies-unread]');
+                const replyThreadsState = new Map();
+                let activeReplyParentId = null;
+                let chatActiveTab = 'chat';
                 const csrfMeta = document.querySelector('meta[name=\"csrf-token\"]');
                 const csrfToken = csrfMeta?.getAttribute('content') || '';
                 const replyToInput = document.getElementById('replyToId');
@@ -772,6 +788,30 @@
                         empty.remove();
                     }
                 };
+                const flashMessage = (() => {
+                    const timers = new WeakMap();
+                    return (el) => {
+                        if (!el) return;
+                        const prev = timers.get(el);
+                        if (prev) {
+                            clearTimeout(prev);
+                        }
+                        el.classList.add('message--flash');
+                        const timer = window.setTimeout(() => {
+                            el.classList.remove('message--flash');
+                            timers.delete(el);
+                        }, 1500);
+                        timers.set(el, timer);
+                    };
+                })();
+                const scrollToMessage = (id) => {
+                    if (!id || !chatContainer) return null;
+                    const target = chatContainer.querySelector(`.message[data-message-id="${id}"]`);
+                    if (!target) return null;
+                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    flashMessage(target);
+                    return target;
+                };
                 const parseJsonSafe = (raw, fallback = []) => {
                     if (!raw) return fallback;
                     try {
@@ -779,6 +819,48 @@
                         return parsed ?? fallback;
                     } catch (e) {
                         return fallback;
+                    }
+                };
+                const countDescendants = (list = []) => list.reduce((acc, node) => acc + 1 + countDescendants(node?.replies || []), 0);
+                const formatTime = (value) => {
+                    if (!value) return '';
+                    const date = new Date(value);
+                    if (Number.isNaN(date.getTime())) return '';
+                    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                };
+                const truncateText = (value, max = 180) => {
+                    const str = String(value ?? '');
+                    if (str.length <= max) return str;
+                    return `${str.slice(0, max)}...`;
+                };
+                const isMyMessage = (messageEl) => {
+                    if (!messageEl) return false;
+                    const userId = normalizeId(messageEl.dataset.userId);
+                    const participantId = normalizeId(messageEl.dataset.participantId);
+                    if (currentUserId && userId && Number(currentUserId) === userId) return true;
+                    if (currentParticipantId && participantId && Number(currentParticipantId) === participantId) return true;
+                    return false;
+                };
+                const getParentDataFromMessageEl = (el) => {
+                    if (!el) return null;
+                    return {
+                        id: el.dataset.messageId,
+                        author: el.dataset.author || el.querySelector('.message-author')?.textContent?.trim() || 'Guest',
+                        time: el.dataset.time || formatTime(el.dataset.created),
+                        content: el.dataset.content || el.querySelector('.message-text')?.textContent?.trim() || '',
+                        is_question: el.dataset.question === '1',
+                    };
+                };
+                const updateRepliesBadge = () => {
+                    if (!repliesBadge) return;
+                    const total = Array.from(replyThreadsState.values()).reduce((sum, thread) => sum + (Number(thread.unread) || 0), 0);
+                    if (total > 0) {
+                        repliesBadge.textContent = total;
+                        repliesBadge.hidden = false;
+                        repliesBadge.removeAttribute('hidden');
+                    } else {
+                        repliesBadge.textContent = '0';
+                        repliesBadge.hidden = true;
                     }
                 };
                 const getReactionUrl = (messageEl) => {
@@ -869,8 +951,16 @@
                     const avatarColor = avatarColorFromName(authorNameRaw);
                     const initials = escapeHtml((authorNameRaw || '??').slice(0, 2).toUpperCase());
                     const devBadge = author.is_dev ? '<span class="message-badge message-badge-dev">dev</span>' : '';
-                    const replyHtml = replyTo ? `<div class="message-reply"><span class="reply-author">${escapeHtml(replyTo.author || 'Guest')}</span><span class="reply-text">${escapeHtml(replyTo.content || '')}</span></div>` : '';
+                    const replyTargetAttr = replyTo?.id ? ` data-reply-target="${escapeHtml(String(replyTo.id))}"` : '';
+                    const replyHtml = replyTo ? `<div class="message-reply"${replyTargetAttr}><span class="reply-author">${escapeHtml(replyTo.author || 'Guest')}</span><span class="reply-text">${escapeHtml(replyTo.content || '')}</span></div>` : '';
                     const time = createdAt ? new Date(createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    container.dataset.userId = authorUserId ?? '';
+                    container.dataset.participantId = authorParticipantId ?? '';
+                    container.dataset.author = authorNameRaw || 'Guest';
+                    container.dataset.content = content || '';
+                    container.dataset.question = asQuestion ? '1' : '0';
+                    container.dataset.created = createdAt || '';
+                    container.dataset.time = time;
                     const canBan = allowBan && isOwnerUser && !isOwnerAuthor && author.participant_id;
                     const banButtonHtml = canBan ? `
                         <form method="POST" action="${banStoreUrl}" class="message-ban-form" data-ban-confirm="1">
@@ -1385,40 +1475,27 @@
 
                 function setupChatTabs() {
                     if (!chatTabButtons.length || !chatPanes.length) return;
-                    let active = 'chat';
                     const current = Array.from(chatTabButtons).find((btn) => btn.classList.contains('active'));
                     if (current?.dataset.chatTab) {
-                        active = current.dataset.chatTab;
+                        chatActiveTab = current.dataset.chatTab;
                     }
-
-                    const sync = () => {
-                        chatTabButtons.forEach((btn) => {
-                            const isActive = btn.dataset.chatTab === active;
-                            btn.classList.toggle('active', isActive);
-                        });
-                        chatPanes.forEach((pane) => {
-                            const isMatch = pane.dataset.chatPanel === active;
-                            pane.hidden = !isMatch;
-                        });
-                        if (active !== 'replies') {
-                            hideReplyDetail();
-                        }
-                    };
 
                     chatTabButtons.forEach((btn) => {
                         btn.addEventListener('click', () => {
-                            active = btn.dataset.chatTab || 'chat';
-                            sync();
+                            setChatTab(btn.dataset.chatTab || 'chat');
                         });
                     });
 
-                    sync();
+                    setChatTab(chatActiveTab || 'chat');
                 }
 
                 const hideReplyDetail = () => {
                     if (replyDetail) {
                         replyDetail.hidden = true;
                         replyDetail.classList.remove('is-open');
+                    }
+                    if (repliesLayout) {
+                        repliesLayout.classList.add('is-collapsed');
                     }
                     if (replyDetailBody) {
                         replyDetailBody.innerHTML = '';
@@ -1427,12 +1504,138 @@
                     if (replyDetailEmpty) {
                         replyDetailEmpty.hidden = false;
                     }
+                    activeReplyParentId = null;
                     if (replyInbox) {
                         replyInbox.querySelectorAll('.reply-inbox-item.is-active').forEach((item) => {
                             item.classList.remove('is-active');
                             item.removeAttribute('aria-current');
                         });
                     }
+                };
+                const setChatTab = (tabName = 'chat') => {
+                    chatActiveTab = tabName;
+                    chatTabButtons.forEach((btn) => {
+                        const isActive = btn.dataset.chatTab === tabName;
+                        btn.classList.toggle('active', isActive);
+                    });
+                    chatPanes.forEach((pane) => {
+                        const isMatch = pane.dataset.chatPanel === tabName;
+                        pane.hidden = !isMatch;
+                    });
+                    if (tabName !== 'replies') {
+                        hideReplyDetail();
+                    }
+                };
+
+                const syncReplyThreadCounts = (state) => {
+                    if (!state) return 0;
+                    const total = countDescendants(state.replies || []);
+                    state.reply_count = total;
+                    return total;
+                };
+
+                const buildReplyBranchFromPayload = (payload) => {
+                    return {
+                        id: payload.id,
+                        author: payload.author?.name || payload.author || 'Guest',
+                        time: formatTime(payload.created_at),
+                        content: payload.content || '',
+                        is_question: Boolean(payload.as_question || payload.question),
+                        replies: [],
+                        reply_count: 0,
+                    };
+                };
+
+                const insertReplyNode = (state, parentId, replyNode) => {
+                    if (!state || !parentId || !replyNode) return false;
+                    const parentStr = String(parentId);
+                    if (String(state.parent?.id) === parentStr) {
+                        state.replies = state.replies || [];
+                        state.replies.push(replyNode);
+                        return true;
+                    }
+                    const walk = (list = []) => {
+                        for (const child of list) {
+                            if (String(child.id) === parentStr) {
+                                child.replies = child.replies || [];
+                                child.replies.push(replyNode);
+                                return true;
+                            }
+                            if (walk(child.replies || [])) return true;
+                        }
+                        return false;
+                    };
+                    return walk(state.replies || []);
+                };
+
+                const syncReplyInboxItem = (item, state) => {
+                    if (!item || !state) return;
+                    item.dataset.replyCount = state.reply_count ?? state.replies?.length ?? 0;
+                    item.dataset.replyUnread = state.unread ?? 0;
+                    item.dataset.replyThread = JSON.stringify(state);
+                    item.classList.toggle('has-new', Number(state.unread) > 0);
+                    const pill = item.querySelector('.pill-soft');
+                    const label = item.querySelector('.reply-inbox-meta-label');
+                    if (pill) {
+                        pill.textContent = state.reply_count ?? 0;
+                    }
+                    if (label) {
+                        const count = Number(state.reply_count ?? 0);
+                        label.textContent = count === 1 ? 'reply' : 'replies';
+                    }
+                    const textEl = item.querySelector('.reply-inbox-text');
+                    if (textEl) {
+                        textEl.textContent = truncateText(state.parent?.content || '');
+                    }
+                };
+
+                const ensureInboxItem = (state) => {
+                    if (!replyInbox || !state || !state.parent) return null;
+                    let item = replyInbox.querySelector(`.reply-inbox-item[data-reply-parent="${state.parent.id}"]`);
+                    if (item) {
+                        syncReplyInboxItem(item, state);
+                        return item;
+                    }
+                    item = document.createElement('li');
+                    item.className = 'reply-inbox-item';
+                    item.dataset.replyThreadTrigger = '1';
+                    item.dataset.replyParent = state.parent.id;
+                    item.dataset.replyThread = JSON.stringify(state);
+                    item.dataset.replyCount = state.reply_count ?? 0;
+                    item.dataset.replyUnread = state.unread ?? 0;
+                    item.innerHTML = `
+                        <div class="reply-inbox-top">
+                            <span class="reply-inbox-author">${escapeHtml(state.parent.author || 'Guest')}</span>
+                            <div class="reply-inbox-meta-row">
+                                ${state.parent.is_question ? '<span class="message-badge message-badge-question">To host</span>' : ''}
+                                ${state.parent.time ? `<span class="reply-inbox-time">${escapeHtml(state.parent.time)}</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="reply-inbox-text">${escapeHtml(truncateText(state.parent.content || ''))}</div>
+                        <div class="reply-inbox-meta">
+                            <span class="pill-soft">${state.reply_count ?? 0}</span>
+                            <span class="reply-inbox-meta-label">${Number(state.reply_count ?? 0) === 1 ? 'reply' : 'replies'}</span>
+                            <span class="reply-inbox-new" aria-hidden="true"></span>
+                        </div>
+                    `;
+                    replyInbox.prepend(item);
+                    syncReplyInboxItem(item, state);
+                    return item;
+                };
+
+                const bootstrapRepliesState = () => {
+                    replyThreadsState.clear();
+                    if (!replyInbox) return;
+                    replyInbox.querySelectorAll('.reply-inbox-item').forEach((item) => {
+                        const thread = parseJsonSafe(item.dataset.replyThread, null);
+                        if (!thread || !thread.parent) return;
+                        thread.unread = Number(item.dataset.replyUnread || 0) || 0;
+                        thread.reply_count = Number(thread.reply_count ?? countDescendants(thread.replies || []));
+                        const id = String(thread.parent.id);
+                        replyThreadsState.set(id, thread);
+                        syncReplyInboxItem(item, thread);
+                    });
+                    updateRepliesBadge();
                 };
 
                 const renderReplyBranch = (node, depth = 0) => {
@@ -1445,11 +1648,13 @@
                     const author = escapeHtml(node?.author || 'Guest');
                     const time = escapeHtml(node?.time || '');
                     const isQuestion = Boolean(node?.is_question);
+                    const targetId = escapeHtml(String(node?.id || ''));
                     card.innerHTML = `
                         <div class="reply-detail-meta">
                             <span class="reply-detail-author">${author}</span>
                             ${isQuestion ? '<span class="message-badge message-badge-question">To host</span>' : ''}
                             ${time ? `<span class="reply-detail-time">${time}</span>` : ''}
+                            ${targetId ? `<button type="button" class="icon-btn reply-jump" data-reply-jump data-target-id="${targetId}" title="View in chat"><i data-lucide="arrow-up-right"></i></button>` : ''}
                         </div>
                         <div class="reply-detail-text">${escapeHtml(node?.content || '')}</div>
                     `;
@@ -1494,7 +1699,13 @@
                 const renderReplyDetail = (threadData) => {
                     if (!threadData || !threadData.parent || !replyDetail || !replyDetailBody) return;
                     const parent = threadData.parent || {};
-                    const replyCount = Number(threadData.reply_count ?? (threadData.replies?.length || 0));
+                    const replyCount = Number(threadData.reply_count ?? countDescendants(threadData.replies || []));
+                    threadData.reply_count = replyCount;
+                    activeReplyParentId = String(parent.id || '');
+                    replyThreadsState.set(String(parent.id || ''), threadData);
+                    if (repliesLayout) {
+                        repliesLayout.classList.remove('is-collapsed');
+                    }
                     replyDetail.hidden = false;
                     replyDetail.classList.add('is-open');
                     replyDetailBody.hidden = false;
@@ -1543,26 +1754,9 @@
                     if (replyDetailEmpty) {
                         replyDetailEmpty.hidden = true;
                     }
-                    if (window.refreshLucideIcons) {
-                        window.refreshLucideIcons();
-                    }
-                };
-
-                function setupRepliesPane() {
-                    if (!replyInbox) return;
-                    replyInbox.addEventListener('click', (event) => {
-                        const item = event.target.closest('[data-reply-thread-trigger]');
-                        if (!item) return;
-                        const raw = item.dataset.replyThread || '';
-                        let parsed = null;
-                        try {
-                            parsed = JSON.parse(raw);
-                        } catch (e) {
-                            parsed = null;
-                        }
-                        if (!parsed) return;
+                    if (replyInbox && parent.id) {
                         replyInbox.querySelectorAll('.reply-inbox-item').forEach((row) => {
-                            const isActive = row === item;
+                            const isActive = row.dataset.replyParent === String(parent.id);
                             row.classList.toggle('is-active', isActive);
                             if (isActive) {
                                 row.setAttribute('aria-current', 'true');
@@ -1570,10 +1764,96 @@
                                 row.removeAttribute('aria-current');
                             }
                         });
+                        const activeItem = replyInbox.querySelector(`.reply-inbox-item[data-reply-parent="${parent.id}"]`);
+                        const state = replyThreadsState.get(String(parent.id));
+                        if (state) {
+                            state.unread = 0;
+                            syncReplyThreadCounts(state);
+                        }
+                        if (activeItem && state) {
+                            syncReplyInboxItem(activeItem, state);
+                        }
+                    }
+                    updateRepliesBadge();
+                    if (window.refreshLucideIcons) {
+                        window.refreshLucideIcons();
+                    }
+                };
+
+                const handleIncomingReplyThread = (payload) => {
+                    const replyParentId = normalizeId(payload?.reply_to?.id);
+                    if (!replyParentId) return;
+                    const parentEl = document.querySelector(`.message[data-message-id="${replyParentId}"]`);
+                    if (!parentEl || !isMyMessage(parentEl)) return;
+                    const replyAuthorUserId = normalizeId(payload.author?.user_id);
+                    const replyAuthorParticipantId = normalizeId(payload.author?.participant_id);
+                    const isOwnReply = (currentUserId && replyAuthorUserId && Number(currentUserId) === replyAuthorUserId)
+                        || (currentParticipantId && replyAuthorParticipantId && Number(currentParticipantId) === replyAuthorParticipantId);
+                    const parentData = getParentDataFromMessageEl(parentEl);
+                    if (!parentData) return;
+                    const parentKey = String(parentData.id);
+                    let state = replyThreadsState.get(parentKey);
+                    if (!state) {
+                        state = {
+                            parent: parentData,
+                            replies: [],
+                            reply_count: 0,
+                            unread: 0,
+                        };
+                        replyThreadsState.set(parentKey, state);
+                    }
+                    const replyNode = buildReplyBranchFromPayload(payload);
+                    const inserted = insertReplyNode(state, payload.reply_to?.id, replyNode);
+                    if (!inserted) {
+                        state.replies = state.replies || [];
+                        state.replies.push(replyNode);
+                    }
+                    syncReplyThreadCounts(state);
+                    if (activeReplyParentId === parentKey && repliesPane && !repliesPane.hidden) {
+                        state.unread = 0;
+                        renderReplyDetail(state);
+                    } else if (!isOwnReply) {
+                        state.unread = Number(state.unread || 0) + 1;
+                    }
+                    const inboxItem = ensureInboxItem(state);
+                    if (inboxItem) {
+                        syncReplyInboxItem(inboxItem, state);
+                    }
+                    updateRepliesBadge();
+                };
+
+                function setupRepliesPane() {
+                    if (!replyInbox) return;
+                    replyInbox.addEventListener('click', (event) => {
+                        const item = event.target.closest('[data-reply-thread-trigger]');
+                        if (!item) return;
+                        const parentId = item.dataset.replyParent;
+                        const parsed = replyThreadsState.get(String(parentId)) || parseJsonSafe(item.dataset.replyThread, null);
+                        if (!parsed || !parsed.parent) return;
+                        parsed.unread = 0;
+                        syncReplyThreadCounts(parsed);
+                        replyThreadsState.set(String(parsed.parent.id), parsed);
+                        syncReplyInboxItem(item, parsed);
+                        updateRepliesBadge();
                         renderReplyDetail(parsed);
                     });
+                    bootstrapRepliesState();
                     hideReplyDetail();
                 }
+
+                const handleReplyJump = (event) => {
+                    const replyEl = event.target.closest('.message-reply[data-reply-target]');
+                    if (!replyEl) return;
+                    const targetId = replyEl.dataset.replyTarget;
+                    if (!targetId) return;
+                    event.preventDefault();
+                    scrollToMessage(targetId);
+                };
+                const jumpToChatMessage = (id) => {
+                    if (!id) return;
+                    setChatTab('chat');
+                    scrollToMessage(id);
+                };
 
                 if (queueSoundUrl) {
                     window.queueSoundUrl = queueSoundUrl;
@@ -1590,6 +1870,18 @@
                 autosizeComposer();
                 updateSendButtonState();
                 scrollChatToBottom();
+                if (chatContainer) {
+                    chatContainer.addEventListener('click', handleReplyJump);
+                }
+                if (replyDetailBody) {
+                    replyDetailBody.addEventListener('click', (event) => {
+                        const btn = event.target.closest('[data-reply-jump]');
+                        if (!btn) return;
+                        event.preventDefault();
+                        const id = btn.dataset.targetId;
+                        jumpToChatMessage(id);
+                    });
+                }
                 window.addEventListener('keydown', (event) => {
                     if (event.key !== 'Escape') return;
                     if (repliesPane && repliesPane.hidden) return;
@@ -2227,6 +2519,7 @@
                             existing.classList.remove('message--pending');
                                 existing.removeAttribute('data-temp-id');
                                 existing.removeAttribute('data-temp-key');
+                                handleIncomingReplyThread(e);
                                 return;
                             }
                             const authorUserId = normalizeId(e.author?.user_id);
@@ -2240,6 +2533,7 @@
                                 if (window.refreshLucideIcons) {
                                     window.refreshLucideIcons();
                                 }
+                                handleIncomingReplyThread(e);
                                 return;
                             }
                             removeEmptyMessageState();
@@ -2250,6 +2544,7 @@
                             if (window.refreshLucideIcons) {
                                 window.refreshLucideIcons();
                             }
+                            handleIncomingReplyThread(e);
                         })
                         .listen('ReactionUpdated', (payload) => {
                             updateReactionsFromEvent(payload.message_id, payload.reactions, payload);
