@@ -477,6 +477,9 @@ function setupChatEnterSubmit() {
   });
 
   textarea.addEventListener('keydown', (event) => {
+    if (event.key === ' ' || event.key === 'Enter') {
+      event.stopPropagation();
+    }
     const isEnter = event.key === 'Enter';
     if (!isEnter || event.shiftKey || event.isComposing) return;
     event.preventDefault();
