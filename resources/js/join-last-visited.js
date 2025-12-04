@@ -119,31 +119,40 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const validRooms = [];
-        for (const room of stored) {
-            if (!room.slug) {
-                continue;
-            }
-            const exists = await checkRoomExists(room.slug);
-            if (exists) {
-                validRooms.push(room);
-            }
+        panel.hidden = false;
+        listEl.innerHTML = '';
+        stored.forEach((room) => {
+            listEl.appendChild(renderCard(room));
+        });
+        if (window.refreshLucideIcons) {
+            window.refreshLucideIcons(panel);
         }
 
+        const validations = await Promise.all(stored.map(async (room) => {
+            if (!room.slug) {
+                return null;
+            }
+            const exists = await checkRoomExists(room.slug);
+            return exists ? room : null;
+        }));
+
+        const validRooms = validations.filter(Boolean);
         if (!validRooms.length) {
             clearRooms();
             panel.hidden = true;
+            listEl.innerHTML = '';
             return;
         }
 
         persistRooms(validRooms);
-        listEl.innerHTML = '';
-        validRooms.forEach((room) => {
-            listEl.appendChild(renderCard(room));
-        });
-        panel.hidden = false;
-        if (window.refreshLucideIcons) {
-            window.refreshLucideIcons(panel);
+        if (validRooms.length !== stored.length) {
+            listEl.innerHTML = '';
+            validRooms.forEach((room) => {
+                listEl.appendChild(renderCard(room));
+            });
+            if (window.refreshLucideIcons) {
+                window.refreshLucideIcons(panel);
+            }
         }
     };
 
