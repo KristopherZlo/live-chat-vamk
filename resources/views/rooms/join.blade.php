@@ -41,4 +41,22 @@
             </form>
         </div>
     </section>
+    <section
+        class="panel fade-up join-visited-panel"
+        aria-label="Last visited rooms"
+        data-last-visited-panel
+        hidden
+    >
+        <div class="panel-header">
+            <div class="panel-title">
+                <i data-lucide="clock-3"></i>
+                <span>Last visited</span>
+            </div>
+            <p class="panel-subtitle">Quickly return to rooms you already joined.</p>
+        </div>
+        <div class="panel-body">
+            <div class="visited-rooms-grid" data-last-visited-list></div>
+        </div>
+    </section>
+    @vite('resources/js/join-last-visited.js')
 </x-app-layout>

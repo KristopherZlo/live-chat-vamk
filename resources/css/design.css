@@ -3927,10 +3927,48 @@ body.modal-open {
   background: color-mix(in srgb, var(--scroll-thumb) 85%, #ffffff 15%);
 }
 
-.page-join .app-footer,
-.error-page-shell .app-footer {
-  display: flex !important;
-}
+  .page-join .app-footer,
+  .error-page-shell .app-footer {
+    display: flex !important;
+  }
+
+  .page-join .join-visited-panel {
+    margin-top: 2rem;
+  }
+  .page-join .visited-rooms-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    padding: 0.5rem;
+    justify-items: start;
+    grid-auto-rows: 1fr;
+  }
+  .page-join .visited-room-card {
+    width: 100%;
+    min-height: 200px;
+    max-height: 270px;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  .page-join .visited-room-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-bottom: 0.05rem;
+  }
+  .page-join .visited-room-description {
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin: 0.35rem 0 0.75rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .page-join .visited-room-actions {
+    margin-top: auto;
+  }
 
 @media (hover: none) {
   .message-actions {
@@ -4679,6 +4717,12 @@ body.modal-open {
     overflow-x: hidden;
     overflow-y: auto;
   }
+
+  @media (max-width: 640px) {
+    .page-join .visited-rooms-grid {
+      grid-template-columns: 1fr;
+    }
+  }
   
   .app-mobile-tabs {
     position: fixed;
@@ -5196,15 +5240,10 @@ body.modal-open {
     align-items: flex-start;
   }
   
-  .footer-links {
-    justify-content: flex-start;
-    gap: 1rem;
-  }
-
-  .student-panel {
-    flex-direction: column;
-    flex: 1 1 auto;
-  }
+    .footer-links {
+      justify-content: flex-start;
+      gap: 1rem;
+    }
 
   .student-panel,.student-panel .panel-body {
     display: flex;

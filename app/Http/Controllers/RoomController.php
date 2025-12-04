@@ -257,6 +257,13 @@ class RoomController extends Controller
         ]);
     }
 
+    public function checkExists(string $slug)
+    {
+        $exists = Room::where('slug', $slug)->exists();
+
+        return response()->json(['exists' => (bool) $exists]);
+    }
+
     protected function getOrCreateParticipant(Request $request, Room $room, string $fingerprint, ?string $ipAddress = null): Participant
     {
         $user = $request->user();
