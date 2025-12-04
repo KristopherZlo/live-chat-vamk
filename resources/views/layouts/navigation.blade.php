@@ -25,6 +25,11 @@
           @stack('room-header-actions')
         </div>
       @endauth
+      @guest
+        <div class="app-nav-primary">
+          <a class="btn btn-sm btn-primary" href="{{ route('login') }}">Sign in</a>
+        </div>
+      @endguest
     </nav>
 
     <button class="icon-btn" type="button" data-theme-toggle aria-label="Toggle theme">
@@ -56,23 +61,29 @@
 <div class="mobile-menu-overlay" id="mobileMenu">
   <div class="mobile-menu-card">
     <div class="mobile-menu-handle"></div>
-    <div class="mobile-menu-row">
-      <div class="mobile-menu-actions">
-        @auth
-          <a class="btn btn-sm btn-ghost" href="{{ route('dashboard') }}" data-close-menu>
-            <i data-lucide="layout-dashboard"></i>
-            <span>Dashboard</span>
-          </a>
-          <a class="btn btn-sm btn-ghost" href="{{ route('rooms.create') }}" data-close-menu>
-            <i data-lucide="plus"></i>
-            <span>New room</span>
-          </a>
-        @endauth
-        <button class="btn btn-sm btn-ghost" type="button" data-theme-toggle data-close-menu>
-          <i data-lucide="sun"></i>
-          <span>Toggle theme</span>
-        </button>
-      </div>
+      <div class="mobile-menu-row">
+        <div class="mobile-menu-actions">
+          @auth
+            <a class="btn btn-sm btn-ghost" href="{{ route('dashboard') }}" data-close-menu>
+              <i data-lucide="layout-dashboard"></i>
+              <span>Dashboard</span>
+            </a>
+            <a class="btn btn-sm btn-ghost" href="{{ route('rooms.create') }}" data-close-menu>
+              <i data-lucide="plus"></i>
+              <span>New room</span>
+            </a>
+          @endauth
+          @guest
+            <a class="btn btn-sm btn-primary" href="{{ route('login') }}" data-close-menu>
+              <i data-lucide="log-in"></i>
+              <span>Sign in</span>
+            </a>
+          @endguest
+          <button class="btn btn-sm btn-ghost" type="button" data-theme-toggle data-close-menu>
+            <i data-lucide="sun"></i>
+            <span>Toggle theme</span>
+          </button>
+        </div>
       <div class="mobile-menu-actions">
         @auth
           <a class="btn btn-sm btn-ghost" href="{{ route('profile.edit') }}" data-close-menu>

@@ -32,6 +32,10 @@
         class="{{ $isOwner ? 'role-teacher' : 'role-student' }} room-page"
         data-room-role="{{ $isOwner ? 'owner' : 'participant' }}"
         data-room-id="{{ $room->id }}"
+        data-last-visited-room
+        data-room-slug="{{ $room->slug }}"
+        data-room-title="{{ $room->title ?? 'Untitled room' }}"
+        data-room-description="{{ $room->description ?? '' }}"
     >
         <div class="panel room-header">
             @php
@@ -2057,4 +2061,5 @@
             });
         </script>
     @endpush
+    @vite('resources/js/track-last-visited-room.js')
 </x-app-layout>

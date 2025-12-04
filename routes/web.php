@@ -47,6 +47,9 @@ Route::middleware(['auth'])->group(function () {
 Route::get('/r/{slug}', [RoomController::class, 'showPublic'])
     ->name('rooms.public');
 
+Route::get('/rooms/{slug}/exists', [RoomController::class, 'checkExists'])
+    ->name('rooms.exists');
+
 // Отправка сообщения (общий чат + опциональный вопрос)
 Route::post('/rooms/{room}/messages', [MessageController::class, 'store'])
     ->middleware('throttle:room-messages')
