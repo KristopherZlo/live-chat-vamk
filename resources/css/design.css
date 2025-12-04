@@ -1056,7 +1056,7 @@ main,.layout {
   width: 100%;
   border: none;
   padding: 0.55rem 0.35rem;
-  font-size: 0.85rem;
+  font-size: 1rem;
   resize: none;
   min-height: 2.8rem;
   max-height: 10rem;
