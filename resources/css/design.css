@@ -5333,11 +5333,12 @@ body.modal-open {
     height: auto;
   }
 
-  .chat-messages,.chat-panel.mobile-panel.mobile-active .chat-messages {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-  }
+.chat-messages,.chat-panel.mobile-panel.mobile-active .chat-messages {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
 
   /* Teacher view: ensure panels clear bottom tabs on mobile */
   .layout.teacher .panel {
@@ -5397,9 +5398,268 @@ body.modal-open {
     min-height: calc(var(--app-viewport-height, 100vh) - var(--mobile-tab-bar-height, 104px));
     height: auto;
     max-height: none;
-    padding-bottom: calc(var(--mobile-tab-bar-height, 104px) + var(--mobile-safe-bottom, 0px));
-    gap: 0.75rem;
+  padding-bottom: calc(var(--mobile-tab-bar-height, 104px) + var(--mobile-safe-bottom, 0px));
+  gap: 0.75rem;
   }
+}
+
+.replies-layout {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 1rem;
+  min-height: 420px;
+}
+
+.replies-sidebar {
+  background: var(--bg-soft);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.9rem;
+  padding: 1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.replies-sidebar-head .panel-title {
+  font-size: 1rem;
+}
+
+.reply-inbox {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.reply-inbox-item {
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.85rem;
+  padding: 0.85rem 0.95rem;
+  background: var(--bg-elevated);
+  display: grid;
+  gap: 0.35rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.16s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.reply-inbox-item:hover {
+  border-color: var(--accent);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.reply-inbox-item.is-active {
+  border-color: var(--accent);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.1);
+  background: color-mix(in srgb, var(--accent-soft) 35%, var(--bg-elevated));
+}
+
+.reply-inbox-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.reply-inbox-author {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.reply-inbox-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  flex-wrap: wrap;
+}
+
+.reply-inbox-text {
+  color: var(--text-primary);
+  line-height: 1.45;
+  margin: 0.25rem 0 0.35rem;
+}
+
+.reply-inbox-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+.reply-inbox-meta-label {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  font-size: 0.76rem;
+}
+
+.reply-inbox-empty {
+  padding: 1rem;
+  text-align: center;
+  color: var(--text-secondary);
+  border: 1px dashed var(--border-subtle);
+  border-radius: 0.85rem;
+}
+
+.replies-detail {
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.9rem;
+  background: var(--bg-elevated);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-height: 100%;
+}
+
+.replies-detail[hidden] {
+  display: none;
+}
+
+.reply-detail-empty {
+  border: 1px dashed var(--border-subtle);
+  border-radius: 0.85rem;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.reply-detail-illustration {
+  font-size: 1.8rem;
+}
+
+.reply-detail-empty-text .panel-title {
+  margin: 0;
+}
+
+.reply-detail-body {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.reply-detail-parent {
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.85rem;
+  padding: 0.95rem 1rem;
+  background: color-mix(in srgb, var(--accent-soft) 32%, var(--bg-elevated));
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.85rem;
+}
+
+.reply-detail-top {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.reply-detail-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.reply-detail-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.reply-detail-author {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.reply-detail-time {
+  font-size: 0.85rem;
+}
+
+.reply-detail-text {
+  color: var(--text-primary);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.reply-detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.reply-detail-thread {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.reply-detail-row {
+  display: grid;
+  gap: 0.35rem;
+  margin-left: calc(var(--depth, 0) * 14px);
+}
+
+.reply-detail-item {
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  background: var(--bg-soft);
+  display: grid;
+  gap: 0.35rem;
+  position: relative;
+}
+
+.reply-detail-item.is-open {
+  border-color: var(--accent);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+}
+
+.reply-detail-children {
+  display: grid;
+  gap: 0.55rem;
+  border-left: 2px solid var(--border-subtle);
+  padding-left: 14px;
+  margin-left: 16px;
+}
+
+.reply-branch-toggle {
+  align-self: flex-start;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border-radius: 0.65rem;
+  padding: 0.35rem 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  transition: border-color 0.18s ease, color 0.18s ease, background 0.18s ease;
+}
+
+.reply-branch-toggle:hover,
+.reply-branch-toggle:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+  outline: none;
+}
+
+.reply-detail-item.is-open .reply-branch-toggle {
+  background: color-mix(in srgb, var(--accent-soft) 60%, transparent);
+  border-color: var(--accent);
+}
+
+.reply-detail-item.is-open .reply-branch-toggle i {
+  transform: rotate(180deg);
 }
 
 @media (max-width: 600px) {
@@ -5607,6 +5867,18 @@ body.modal-open {
   
   .form-footer {
     align-items: stretch;
+  }
+
+  .replies-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .replies-detail {
+    order: 2;
+  }
+
+  .replies-sidebar {
+    order: 1;
   }
 }
 

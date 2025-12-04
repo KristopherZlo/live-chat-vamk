@@ -19,10 +19,60 @@
     @endphp
     @php
         $defaultQuickResponses = [
-            'Что было непонятно в последней теме?',
-            'С чего начать лекцию?',
-            'Есть ли вопросы на данном этапе?',
+            'What was unclear in the last topic?',
+            'Where should we start the lecture?',
+            'Any questions at this point?',
         ];
+    @endphp
+    @php
+        $repliesByParent = $messages->groupBy('reply_to_id');
+        $myReplyThreads = $messages->filter(function ($message) use ($repliesByParent, $currentUserId, $participant) {
+            $isMine = ($currentUserId && $message->user_id === $currentUserId)
+                || ($participant && $message->participant && $message->participant->id === $participant->id);
+            return $isMine && ($repliesByParent[$message->id] ?? collect())->isNotEmpty();
+        })->map(function ($message) use ($repliesByParent) {
+            return [
+                'parent' => $message,
+                'replies' => $repliesByParent[$message->id] ?? collect(),
+            ];
+        })->values();
+        $buildReplyBranch = function ($message) use (&$buildReplyBranch, $repliesByParent) {
+            $children = $repliesByParent[$message->id] ?? collect();
+            $childBranches = $children->map(fn ($child) => $buildReplyBranch($child))->values();
+            $descendants = $childBranches->reduce(
+                fn ($carry, $branch) => $carry + 1 + ($branch['reply_count'] ?? 0),
+                0
+            );
+            return [
+                'id' => $message->id,
+                'author' => $message->user?->name ?? $message->participant?->display_name ?? 'Guest',
+                'time' => $message->created_at?->format('H:i'),
+                'content' => $message->content,
+                'is_question' => (bool) $message->question,
+                'reply_count' => $descendants,
+                'replies' => $childBranches,
+            ];
+        };
+        $myReplyThreadsData = $myReplyThreads->map(function ($thread) use ($buildReplyBranch, $repliesByParent) {
+            $parent = $thread['parent'];
+            $children = $repliesByParent[$parent->id] ?? collect();
+            $childBranches = $children->map(fn ($reply) => $buildReplyBranch($reply))->values();
+            $descendants = $childBranches->reduce(
+                fn ($carry, $branch) => $carry + 1 + ($branch['reply_count'] ?? 0),
+                0
+            );
+            return [
+                'parent' => [
+                    'id' => $parent->id,
+                    'author' => $parent->user?->name ?? $parent->participant?->display_name ?? 'Guest',
+                    'time' => $parent->created_at?->format('H:i'),
+                    'content' => $parent->content,
+                    'is_question' => (bool) $parent->question,
+                ],
+                'replies' => $childBranches,
+                'reply_count' => $descendants,
+            ];
+        })->values();
     @endphp
 
     @if($isOwner)
@@ -178,17 +228,20 @@
                     </div>
                 @endif
 
-                @if($isOwner)
-                    <div class="chat-subtabs" data-chat-tabs>
-                        <button class="chat-tab-btn active" type="button" data-chat-tab="chat">
-                            <span>Chat</span>
-                        </button>
+                <div class="chat-subtabs" data-chat-tabs>
+                    <button class="chat-tab-btn active" type="button" data-chat-tab="chat">
+                        <span>Chat</span>
+                    </button>
+                    <button class="chat-tab-btn" type="button" data-chat-tab="replies">
+                        <span>Replies</span>
+                    </button>
+                    @if($isOwner)
                         <button class="chat-tab-btn" type="button" data-chat-tab="bans" data-onboarding-target="bans-tab">
                             <span>Bans</span>
                             <span class="pill-soft">{{ $bannedParticipants->count() }}</span>
                         </button>
-                    </div>
-                @endif
+                    @endif
+                </div>
 
                 <div class="chat-pane" data-chat-panel="chat" data-onboarding-target="chat-pane">
                     <ol class="chat-messages messages-container" id="chatMessages">
@@ -431,6 +484,61 @@
                         </div>
                     @endif
                 </div>
+                <div class="chat-pane" data-chat-panel="replies" hidden>
+                    <div class="replies-layout">
+                        <div class="replies-sidebar">
+                            <div class="replies-sidebar-head">
+                                <div class="panel-title">Replies to your messages</div>
+                                <div class="panel-subtitle">Pick a message to open its thread.</div>
+                            </div>
+                            <ol class="reply-inbox" data-reply-inbox>
+                                @forelse($myReplyThreadsData as $thread)
+                                    @php
+                                        $parent = $thread['parent'];
+                                        $replyCount = $thread['reply_count'];
+                                    @endphp
+                                    <li
+                                        class="reply-inbox-item"
+                                        data-reply-thread-trigger
+                                        data-reply-parent="{{ $parent['id'] }}"
+                                        data-reply-thread='@json($thread)'
+                                    >
+                                        <div class="reply-inbox-top">
+                                            <span class="reply-inbox-author">{{ $parent['author'] }}</span>
+                                            <div class="reply-inbox-meta-row">
+                                                @if($parent['is_question'])
+                                                    <span class="message-badge message-badge-question">To host</span>
+                                                @endif
+                                                @if($parent['time'])
+                                                    <span class="reply-inbox-time">{{ $parent['time'] }}</span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <div class="reply-inbox-text">{{ \Illuminate\Support\Str::limit($parent['content'], 180) }}</div>
+                                        <div class="reply-inbox-meta">
+                                            <span class="pill-soft">{{ $replyCount }}</span>
+                                            <span class="reply-inbox-meta-label">{{ \Illuminate\Support\Str::plural('reply', $replyCount) }}</span>
+                                        </div>
+                                    </li>
+                                @empty
+                                    <li class="reply-inbox-empty">
+                                        <div class="message-text">No replies yet.</div>
+                                    </li>
+                                @endforelse
+                            </ol>
+                        </div>
+                        <div class="replies-detail" data-reply-detail hidden>
+                            <div class="reply-detail-empty" data-replies-empty>
+                                <div class="reply-detail-illustration">&#128172;</div>
+                                <div class="reply-detail-empty-text">
+                                    <div class="panel-title">Open a thread</div>
+                                    <div class="panel-subtitle">Select any message on the left to view every reply and nested conversations.</div>
+                                </div>
+                            </div>
+                            <div class="reply-detail-body" data-reply-thread-view hidden></div>
+                        </div>
+                    </div>
+                </div>
 
                 @if($isOwner)
                     <div class="chat-pane chat-pane-bans" data-chat-panel="bans" hidden>
@@ -623,6 +731,11 @@
                 };
                 const chatTabButtons = document.querySelectorAll('[data-chat-tab]');
                 const chatPanes = document.querySelectorAll('[data-chat-panel]');
+                const replyInbox = document.querySelector('[data-reply-inbox]');
+                const replyDetail = document.querySelector('[data-reply-detail]');
+                const replyDetailBody = document.querySelector('[data-reply-thread-view]');
+                const replyDetailEmpty = document.querySelector('[data-replies-empty]');
+                const repliesPane = document.querySelector('[data-chat-panel=\"replies\"]');
                 const csrfMeta = document.querySelector('meta[name=\"csrf-token\"]');
                 const csrfToken = csrfMeta?.getAttribute('content') || '';
                 const replyToInput = document.getElementById('replyToId');
@@ -1287,6 +1400,9 @@
                             const isMatch = pane.dataset.chatPanel === active;
                             pane.hidden = !isMatch;
                         });
+                        if (active !== 'replies') {
+                            hideReplyDetail();
+                        }
                     };
 
                     chatTabButtons.forEach((btn) => {
@@ -1299,6 +1415,166 @@
                     sync();
                 }
 
+                const hideReplyDetail = () => {
+                    if (replyDetail) {
+                        replyDetail.hidden = true;
+                        replyDetail.classList.remove('is-open');
+                    }
+                    if (replyDetailBody) {
+                        replyDetailBody.innerHTML = '';
+                        replyDetailBody.hidden = true;
+                    }
+                    if (replyDetailEmpty) {
+                        replyDetailEmpty.hidden = false;
+                    }
+                    if (replyInbox) {
+                        replyInbox.querySelectorAll('.reply-inbox-item.is-active').forEach((item) => {
+                            item.classList.remove('is-active');
+                            item.removeAttribute('aria-current');
+                        });
+                    }
+                };
+
+                const renderReplyBranch = (node, depth = 0) => {
+                    const row = document.createElement('div');
+                    row.className = 'reply-detail-row';
+                    row.style.setProperty('--depth', String(depth));
+
+                    const card = document.createElement('div');
+                    card.className = 'reply-detail-item';
+                    const author = escapeHtml(node?.author || 'Guest');
+                    const time = escapeHtml(node?.time || '');
+                    const isQuestion = Boolean(node?.is_question);
+                    card.innerHTML = `
+                        <div class="reply-detail-meta">
+                            <span class="reply-detail-author">${author}</span>
+                            ${isQuestion ? '<span class="message-badge message-badge-question">To host</span>' : ''}
+                            ${time ? `<span class="reply-detail-time">${time}</span>` : ''}
+                        </div>
+                        <div class="reply-detail-text">${escapeHtml(node?.content || '')}</div>
+                    `;
+                    row.appendChild(card);
+
+                    const children = Array.isArray(node?.replies) ? node.replies : [];
+                    if (children.length) {
+                        const toggle = document.createElement('button');
+                        toggle.type = 'button';
+                        toggle.className = 'reply-branch-toggle';
+                        toggle.dataset.replyBranchToggle = '1';
+                        toggle.innerHTML = `
+                            <i data-lucide="chevron-down"></i>
+                            <span>Show thread (${children.length})</span>
+                        `;
+                        const childrenWrap = document.createElement('div');
+                        childrenWrap.className = 'reply-detail-children';
+                        childrenWrap.hidden = true;
+                        children.forEach((child) => {
+                            childrenWrap.appendChild(renderReplyBranch(child, depth + 1));
+                        });
+                        toggle.addEventListener('click', () => {
+                            const open = childrenWrap.hidden;
+                            childrenWrap.hidden = !open;
+                            card.classList.toggle('is-open', open);
+                            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+                            const label = toggle.querySelector('span');
+                            if (label) {
+                                label.textContent = open ? 'Hide thread' : `Show thread (${children.length})`;
+                            }
+                            if (window.refreshLucideIcons) {
+                                window.refreshLucideIcons();
+                            }
+                        });
+                        card.appendChild(toggle);
+                        row.appendChild(childrenWrap);
+                    }
+
+                    return row;
+                };
+
+                const renderReplyDetail = (threadData) => {
+                    if (!threadData || !threadData.parent || !replyDetail || !replyDetailBody) return;
+                    const parent = threadData.parent || {};
+                    const replyCount = Number(threadData.reply_count ?? (threadData.replies?.length || 0));
+                    replyDetail.hidden = false;
+                    replyDetail.classList.add('is-open');
+                    replyDetailBody.hidden = false;
+                    replyDetailBody.innerHTML = '';
+
+                    const header = document.createElement('div');
+                    header.className = 'reply-detail-parent';
+                    header.innerHTML = `
+                        <div class="reply-detail-top">
+                            <div class="reply-detail-eyebrow">Thread for your message</div>
+                            <div class="reply-detail-meta">
+                                <span class="reply-detail-author">${escapeHtml(parent.author || 'Guest')}</span>
+                                ${parent.is_question ? '<span class="message-badge message-badge-question">To host</span>' : ''}
+                                ${parent.time ? `<span class="reply-detail-time">${escapeHtml(parent.time)}</span>` : ''}
+                            </div>
+                            <div class="reply-detail-text">${escapeHtml(parent.content || '')}</div>
+                        </div>
+                        <div class="reply-detail-actions">
+                            <span class="pill-soft">${replyCount}</span>
+                            <button type="button" class="icon-btn reply-detail-close" data-reply-detail-close aria-label="Hide thread">
+                                <i data-lucide="x"></i>
+                            </button>
+                        </div>
+                    `;
+                    const closeBtn = header.querySelector('[data-reply-detail-close]');
+                    if (closeBtn) {
+                        closeBtn.addEventListener('click', hideReplyDetail);
+                    }
+
+                    const threadWrap = document.createElement('div');
+                    threadWrap.className = 'reply-detail-thread';
+                    const replies = Array.isArray(threadData.replies) ? threadData.replies : [];
+                    if (replies.length) {
+                        replies.forEach((child) => {
+                            threadWrap.appendChild(renderReplyBranch(child, 0));
+                        });
+                    } else {
+                        const empty = document.createElement('div');
+                        empty.className = 'panel-subtitle';
+                        empty.textContent = 'No replies yet.';
+                        threadWrap.appendChild(empty);
+                    }
+
+                    replyDetailBody.appendChild(header);
+                    replyDetailBody.appendChild(threadWrap);
+                    if (replyDetailEmpty) {
+                        replyDetailEmpty.hidden = true;
+                    }
+                    if (window.refreshLucideIcons) {
+                        window.refreshLucideIcons();
+                    }
+                };
+
+                function setupRepliesPane() {
+                    if (!replyInbox) return;
+                    replyInbox.addEventListener('click', (event) => {
+                        const item = event.target.closest('[data-reply-thread-trigger]');
+                        if (!item) return;
+                        const raw = item.dataset.replyThread || '';
+                        let parsed = null;
+                        try {
+                            parsed = JSON.parse(raw);
+                        } catch (e) {
+                            parsed = null;
+                        }
+                        if (!parsed) return;
+                        replyInbox.querySelectorAll('.reply-inbox-item').forEach((row) => {
+                            const isActive = row === item;
+                            row.classList.toggle('is-active', isActive);
+                            if (isActive) {
+                                row.setAttribute('aria-current', 'true');
+                            } else {
+                                row.removeAttribute('aria-current');
+                            }
+                        });
+                        renderReplyDetail(parsed);
+                    });
+                    hideReplyDetail();
+                }
+
                 if (queueSoundUrl) {
                     window.queueSoundUrl = queueSoundUrl;
                     if (typeof window.initQueueSoundPlayer === 'function') {
@@ -1308,11 +1584,19 @@
 
                 setupChatTabs();
                 bindBanForms();
+                setupRepliesPane();
                 setupInitialReactions();
                 renderReactionMenuOptions();
                 autosizeComposer();
                 updateSendButtonState();
                 scrollChatToBottom();
+                window.addEventListener('keydown', (event) => {
+                    if (event.key !== 'Escape') return;
+                    if (repliesPane && repliesPane.hidden) return;
+                    if (replyDetail && !replyDetail.hidden) {
+                        hideReplyDetail();
+                    }
+                });
                 if (reactionMenu) {
                     reactionMenu.addEventListener('click', handleReactionMenuClick);
                 }

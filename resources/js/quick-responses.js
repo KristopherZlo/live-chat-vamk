@@ -1,9 +1,9 @@
 ﻿const STORAGE_KEY = 'gr:quickResponses';
 const MAX_RESPONSES = 3;
 const FALLBACK_RESPONSES = [
-    'Что было непонятно в последней теме?',
-    'С чего начать лекцию?',
-    'Есть ли вопросы на данном этапе?',
+    'What was unclear in the last topic?',
+    'Where should we start the lecture?',
+    'Any questions at this point?',
 ];
 
 const parseJson = (value) => {
