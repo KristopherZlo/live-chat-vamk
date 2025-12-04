@@ -346,8 +346,8 @@ main,.layout {
 .layout {
   display: grid;
   grid-template-columns: 2fr 1.2fr;
-  height: min(calc(100vh - 110px), 720px);
-  max-height: min(calc(100vh - 110px), 720px);
+  height: calc(var(--app-viewport-height, 100vh) - 100px);
+  max-height: none;
   flex: 1 1 auto;
   grid-auto-rows: minmax(0, 1fr);
 }
@@ -1077,6 +1077,14 @@ main,.layout {
   border-color: var(--border-subtle);
 }
 
+@media (max-width: 640px) {
+  .chat-textarea {
+    font-size: 15px;
+    line-height: 1.4;
+    padding: 0.45rem 0.35rem;
+  }
+}
+
 .chat-composer {
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -1149,7 +1157,7 @@ main,.layout {
     line-height: 1.4;
     color: var(--text-primary);
     background: var(--bg-elevated);
-    border: 1px solid color-mix(in srgb, var(--border-subtle) 80%, transparent);
+    border: 1px solid var(--border-strong);
     position: relative;
     overflow: hidden;
     display: flex;
@@ -1159,7 +1167,7 @@ main,.layout {
     gap: 0.25rem;
     box-shadow:
       inset 0 2px 10px var(--quick-responses-inner-shadow, rgba(255, 255, 255, 0.4));
-    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
     white-space: nowrap;
     text-overflow: ellipsis;
   }
@@ -1183,16 +1191,14 @@ main,.layout {
   .quick-responses__button:focus {
     border-color: var(--accent);
     box-shadow:
-      inset 0 0 0 1px var(--accent),
-      inset 0 2px 10px var(--quick-responses-inner-shadow, rgba(255, 255, 255, 0.65));
-    transform: translateY(-1px);
+      inset 0 2px 10px var(--quick-responses-inner-shadow, rgba(255, 255, 255, 0.6));
+    background: color-mix(in srgb, var(--bg-elevated) 85%, var(--accent-soft));
   }
 
   .quick-responses__button:focus-visible {
     outline: none;
     box-shadow:
-      inset 0 0 0 1px var(--accent),
-      0 0 0 2px color-mix(in srgb, var(--accent) 80%, transparent),
+      0 0 0 1px color-mix(in srgb, var(--accent) 70%, transparent),
       inset 0 2px 10px var(--quick-responses-inner-shadow, rgba(255, 255, 255, 0.45));
   }
 
@@ -1286,9 +1292,9 @@ main,.layout {
   }
 
   .quick-response-remove {
-    border: 1px solid color-mix(in srgb, var(--danger) 65%, transparent);
-    background: color-mix(in srgb, var(--danger) 12%, transparent);
-    color: var(--danger);
+    border: 1px solid var(--border-subtle);
+    background: color-mix(in srgb, var(--bg-soft) 85%, transparent);
+    color: var(--text-secondary);
     border-radius: 0.9rem;
     height: 100%;
     min-height: 2.75rem;
@@ -1301,8 +1307,8 @@ main,.layout {
 
   .quick-response-remove:hover,
   .quick-response-remove:focus-visible {
-    background: color-mix(in srgb, var(--danger) 20%, transparent);
-    border-color: color-mix(in srgb, var(--danger) 80%, transparent);
+    background: color-mix(in srgb, var(--danger) 15%, transparent);
+    border-color: color-mix(in srgb, var(--danger) 75%, transparent);
     color: var(--danger);
     outline: none;
   }
@@ -4337,18 +4343,12 @@ body.modal-open {
   
   .room-page,.layout {
     flex: 1 1 auto;
-    min-height: 0;
+    min-height: var(--app-viewport-height, 100vh);
     display: flex;
     flex-direction: column;
     gap: 0.65rem;
     padding-bottom: calc(var(--mobile-tab-bar-height) + var(--mobile-safe-bottom, 0px));
-  }
-
-  .room-page {
-    min-height: 100vh;
-  }
-
-  .room-page,.layout {
+    height: auto;
     overflow: hidden;
   }
   
@@ -4893,32 +4893,39 @@ body.modal-open {
     max-height: none;
   }
   
-  .mobile-panel.mobile-active {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 auto;
-    min-height: 0;
-    height: auto;
-    max-height: none;
-    overflow: hidden;
-  }
+.mobile-panel.mobile-active {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: calc(var(--app-viewport-height, 100vh) - var(--mobile-tab-bar-height, 104px));
+  max-height: calc(var(--app-viewport-height, 100vh) - var(--mobile-tab-bar-height, 104px));
+  overflow: hidden;
+}
 
   /* Force chat to scroll inside the panel on mobile */
   .chat-panel.mobile-panel.mobile-active {
-    height: calc(100vh - var(--mobile-tab-bar-height, 104px));
-    max-height: calc(100vh - var(--mobile-tab-bar-height, 104px));
+    height: calc(var(--app-viewport-height, 100vh) - var(--mobile-tab-bar-height, 104px));
+    max-height: calc(var(--app-viewport-height, 100vh) - var(--mobile-tab-bar-height, 104px));
     overflow: hidden;
     display: flex;
     flex-direction: column;
   }
 
-  .chat-panel.mobile-panel.mobile-active .panel-body {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
+.chat-panel.mobile-panel.mobile-active .panel-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: calc(var(--mobile-tab-bar-height, 104px) - 16px);
+}
+
+.mobile-panel.mobile-active .panel-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-bottom: calc(var(--mobile-tab-bar-height, 104px) - 12px);
+}
 
   .chat-panel.mobile-panel.mobile-active .chat-messages {
     flex: 1 1 auto;
@@ -5055,10 +5062,11 @@ body.modal-open {
     max-height: none;
   }
   
-  .room-page,.room-page .layout {
-    padding-bottom: 0;
-    margin-bottom: 40px;
-  }
+.room-page,.room-page .layout {
+  padding-bottom: 0;
+  min-height: var(--app-viewport-height, 100vh);
+  height: auto;
+}
   
   .room-page .chat-panel {
     padding-bottom: 0.75rem;
@@ -5233,10 +5241,12 @@ body.modal-open {
   .layout {
     height: auto;
     max-height: none;
+    min-height: calc(var(--app-viewport-height, 100vh) - var(--mobile-tab-bar-height, 104px));
   }
   
   .layout,.layout.teacher {
     grid-template-columns: 1.7fr 1.3fr;
+    padding-bottom: calc(var(--mobile-tab-bar-height, 104px) + var(--mobile-safe-bottom, 0px));
   }
   
   .layout.teacher {
@@ -5328,6 +5338,20 @@ body.modal-open {
     min-height: 0;
     overflow-y: auto;
   }
+
+  /* Teacher view: ensure panels clear bottom tabs on mobile */
+  .layout.teacher .panel {
+    max-height: none;
+    min-height: 0;
+    flex: 1 1 auto;
+  }
+
+  .layout.teacher .panel .panel-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding-bottom: calc(var(--mobile-tab-bar-height, 104px) - 12px);
+  }
   
   .chat-input-row {
     grid-template-columns: 1fr auto;
@@ -5370,9 +5394,10 @@ body.modal-open {
     display: flex;
     flex-direction: column;
     flex: 1 1 0;
-    min-height: 0;
+    min-height: calc(var(--app-viewport-height, 100vh) - var(--mobile-tab-bar-height, 104px));
     height: auto;
     max-height: none;
+    padding-bottom: calc(var(--mobile-tab-bar-height, 104px) + var(--mobile-safe-bottom, 0px));
     gap: 0.75rem;
   }
 }
