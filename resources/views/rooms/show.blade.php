@@ -326,6 +326,7 @@
                         </div>
                     @elseif(!$isClosed)
                         <div class="chat-input">
+                            <span class="panel-subtitle chat-hint">Press Enter to send, Shift+Enter for a new line</span>
                             @if($isOwner)
                                 <div class="quick-responses" data-quick-responses data-default-responses='@json($defaultQuickResponses)'>
                                     <div
@@ -390,7 +391,6 @@
                                             <span class="switch-label">Send as a question</span>
                                         </label>
                                     @endunless
-                                    <span class="panel-subtitle">Press Enter to send, Shift+Enter for a new line</span>
                                 </div>
                                 <div class="reply-preview" id="replyPreview" hidden>
                                     <div class="reply-preview-label">
