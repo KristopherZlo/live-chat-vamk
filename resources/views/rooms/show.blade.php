@@ -17,6 +17,13 @@
         $currentUserId = auth()->id();
         $currentParticipantId = $participant?->id;
     @endphp
+    @php
+        $defaultQuickResponses = [
+            'Что было непонятно в последней теме?',
+            'С чего начать лекцию?',
+            'Есть ли вопросы на данном этапе?',
+        ];
+    @endphp
 
     @if($isOwner)
         @push('room-header-actions')
@@ -319,6 +326,58 @@
                         </div>
                     @elseif(!$isClosed)
                         <div class="chat-input">
+                            @if($isOwner)
+                                <div class="quick-responses" data-quick-responses data-default-responses='@json($defaultQuickResponses)'>
+                                    <div
+                                        class="quick-responses__buttons"
+                                        role="toolbar"
+                                        aria-label="Quick responses"
+                                        data-quick-responses-buttons
+                                    ></div>
+                                    <button
+                                        type="button"
+                                        class="quick-responses__settings"
+                                        data-quick-responses-settings
+                                        aria-label="Open quick responses settings"
+                                    >
+                                        <i data-lucide="settings"></i>
+                                    </button>
+                                </div>
+                                <div
+                                    class="quick-responses-modal"
+                                    id="quickResponsesModal"
+                                    data-quick-responses-modal
+                                    hidden
+                                    aria-hidden="true"
+                                    role="dialog"
+                                    aria-modal="true"
+                                >
+                                    <div class="modal-card">
+                                        <button
+                                            type="button"
+                                            class="modal-close"
+                                            data-quick-responses-modal-close
+                                            aria-label="Close quick responses settings"
+                                        >
+                                            <i data-lucide="x"></i>
+                                        </button>
+                                        <h3>Quick responses</h3>
+                                        <p class="panel-subtitle">Save up to three canned replies that you can send with one tap.</p>
+                                        <form class="quick-responses-modal-form" data-quick-responses-form>
+                                            <div class="quick-responses-modal-list" data-quick-responses-list></div>
+                                            <div class="quick-responses-modal-actions">
+                                                <button type="button" class="btn btn-sm btn-ghost" data-quick-response-add>
+                                                    Add response
+                                                </button>
+                                            </div>
+                                            <div class="modal-actions">
+                                                <button type="button" class="btn btn-ghost" data-quick-responses-modal-close>Cancel</button>
+                                                <button type="submit" class="btn btn-primary">Save</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            @endif
                             <form id="chat-form" method="POST" action="{{ route('rooms.messages.store', $room) }}">
                                 @csrf
                                 <div class="chat-send-options">
@@ -1264,7 +1323,8 @@
                         updateSendButtonState();
                     });
                     chatInput.addEventListener('keydown', (event) => {
-                        if (event.key === ' ') {
+                        // Stop bubbling so global shortcuts don’t swallow typing inside the composer.
+                        if (event.key === ' ' || event.key === 'Enter') {
                             event.stopPropagation();
                         }
                         if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey) {
@@ -2071,5 +2131,6 @@
             });
         </script>
     @endpush
+    @vite('resources/js/quick-responses.js')
     @vite('resources/js/track-last-visited-room.js')
 </x-app-layout>
