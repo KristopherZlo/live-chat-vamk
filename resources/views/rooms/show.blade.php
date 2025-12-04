@@ -473,11 +473,29 @@
                 const myQuestionsPanelUrl = @json(route('rooms.myQuestionsPanel', $room));
                 const banStoreUrl = @json(route('rooms.bans.store', $room));
                 const rootWindow = window;
-                const queuePipButton = document.querySelector('[data-queue-pip]');
+                let queuePipButton;
                 const supportsDocumentPip = Boolean(window.documentPictureInPicture && window.documentPictureInPicture.requestWindow);
                 let queuePipWindow = null;
                 let queuePipSyncTimer = null;
                 let queuePipStylesCloned = false;
+                const handleQueuePipClick = () => {
+                    if (queuePipWindow && !queuePipWindow.closed) {
+                        closeQueuePip();
+                    } else {
+                        openQueuePip();
+                    }
+                };
+                const attachQueuePipButton = () => {
+                    queuePipButton = document.querySelector('[data-queue-pip]');
+                    if (!queuePipButton) {
+                        return;
+                    }
+                    queuePipButton.removeEventListener('click', handleQueuePipClick);
+                    queuePipButton.addEventListener('click', handleQueuePipClick);
+                    if (!supportsDocumentPip) {
+                        queuePipButton.title = 'Picture-in-picture is not fully supported in this browser.';
+                    }
+                };
                 const normalizeId = (value) => {
                     const num = Number(value);
                     return Number.isFinite(num) ? num : null;
@@ -1246,6 +1264,9 @@
                         updateSendButtonState();
                     });
                     chatInput.addEventListener('keydown', (event) => {
+                        if (event.key === ' ') {
+                            event.stopPropagation();
+                        }
                         if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey) {
                             event.preventDefault();
                             if ((chatInput.value || '').trim().length === 0) {
@@ -1644,24 +1665,13 @@
                     if (typeof window.rebindQueuePanels === 'function') {
                         window.rebindQueuePanels(scope);
                     }
+                    attachQueuePipButton();
                 }
                 if (questionsPanel) {
                     bindQueueInteractions();
                 }
 
-                if (queuePipButton) {
-                    queuePipButton.addEventListener('click', () => {
-                        if (queuePipWindow && !queuePipWindow.closed) {
-                            closeQueuePip();
-                        } else {
-                            openQueuePip();
-                        }
-                    });
-
-                    if (!supportsDocumentPip) {
-                        queuePipButton.title = 'Picture-in-picture is not fully supported in this browser.';
-                    }
-                }
+                attachQueuePipButton();
 
                 const buildFormData = (form) => {
                     const view = form?.ownerDocument?.defaultView;

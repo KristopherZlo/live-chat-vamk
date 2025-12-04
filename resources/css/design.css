@@ -2450,6 +2450,7 @@ body.app, .app {
 }
 
 .room-header .panel-header {
+  border-radius: 0.75rem;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -4859,6 +4860,14 @@ body.modal-open {
     min-height: 0;
     overflow-y: auto;
     padding-right: 0.25rem;
+  }
+  .queue-pip-body #queuePanel {
+    width: 100vw;
+    max-width: 100vw;
+    border-radius: 0;
+  }
+  .queue-pip-body #queuePanel .panel {
+    width: 100%;
   }
   .app-footer {
     padding: 0.8rem 1rem 0.95rem;
