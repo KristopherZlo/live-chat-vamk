@@ -1,6 +1,5 @@
 @php
     $queueCount = $queueQuestions->count();
-    $historyCount = $historyQuestions->count();
 @endphp
 
 <section
@@ -17,19 +16,25 @@
         <i data-lucide="list-ordered"></i>
         <span>Question queue</span>
       </div>
-    <div class="panel-subtitle">New questions from participants</div>
+      <div class="panel-subtitle">Filter and manage questions from participants</div>
     </div>
     <div class="queue-header-extra">
+      <div class="queue-filter">
+        <label class="queue-filter-label" for="queueFilter">Filter</label>
+        <select id="queueFilter" class="queue-filter-select" data-queue-filter>
+          <option value="new" selected>New</option>
+          <option value="all">All</option>
+          <option value="answered">Answered</option>
+          <option value="ignored">Ignored</option>
+          <option value="later">Later</option>
+        </select>
+      </div>
       @auth
         <button class="btn btn-sm btn-ghost queue-pip-btn" type="button" data-queue-pip aria-label="Picture in picture">
           <i data-lucide="picture-in-picture"></i>
         </button>
       @endauth
-      <button class="btn btn-sm btn-ghost history-open-btn" type="button" data-toggle-history data-onboarding-target="queue-history">
-        <i data-lucide="clock"></i>
-        <span>Open history</span>
-      </button>
-      <span class="queue-count-badge">{{ $queueCount }} open</span>
+      <span class="queue-count-badge">{{ $queueCount }} questions</span>
     </div>
   </div>
 
@@ -104,115 +109,12 @@
           </li>
         @endforeach
       </ul>
+      <p class="empty-state queue-filter-empty" data-queue-filter-empty hidden>No questions in this filter.</p>
     @endif
   </div>
 
   <div class="panel-footer">
-    <span>{{ $queueCount }} open questions</span>
-    <span class="panel-subtitle">Set status to move to history</span>
-  </div>
-</section>
-
-<section class="panel history-panel mobile-panel" data-mobile-panel="history" id="historyPanel">
-  <div class="panel-header">
-    <div>
-      <div class="panel-title">
-        <i data-lucide="archive-restore"></i>
-        <span>Question history</span>
-      </div>
-      <div class="panel-subtitle">All questions for this room</div>
-    </div>
-    <span class="queue-count-badge">{{ $historyCount }} total</span>
-  </div>
-
-  <div class="panel-body">
-    @if($historyQuestions->isEmpty())
-      <p class="empty-state">No history yet.</p>
-    @else
-      <ul class="history-list">
-        @foreach($historyQuestions as $question)
-          @php
-              $likes = $question->ratings->where('rating', 1)->count();
-              $dislikes = $question->ratings->where('rating', -1)->count();
-              $feedbackClass = 'rating-pill-neutral';
-              $feedbackLabel = 'No feedback yet';
-              if ($likes > 0 || $dislikes > 0) {
-                  if ($likes >= $dislikes) {
-                      $feedbackClass = 'rating-pill-ok';
-                      $feedbackLabel = 'clear';
-                  } else {
-                      $feedbackClass = 'rating-pill-bad';
-                      $feedbackLabel = 'unclear';
-                  }
-              }
-          @endphp
-          <li class="history-item">
-            <div class="question-header">
-              <div class="question-meta">
-                <span class="message-author">{{ $question->participant?->display_name ?? 'Anonymous' }}</span>
-                <span class="message-meta">{{ $question->created_at->format('d.m H:i') }}</span>
-              </div>
-              <span class="status-pill status-{{ $question->status }}">{{ ucfirst($question->status) }}</span>
-            </div>
-            <div class="question-text">{{ $question->content }}</div>
-
-            @if($question->status === 'answered')
-              <div class="rating">
-                <span class="rating-label">Students feedback:</span>
-                <span class="rating-pill {{ $feedbackClass }}">{{ $feedbackLabel }}</span>
-              </div>
-            @endif
-
-            <div class="question-actions">
-              @if($isOwner)
-                <div class="queue-controls">
-                  @if($question->status !== 'new')
-                    <form method="POST" action="{{ route('questions.updateStatus', $question) }}" data-remote="questions-panel">
-                      @csrf
-                      <input type="hidden" name="status" value="new">
-                      <button type="submit" class="queue-action">
-                        <i data-lucide="corner-up-left"></i>
-                        <span>Move to queue</span>
-                      </button>
-                    </form>
-                  @endif
-                </div>
-                <div class="question-actions-secondary">
-                  @if($question->participant)
-                    <form
-                      method="POST"
-                      action="{{ route('rooms.bans.store', $room) }}"
-                      data-ban-confirm="1"
-                    >
-                      @csrf
-                      <input type="hidden" name="participant_id" value="{{ $question->participant->id }}">
-                    <button type="submit" class="btn btn-sm queue-ban-btn">
-                        <i data-lucide="gavel"></i>
-                        <span>Ban participant</span>
-                      </button>
-                    </form>
-                  @endif
-                  <form method="POST" action="{{ route('questions.destroy', $question) }}" onsubmit="return confirm('Delete this record for good?');" data-remote="questions-panel">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="btn btn-sm queue-delete-btn">
-                      <i data-lucide="trash-2"></i>
-                      <span>Delete</span>
-                    </button>
-                  </form>
-                </div>
-              @else
-                <span class="panel-subtitle">Only the host can manage history.</span>
-              @endif
-            </div>
-          </li>
-        @endforeach
-      </ul>
-    @endif
-  </div>
-
-  <div class="panel-footer">
-    <span>{{ $historyCount }} total questions</span>
-    <span class="panel-subtitle">Restore to queue if needed</span>
+    <span>{{ $queueCount }} total</span>
+    <span class="panel-subtitle">Update status and filter to focus on what matters</span>
   </div>
 </section>

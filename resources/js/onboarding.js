@@ -104,18 +104,9 @@ const ONBOARDING_STAGES = {
                 id: 'queue-answer',
                 selector: '[data-onboarding-action="queue-answered"]',
                 title: 'Mark as answered',
-                body: 'Now choose “Answered” to close the question and move it to history.',
+                body: 'Now choose “Answered” to close the question and keep your queue focused.',
                 padding: 12,
                 completeEvent: 'queue-answered',
-            },
-            {
-                id: 'history-feedback',
-                selector: '[data-onboarding-demo="history-feedback"] .rating-actions',
-                title: 'Student feedback',
-                body: 'Answered questions can get “clear/unclear” votes. Click to see the actions.',
-                padding: 8,
-                prepare: ensureHistoryOpen,
-                completeEvent: 'feedback-given',
             },
             {
                 id: 'qr',
@@ -216,50 +207,22 @@ function openBansTab() {
     };
 }
 
-function ensureHistoryOpen() {
-    const layoutRoot = document.getElementById('layoutRoot');
-    const historyPanel = document.getElementById('historyPanel');
-    layoutRoot?.classList.remove('history-hidden');
-    historyPanel?.classList.remove('hidden');
-    document.querySelectorAll('[data-toggle-history]').forEach((btn) => {
-        btn.classList.add('active');
-        const label = btn.querySelector('span');
-        if (label) label.textContent = 'Close history';
-    });
-    const historyTab = document.querySelector('[data-tab-target="history"]');
-    if (historyTab) historyTab.classList.add('active');
-}
-
-function ensureHistoryList() {
-    const historyPanel = document.getElementById('historyPanel');
-    if (!historyPanel) return null;
-    const body = historyPanel.querySelector('.panel-body');
-    if (!body) return null;
-    let list = historyPanel.querySelector('.history-list');
-    if (!list) {
-        list = document.createElement('ul');
-        list.className = 'history-list';
-        body.appendChild(list);
-    }
-    const empty = body.querySelector('.empty-state');
-    if (empty) empty.remove();
-    return list;
-}
-
 function findFirst(selector) {
     if (!selector) return null;
     return document.querySelector(selector);
 }
 
 function ensureQueueDemoVisible() {
-    ensureHistoryOpen();
     const queuePanel = document.getElementById('queuePanel');
     if (!queuePanel) return null;
     queuePanel.classList.remove('hidden');
     const tab = document.querySelector('[data-tab-target="queue"]');
     if (tab) tab.classList.add('active');
-    const historyTab = document.querySelector('[data-tab-target="history"]');
-    if (historyTab) historyTab.classList.add('active');
+    const filter = queuePanel.querySelector('[data-queue-filter]');
+    if (filter) {
+        filter.value = 'new';
+        filter.dispatchEvent(new Event('change', { bubbles: true }));
+    }
     playQueueSoundSample();
 }
 
@@ -362,18 +325,14 @@ function ensureDemoRoomData(ctx) {
             });
             queueList.prepend(li);
             created = true;
-        } else {
-            const demo = queueList.querySelector('[data-onboarding-demo="queue"]');
-            demo.classList.add('queue-item-new');
-        }
-        if (created) {
-            playQueueSoundSample();
-        }
+    } else {
+        const demo = queueList.querySelector('[data-onboarding-demo="queue"]');
+        demo.classList.add('queue-item-new');
     }
-
-    // history item with feedback
-    const historyList = document.querySelector('#historyPanel .history-list');
-    // history demo is created after marking "Answered"
+    if (created) {
+        playQueueSoundSample();
+    }
+    }
 
     // bans list demo
     const bansPane = document.querySelector('.chat-pane-bans');
@@ -397,74 +356,14 @@ function ensureDemoRoomData(ctx) {
                 <span>Unban</span>
             </button>
         `;
-        list.prepend(li);
-    }
+            list.prepend(li);
+        }
 
-    ensureHistoryOpen();
     if (typeof window.refreshLucideIcons === 'function') {
         window.refreshLucideIcons(document);
     } else if (window.lucide?.createIcons && window.lucide?.icons) {
         window.lucide.createIcons({ icons: window.lucide.icons });
     }
-}
-
-function addHistoryFeedbackDemo(historyList) {
-    const list = historyList || ensureHistoryList();
-    if (!list) return null;
-    const existing = list.querySelector('[data-onboarding-demo="history-feedback"]');
-    if (existing) return existing;
-    const li = document.createElement('li');
-    li.className = 'history-item';
-    li.dataset.onboardingDemo = 'history-feedback';
-    li.innerHTML = `
-        <div class="question-header">
-            <div class="question-meta">
-                <span class="message-author">Guest</span>
-                <span class="message-meta">today 11:40</span>
-            </div>
-            <span class="status-pill status-answered">Answered</span>
-        </div>
-        <div class="question-text">Will slides be shared afterwards?</div>
-        <div class="rating">
-            <span class="rating-label">Students feedback:</span>
-            <div class="rating-actions" data-onboarding-demo="feedback-actions">
-                <button type="button" class="rating-pill rating-pill-ok" data-onboarding-action="feedback-clear">clear</button>
-                <button type="button" class="rating-pill rating-pill-bad" data-onboarding-action="feedback-unclear">unclear</button>
-            </div>
-        </div>
-    `;
-    list.prepend(li);
-    return li;
-}
-
-function moveQueueItemToHistory(queueItem) {
-    if (!queueItem) return null;
-    const historyList = ensureHistoryList();
-    if (!historyList) return null;
-    const text = queueItem.querySelector('.question-text')?.textContent?.trim() || 'Question';
-    const author = queueItem.querySelector('.message-author')?.textContent?.trim() || 'Guest';
-    const li = document.createElement('li');
-    li.className = 'history-item';
-    li.dataset.onboardingDemo = 'history-feedback';
-    li.innerHTML = `
-        <div class="question-header">
-            <div class="question-meta">
-                <span class="message-author">${author}</span>
-                <span class="message-meta">just now</span>
-            </div>
-            <span class="status-pill status-answered">Answered</span>
-        </div>
-        <div class="question-text">${text}</div>
-        <div class="rating">
-            <span class="rating-label">Students feedback:</span>
-            <div class="rating-actions" data-onboarding-demo="feedback-actions">
-                <button type="button" class="rating-pill rating-pill-ok" data-onboarding-action="feedback-clear">clear</button>
-                <button type="button" class="rating-pill rating-pill-bad" data-onboarding-action="feedback-unclear">unclear</button>
-            </div>
-        </div>
-    `;
-    historyList.prepend(li);
-    return li;
 }
 
 function showReplyPreviewDemo() {
@@ -545,18 +444,27 @@ function setupDemoActionHandlers() {
             event.preventDefault();
             const queuePanel = document.getElementById('queuePanel');
             const demoQueue = queuePanel?.querySelector('[data-onboarding-demo="queue"]');
-            const historyList = ensureHistoryList();
-            const historyItem = moveQueueItemToHistory(demoQueue) || addHistoryFeedbackDemo(historyList);
             if (demoQueue) {
-                demoQueue.remove();
+                demoQueue.classList.remove('queue-item-new');
+                demoQueue.dataset.status = 'answered';
+                const header = demoQueue.querySelector('.question-header');
+                let pill = demoQueue.querySelector('.status-pill');
+                if (!pill && header) {
+                    pill = document.createElement('span');
+                    pill.className = 'status-pill status-answered';
+                    pill.textContent = 'Answered';
+                    header.appendChild(pill);
+                } else if (pill) {
+                    pill.textContent = 'Answered';
+                    pill.className = 'status-pill status-answered';
+                }
             }
-            ensureHistoryOpen();
-            if (historyItem) {
-                historyItem.classList.add('onboarding-history-highlight');
-                historyItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                setTimeout(() => historyItem.classList.remove('onboarding-history-highlight'), 2500);
+            const filter = queuePanel?.querySelector('[data-queue-filter]');
+            if (filter) {
+                filter.value = 'answered';
+                filter.dispatchEvent(new Event('change', { bubbles: true }));
             }
-            showDemoFlash('Marked as answered (demo). Question moved to History; you can review answered questions there.', 'success');
+            showDemoFlash('Marked as answered (demo). Use the filter to review answered questions.', 'success');
             window.dispatchEvent(new CustomEvent('onboarding:demo', { detail: { event: 'queue-answered' } }));
         }
         if (action === 'queue-ignored') {
@@ -566,17 +474,6 @@ function setupDemoActionHandlers() {
         if (action === 'queue-later') {
             event.preventDefault();
             showDemoFlash('Marked for later (demo).', 'info');
-        }
-
-        if (action === 'feedback-clear') {
-            event.preventDefault();
-            showDemoFlash('Students marked as clear (demo).', 'success');
-            window.dispatchEvent(new CustomEvent('onboarding:demo', { detail: { event: 'feedback-given' } }));
-        }
-        if (action === 'feedback-unclear') {
-            event.preventDefault();
-            showDemoFlash('Students marked as unclear (demo).', 'danger');
-            window.dispatchEvent(new CustomEvent('onboarding:demo', { detail: { event: 'feedback-given' } }));
         }
     });
 }
