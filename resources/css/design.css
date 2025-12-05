@@ -482,6 +482,8 @@ main,.layout {
   font-size: 0.7rem;
   color: var(--text-secondary);
   flex-shrink: 0;
+  position: relative;
+  z-index: 2;
 }
 
 .message-avatar.colorized {
@@ -559,20 +561,40 @@ main,.layout {
   margin-right: 0.35rem;
 }
 
-.message--flash .message-body {
-  animation: messageFlash 1.4s ease-out;
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-soft) 90%, transparent), 0 10px 24px rgba(0, 0, 0, 0.1);
+.message--flash {
+  position: relative;
 }
 
-@keyframes messageFlash {
+.message--flash::after {
+  content: "";
+  position: absolute;
+  inset: -6px -10px;
+  border-radius: 0.95rem;
+  background: color-mix(in srgb, var(--accent-soft) 75%, transparent);
+  animation: messageRowFlash 1.4s ease-out forwards;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.message--flash .message-body {
+  position: relative;
+  z-index: 1;
+  animation: none;
+  box-shadow: none;
+}
+
+@keyframes messageRowFlash {
   0% {
-    background: color-mix(in srgb, var(--accent) 25%, var(--message-in));
+    background: color-mix(in srgb, var(--accent) 30%, var(--accent-soft));
+    opacity: 1;
   }
-  50% {
-    background: color-mix(in srgb, var(--accent) 15%, var(--message-in));
+  60% {
+    background: color-mix(in srgb, var(--accent) 15%, var(--accent-soft));
+    opacity: 0.8;
   }
   100% {
-    background: inherit;
+    background: transparent;
+    opacity: 0;
   }
 }
 
