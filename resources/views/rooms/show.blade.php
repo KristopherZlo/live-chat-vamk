@@ -199,7 +199,6 @@
       <button class="mobile-tab-btn active" data-tab-target="chat">Chat</button>
       @if($isOwner)
         <button class="mobile-tab-btn" data-tab-target="queue">Queue</button>
-        <button class="mobile-tab-btn" data-tab-target="history">History</button>
       @else
         <button class="mobile-tab-btn" data-tab-target="questions">My questions</button>
       @endif
@@ -209,7 +208,7 @@
       </button>
     </nav>
 
-        <div id="layoutRoot" class="layout {{ $isOwner ? 'teacher history-hidden' : '' }}">
+        <div id="layoutRoot" class="layout {{ $isOwner ? 'teacher' : '' }}">
             <section class="panel chat-panel mobile-panel mobile-active" data-mobile-panel="chat">
                 <div class="panel-header">
                     <div class="panel-title">
@@ -2216,12 +2215,14 @@
                     }
                     const queueClone = sourceQueue.cloneNode(true);
                     queueClone.querySelectorAll('[data-queue-pip]').forEach((btn) => btn.remove());
-                    queueClone.querySelectorAll('[data-toggle-history]').forEach((btn) => btn.remove());
                     shell.appendChild(queueClone);
                     pipDoc.body.innerHTML = '';
                     pipDoc.body.appendChild(shell);
                     if (window.refreshLucideIcons) {
                         window.refreshLucideIcons(queueClone);
+                    }
+                    if (typeof window.setupQueueFilter === 'function') {
+                        window.setupQueueFilter(queueClone);
                     }
                     if (typeof window.setupQueueNewHandlers === 'function') {
                         window.setupQueueNewHandlers(queueClone);

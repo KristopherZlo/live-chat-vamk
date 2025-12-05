@@ -491,41 +491,41 @@ function setupChatEnterSubmit() {
   });
 }
 
-function setupHistoryOpener(root = document) {
-  const buttons = root.querySelectorAll('[data-toggle-history]');
-  if (!buttons.length) return;
+function setupQueueFilter(root = document) {
+  const queuePanel = getQueuePanel(root);
+  if (!queuePanel) return;
+  const filter = queuePanel.querySelector('[data-queue-filter]');
+  const list = queuePanel.querySelector('.queue-list');
+  if (!filter || !list) return;
 
-  const layoutRoot = document.getElementById('layoutRoot');
-  const historyPanel = document.getElementById('historyPanel');
+  const emptyState = queuePanel.querySelector('[data-queue-filter-empty]');
 
-  let historyVisible = true;
+  const applyFilter = () => {
+    const value = (filter.value || 'new').toLowerCase();
+    const items = Array.from(list.querySelectorAll('.queue-item'));
+    let visible = 0;
 
-  const applyVisibility = () => {
-    if (layoutRoot) layoutRoot.classList.toggle('history-hidden', !historyVisible);
-    if (historyPanel) historyPanel.classList.toggle('hidden', !historyVisible);
-
-    buttons.forEach((b) => b.classList.toggle('active', historyVisible));
-    buttons.forEach((btn) => {
-      const label = btn.querySelector('span');
-      if (label) {
-        label.textContent = historyVisible ? 'Close history' : 'Open history';
-      }
+    items.forEach((item) => {
+      const status = (item.dataset.status || '').toLowerCase();
+      const matches = value === 'all' ? true : status === value;
+      item.hidden = !matches;
+      if (matches) visible += 1;
     });
 
-    // mobile tab sync
-    const historyTab = document.querySelector('[data-tab-target="history"]');
-    if (historyTab) {
-      historyTab.classList.toggle('active', historyVisible);
+    if (emptyState) {
+      emptyState.hidden = visible > 0;
     }
+    list.classList.toggle('queue-list-filter-empty', visible === 0);
   };
 
-  const toggle = () => {
-    historyVisible = !historyVisible;
-    applyVisibility();
-  };
+  if (filter.dataset.queueFilterBound === '1') {
+    applyFilter();
+    return;
+  }
 
-  buttons.forEach((btn) => btn.addEventListener('click', toggle));
-  applyVisibility();
+  filter.dataset.queueFilterBound = '1';
+  filter.addEventListener('change', applyFilter);
+  applyFilter();
 }
 
 function setupQueueNewHandlers(root = document) {
@@ -944,7 +944,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupSoundPriming(window.queueSoundUrl);
   setupMobileTabs();
   setupChatEnterSubmit();
-  setupHistoryOpener();
+  setupQueueFilter();
   setupQueueNewHandlers();
   setupFlashMessages();
   setupInlineEditors();
@@ -961,11 +961,11 @@ window.rebindQueuePanels = (root = document) => {
   const isExternalDoc = doc && doc.defaultView && doc.defaultView !== window;
 
   if (!isExternalDoc) {
-    setupHistoryOpener(root);
     setupFlashMessages(root);
     setupRoomDescriptions(root);
   }
 
+  setupQueueFilter(root);
   setupQueueNewHandlers(root);
   refreshLucideIcons(root);
 };
@@ -975,4 +975,5 @@ window.playQueueSound = playQueueSound;
 window.initQueueSoundPlayer = initQueueSoundPlayer;
 window.isQueueSoundEnabled = isQueueSoundEnabled;
 window.setupQueueNewHandlers = setupQueueNewHandlers;
+window.setupQueueFilter = setupQueueFilter;
 window.markQueueItemSeen = markQueueItemSeen;

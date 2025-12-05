@@ -17,7 +17,6 @@ class RoomController extends Controller
 {
     private const MAX_MESSAGES = 200;
     private const MAX_QUEUE_ITEMS = 200;
-    private const MAX_HISTORY_ITEMS = 500;
     private const MAX_MY_QUESTIONS = 200;
 
     public function landing()
@@ -198,28 +197,16 @@ class RoomController extends Controller
         $isBanned = false;
 
         $queueQuestions = collect();
-        $historyQuestions = collect();
         $bannedParticipants = collect();
 
         if ($isOwner) {
             $queueQuestions = $room->questions()
                 ->with('participant')
-                ->whereIn('status', ['new', 'later'])
                 ->whereNull('deleted_by_owner_at')
                 ->whereNull('deleted_by_participant_at')
+                ->orderByRaw("CASE status WHEN 'new' THEN 0 WHEN 'later' THEN 1 WHEN 'answered' THEN 2 WHEN 'ignored' THEN 3 ELSE 4 END")
                 ->orderBy('created_at')
                 ->limit(self::MAX_QUEUE_ITEMS)
-                ->get();
-
-            $historyQuestions = $room->questions()
-                ->with(['participant', 'ratings'])
-                ->whereNull('deleted_by_participant_at')
-                ->where(function ($q) {
-                    $q->whereNotIn('status', ['new', 'later'])
-                    ->orWhereNotNull('deleted_by_owner_at');
-                })
-                ->orderBy('created_at', 'desc')
-                ->limit(self::MAX_HISTORY_ITEMS)
                 ->get();
 
             $bannedParticipants = $room->bans()
@@ -252,7 +239,6 @@ class RoomController extends Controller
             'isBanned' => $isBanned,
             'bannedParticipants' => $bannedParticipants,
             'queueQuestions' => $queueQuestions,
-            'historyQuestions' => $historyQuestions,
             'myQuestions' => $myQuestions,
         ]);
     }
@@ -338,28 +324,16 @@ class RoomController extends Controller
 
         $queueQuestions = $room->questions()
             ->with('participant')
-            ->whereIn('status', ['new', 'later'])
             ->whereNull('deleted_by_owner_at')
             ->whereNull('deleted_by_participant_at')
+            ->orderByRaw("CASE status WHEN 'new' THEN 0 WHEN 'later' THEN 1 WHEN 'answered' THEN 2 WHEN 'ignored' THEN 3 ELSE 4 END")
             ->orderBy('created_at')
             ->limit(self::MAX_QUEUE_ITEMS)
-            ->get();
-
-        $historyQuestions = $room->questions()
-            ->with(['participant', 'ratings'])
-            ->whereNull('deleted_by_participant_at')
-            ->where(function ($q) {
-                $q->whereNotIn('status', ['new', 'later'])
-                ->orWhereNotNull('deleted_by_owner_at');
-            })
-            ->orderByDesc('created_at')
-            ->limit(self::MAX_HISTORY_ITEMS)
             ->get();
 
         return view('rooms.partials.questions_panel', [
             'room'            => $room,
             'queueQuestions'  => $queueQuestions,
-            'historyQuestions'=> $historyQuestions,
             'isOwner'         => $isOwner,
         ]);
     }
