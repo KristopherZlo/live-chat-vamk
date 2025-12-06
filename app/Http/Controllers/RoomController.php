@@ -239,6 +239,7 @@ class RoomController extends Controller
             'isBanned' => $isBanned,
             'bannedParticipants' => $bannedParticipants,
             'queueQuestions' => $queueQuestions,
+            'queueStatusCounts' => $this->getQueueStatusCounts($queueQuestions),
             'myQuestions' => $myQuestions,
         ]);
     }
@@ -334,8 +335,30 @@ class RoomController extends Controller
         return view('rooms.partials.questions_panel', [
             'room'            => $room,
             'queueQuestions'  => $queueQuestions,
+            'queueStatusCounts' => $this->getQueueStatusCounts($queueQuestions),
             'isOwner'         => $isOwner,
         ]);
+    }
+
+    private function getQueueStatusCounts($queueQuestions)
+    {
+        $counts = [
+            'new' => 0,
+            'later' => 0,
+            'answered' => 0,
+            'ignored' => 0,
+        ];
+
+        foreach ($queueQuestions as $question) {
+            $status = $question->status ?? 'new';
+            if (array_key_exists($status, $counts)) {
+                $counts[$status]++;
+            }
+        }
+
+        $counts['all'] = $queueQuestions->count();
+
+        return $counts;
     }
 
     public function myQuestionsPanel(Request $request, Room $room)

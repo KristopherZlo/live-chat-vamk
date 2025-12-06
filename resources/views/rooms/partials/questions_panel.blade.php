@@ -22,11 +22,11 @@
       <div class="queue-filter">
         <label class="queue-filter-label" for="queueFilter">Filter</label>
         <select id="queueFilter" class="queue-filter-select" data-queue-filter>
-          <option value="new" selected>New</option>
-          <option value="all">All</option>
-          <option value="answered">Answered</option>
-          <option value="ignored">Ignored</option>
-          <option value="later">Later</option>
+          <option value="new" selected>New ({{ $queueStatusCounts['new'] ?? 0 }})</option>
+          <option value="all">All ({{ $queueStatusCounts['all'] ?? 0 }})</option>
+          <option value="answered">Answered ({{ $queueStatusCounts['answered'] ?? 0 }})</option>
+          <option value="ignored">Ignored ({{ $queueStatusCounts['ignored'] ?? 0 }})</option>
+          <option value="later">Later ({{ $queueStatusCounts['later'] ?? 0 }})</option>
         </select>
       </div>
       @auth
