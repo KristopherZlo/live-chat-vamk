@@ -1,5 +1,7 @@
 /vendor
 /node_modules
+/design-tests
+/design-tests/*
 
 # Laravel
 /public/hot
