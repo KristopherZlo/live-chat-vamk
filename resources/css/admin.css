@@ -313,6 +313,10 @@
   gap: 1rem;
 }
 
+.admin-grid--offset-top {
+  margin-top: 1rem;
+}
+
 .admin-grid--cols-2 {
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
@@ -376,6 +380,16 @@
 .admin-card__header--between {
   justify-content: space-between;
   flex-wrap: wrap;
+}
+
+.admin-card__body {
+  padding: 0.9rem 1rem 1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.admin-card__body--spaced {
+  padding-top: 1.3rem;
 }
 
 .admin-card__title {

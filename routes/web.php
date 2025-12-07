@@ -83,6 +83,7 @@ Route::delete('/questions/{question}', [QuestionController::class, 'destroy'])
     ->name('questions.destroy');
 
 Route::get('/rooms/{room}/questions-panel', [RoomController::class, 'questionsPanel'])
+    ->middleware('auth')
     ->name('rooms.questionsPanel');
 Route::get('/rooms/{room}/my-questions-panel', [RoomController::class, 'myQuestionsPanel'])
     ->name('rooms.myQuestionsPanel');

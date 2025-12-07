@@ -15,8 +15,9 @@ class EnsureDev
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!auth()->check() || !auth()->user()?->is_dev) {
-            abort(403);
+        $user = auth()->user();
+        if (!$user || !$user->is_dev) {
+            abort(404);
         }
 
         return $next($request);

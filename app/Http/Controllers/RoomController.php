@@ -318,10 +318,15 @@ class RoomController extends Controller
         return $participant;
     }
 
-    public function questionsPanel(Room $room)
+    public function questionsPanel(Request $request, Room $room)
     {
         $user = auth()->user();
         $isOwner = $user && $user->id === $room->user_id;
+        $isAdmin = $user && $user->is_dev;
+
+        if (!$user || (!$isOwner && !$isAdmin)) {
+            abort(403);
+        }
 
         $queueQuestions = $room->questions()
             ->with('participant')
@@ -332,12 +337,18 @@ class RoomController extends Controller
             ->limit(self::MAX_QUEUE_ITEMS)
             ->get();
 
-        return view('rooms.partials.questions_panel', [
+        $viewData = [
             'room'            => $room,
             'queueQuestions'  => $queueQuestions,
             'queueStatusCounts' => $this->getQueueStatusCounts($queueQuestions),
             'isOwner'         => $isOwner,
-        ]);
+        ];
+
+        if ($request->ajax()) {
+            return view('rooms.partials.questions_panel', $viewData);
+        }
+
+        return view('rooms.questions_panel_page', $viewData);
     }
 
     private function getQueueStatusCounts($queueQuestions)

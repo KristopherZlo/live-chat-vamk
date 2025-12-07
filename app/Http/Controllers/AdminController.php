@@ -66,6 +66,8 @@ class AdminController extends Controller
             ->orderByDesc('id')
             ->paginate(20, ['*'], 'participants_page');
 
+        $health = $this->resolveHealthStatus();
+
         return view('admin.index', compact(
             'stats',
             'inviteCodes',
@@ -75,7 +77,8 @@ class AdminController extends Controller
             'recentUsers',
             'recentBans',
             'allRooms',
-            'participants'
+            'participants',
+            'health'
         ));
     }
 
@@ -122,6 +125,41 @@ class AdminController extends Controller
         $ban->delete();
 
         return redirect()->route('admin.index')->with('status', 'Ban removed.');
+    }
+
+    protected function resolveHealthStatus(): array
+    {
+        $dbOk = false;
+        try {
+            DB::connection()->getPdo();
+            DB::select('select 1');
+            $dbOk = true;
+        } catch (\Throwable $e) {
+            $dbOk = false;
+        }
+
+        $queueDriver = config('queue.default', 'sync');
+        $realtimeDriver = config('broadcasting.default', 'log');
+        $reverbConnection = config('broadcasting.connections.reverb', []);
+        $reverbKey = $reverbConnection['key'] ?? null;
+
+        return [
+            'database' => [
+                'label' => 'Database',
+                'ok' => $dbOk,
+                'details' => $dbOk ? 'Connected' : 'Unavailable',
+            ],
+            'queue' => [
+                'label' => 'Queue',
+                'ok' => $queueDriver !== 'sync',
+                'details' => $queueDriver,
+            ],
+            'realtime' => [
+                'label' => 'Realtime',
+                'ok' => (bool) $reverbKey || $realtimeDriver !== 'log',
+                'details' => $reverbKey ? 'reverb' : $realtimeDriver,
+            ],
+        ];
     }
 
     protected function countActiveUsers(): int
