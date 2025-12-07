@@ -139,9 +139,6 @@ class AdminController extends Controller
         }
 
         $queueDriver = config('queue.default', 'sync');
-        $realtimeDriver = config('broadcasting.default', 'log');
-        $reverbConnection = config('broadcasting.connections.reverb', []);
-        $reverbKey = $reverbConnection['key'] ?? null;
 
         return [
             'database' => [
@@ -152,13 +149,9 @@ class AdminController extends Controller
             'queue' => [
                 'label' => 'Queue',
                 'ok' => $queueDriver !== 'sync',
-                'details' => $queueDriver,
+                'details' => $queueDriver === 'sync' ? 'sync (disabled)' : $queueDriver,
             ],
-            'realtime' => [
-                'label' => 'Realtime',
-                'ok' => (bool) $reverbKey || $realtimeDriver !== 'log',
-                'details' => $reverbKey ? 'reverb' : $realtimeDriver,
-            ],
+            'realtime' => $this->resolveRealtimeHealth(),
         ];
     }
 
@@ -172,5 +165,70 @@ class AdminController extends Controller
         } catch (\Throwable $e) {
             return 0;
         }
+    }
+
+    protected function resolveRealtimeHealth(): array
+    {
+        $driver = config('broadcasting.default', 'log');
+        $connections = config('broadcasting.connections', []);
+        $connection = $connections[$driver] ?? [];
+        $ok = false;
+        $details = $driver;
+        $missing = [];
+
+        if ($driver === 'reverb') {
+            $required = ['key', 'secret', 'app_id'];
+            foreach ($required as $key) {
+                if (empty($connection[$key])) {
+                    $missing[] = $key;
+                }
+            }
+
+            if (!empty($missing)) {
+                return [
+                    'label' => 'Realtime',
+                    'ok' => false,
+                    'details' => 'Missing: '.implode(', ', $missing),
+                ];
+            }
+
+            $host = $connection['options']['host'] ?? request()->getHost() ?? '127.0.0.1';
+            $port = (int) ($connection['options']['port'] ?? 443);
+            $errno = 0;
+            $errstr = null;
+            $socket = @fsockopen($host, $port, $errno, $errstr, 1.5);
+            if ($socket) {
+                fclose($socket);
+                $ok = true;
+                $details = "reverb: {$host}:{$port}";
+            } else {
+                $ok = false;
+                $details = "reverb offline ({$host}:{$port})";
+            }
+        } elseif ($driver === 'pusher') {
+            $required = ['key', 'secret', 'app_id'];
+            foreach ($required as $key) {
+                if (empty($connection[$key])) {
+                    $missing[] = $key;
+                }
+            }
+            $ok = empty($missing);
+            $details = $ok ? 'pusher' : 'Missing: '.implode(', ', $missing);
+        } elseif ($driver === 'ably') {
+            $ok = !empty($connection['key']);
+            $details = $ok ? 'ably' : 'Missing: key';
+        } elseif (in_array($driver, ['log', 'null'], true)) {
+            $ok = false;
+            $details = $driver.' (disabled)';
+        } else {
+            $ok = !empty($connection);
+            $details = $connection ? $driver : $driver.' (unconfigured)';
+        }
+
+        return [
+            'label' => 'Realtime',
+            'ok' => $ok,
+            'details' => $details,
+        ];
     }
 }

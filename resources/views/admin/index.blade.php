@@ -8,6 +8,16 @@
         $latestInviteUsage = $recentUsedInvites->first();
         $avgMessagesPerRoom = $stats['rooms'] ? round($stats['messages'] / max($stats['rooms'], 1), 1) : 0;
         $avgQuestionsPerRoom = $stats['rooms'] ? round($stats['questions'] / max($stats['rooms'], 1), 1) : 0;
+        $authUser = auth()->user();
+        $userInitials = 'AD';
+        if ($authUser && $authUser->name) {
+            $initials = \Illuminate\Support\Str::of($authUser->name)
+                ->trim()
+                ->explode(' ')
+                ->map(fn ($part) => \Illuminate\Support\Str::substr($part, 0, 1))
+                ->implode('');
+            $userInitials = strtoupper($initials ?: 'AD');
+        }
     @endphp
 
     <div class="admin-layout">
@@ -95,23 +105,30 @@
         <div class="admin-main">
             <header class="admin-topbar">
                 <div class="admin-topbar__left">
-                    <button class="admin-icon-btn admin-nav-toggle" type="button" aria-label="Open navigation" data-mobile-nav-toggle>
-                        <i data-lucide="menu"></i>
-                    </button>
-                    <div>
-                        <div class="admin-eyebrow">Ghost Room admin</div>
-                        <div class="admin-topbar__title">Control panel</div>
+                    <div class="admin-topbar__brand admin-topbar__brand--mobile">
+                        <button class="admin-icon-btn admin-nav-toggle admin-nav-toggle--mobile" type="button" aria-label="Open navigation" data-nav-toggle>
+                            <i data-lucide="menu"></i>
+                        </button>
+                        <div>
+                            <div class="admin-eyebrow">Admin panel</div>
+                            <div class="admin-topbar__title">Visible only to developers</div>
+                        </div>
+                    </div>
+                    <div class="admin-topbar__brand admin-topbar__brand--desktop">
+                        <span class="admin-eyebrow">Realtime admin overview</span>
+                        <span class="admin-topbar__meta">
+                            Users: <span class="admin-strong">{{ $stats['users'] }}</span> |
+                            Active: <span class="admin-topbar__accent">{{ $stats['active_users'] }}</span> |
+                            Rooms: <span class="admin-muted">{{ $stats['rooms'] }}</span>
+                        </span>
                     </div>
                 </div>
                 <div class="admin-topbar__actions">
-                    <a class="admin-chip" href="{{ route('dashboard') }}">
-                        <i data-lucide="arrow-left"></i>
-                        <span>Dashboard</span>
-                    </a>
-                    <div class="admin-chip admin-chip--ghost">
-                        <i data-lucide="shield-check"></i>
-                        <span>Dev only</span>
+                    <div class="admin-topbar__meta admin-topbar__meta--compact">
+                        Users: <span class="admin-strong">{{ $stats['users'] }}</span> |
+                        Active: <span class="admin-topbar__accent">{{ $stats['active_users'] }}</span>
                     </div>
+                    <div class="admin-avatar admin-avatar--small">{{ $userInitials }}</div>
                 </div>
             </header>
 
@@ -153,7 +170,7 @@
                         </div>
                     </div>
 
-                    <div class="admin-grid admin-grid--offset-top">
+                    <div class="admin-grid admin-grid--offset-top admin-grid--overview">
                         <div class="admin-card admin-card--stretch">
                             <div class="admin-card__header">
                                 <div>
@@ -322,11 +339,13 @@
                                 <tbody>
                                     @forelse($inviteCodes as $invite)
                                         <tr>
-                                            <td class="admin-code">
-                                                <span class="admin-mono">{{ $invite->code }}</span>
-                                                <button class="admin-copy-btn" type="button" data-copy="{{ $invite->code }}" title="Copy code">
-                                                    <i data-lucide="copy"></i>
-                                                </button>
+                                            <td>
+                                                <div class="admin-code-chip">
+                                                    <span class="admin-mono">{{ $invite->code }}</span>
+                                                    <button class="admin-copy-btn admin-copy-btn--tiny" type="button" data-copy="{{ $invite->code }}" title="Copy code">
+                                                        <i data-lucide="copy"></i>
+                                                    </button>
+                                                </div>
                                             </td>
                                             <td>
                                                 @if($invite->used_at)
@@ -421,12 +440,14 @@
                                             @forelse($rooms as $room)
                                                 <tr>
                                                     <td>{{ $room->title }}</td>
-                                                    <td class="admin-code">
-                                                        <span class="admin-mono">{{ $room->slug }}</span>
-                                                        <button class="admin-copy-btn" type="button" data-copy="{{ $room->slug }}" title="Copy slug">
-                                                            <i data-lucide="copy"></i>
-                                                        </button>
-                                                    </td>
+                                            <td>
+                                                <div class="admin-code-chip">
+                                                    <span class="admin-mono">{{ $room->slug }}</span>
+                                                    <button class="admin-copy-btn admin-copy-btn--tiny" type="button" data-copy="{{ $room->slug }}" title="Copy slug">
+                                                        <i data-lucide="copy"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
                                                     <td class="admin-muted">{{ $room->owner?->name ?? '-' }}</td>
                                                     <td class="text-right">{{ $room->messages_count }}</td>
                                                     <td class="text-right">{{ $room->questions_count }}</td>
@@ -446,6 +467,7 @@
                                     </table>
                                 </div>
                                 <div class="admin-pagination">
+                                    <div class="admin-pagination__meta">Page {{ $rooms->currentPage() }} / {{ $rooms->lastPage() }}</div>
                                     {{ $rooms->links() }}
                                 </div>
                             </div>
@@ -615,6 +637,7 @@
                                     </table>
                                 </div>
                                 <div class="admin-pagination">
+                                    <div class="admin-pagination__meta">Page {{ $recentUsers->currentPage() }} / {{ $recentUsers->lastPage() }}</div>
                                     {{ $recentUsers->links() }}
                                 </div>
                             </div>
@@ -645,13 +668,15 @@
                                                 <tr>
                                                     <td>{{ $p->display_name ?? 'Guest' }}</td>
                                                     <td class="admin-muted">{{ $p->room?->title ?? '-' }}</td>
-                                                    <td class="admin-code">
-                                                        <span class="admin-mono">{{ \Illuminate\Support\Str::limit($p->fingerprint, 24) }}</span>
-                                                        @if($p->fingerprint)
-                                                            <button class="admin-copy-btn" type="button" data-copy="{{ $p->fingerprint }}" title="Copy fingerprint">
-                                                                <i data-lucide="copy"></i>
-                                                            </button>
-                                                        @endif
+                                                    <td>
+                                                        <div class="admin-code-chip">
+                                                            <span class="admin-mono">{{ \Illuminate\Support\Str::limit($p->fingerprint, 24) }}</span>
+                                                            @if($p->fingerprint)
+                                                                <button class="admin-copy-btn admin-copy-btn--tiny" type="button" data-copy="{{ $p->fingerprint }}" title="Copy fingerprint">
+                                                                    <i data-lucide="copy"></i>
+                                                                </button>
+                                                            @endif
+                                                        </div>
                                                     </td>
                                                     <td class="admin-muted">{{ $p->ip_address ?? '-' }}</td>
                                                     <td class="admin-mono">{{ \Illuminate\Support\Str::limit($p->session_token, 24) }}</td>
@@ -680,6 +705,7 @@
                                     </table>
                                 </div>
                                 <div class="admin-pagination">
+                                    <div class="admin-pagination__meta">Page {{ $participants->currentPage() }} / {{ $participants->lastPage() }}</div>
                                     {{ $participants->links() }}
                                 </div>
                             </div>
@@ -786,18 +812,38 @@
             const sections = document.querySelectorAll('[data-section]');
             const navButtons = document.querySelectorAll('[data-section-target]');
             const sidebar = document.querySelector('[data-admin-sidebar]');
+            const layout = document.querySelector('.admin-layout');
             const backdrop = document.querySelector('[data-sidebar-backdrop]');
             const closeSidebarBtn = document.querySelector('[data-sidebar-close]');
-            const mobileToggle = document.querySelector('[data-mobile-nav-toggle]');
+            const navToggles = document.querySelectorAll('[data-nav-toggle]');
+            const desktopMedia = window.matchMedia('(min-width: 961px)');
             let currentRoomsView = 'all';
+            const renderIcons = (root = document) => {
+                if (window.lucide?.createIcons && window.lucide?.icons) {
+                    window.lucide.createIcons({ icons: window.lucide.icons }, root);
+                }
+            };
 
             const closeSidebar = () => {
                 sidebar?.classList.remove('is-open');
                 backdrop?.classList.remove('is-visible');
             };
             const openSidebar = () => {
+                layout?.classList.remove('is-collapsed');
                 sidebar?.classList.add('is-open');
                 backdrop?.classList.add('is-visible');
+            };
+
+            const toggleSidebar = () => {
+                if (desktopMedia.matches) {
+                    layout?.classList.toggle('is-collapsed');
+                    return;
+                }
+                if (sidebar?.classList.contains('is-open')) {
+                    closeSidebar();
+                } else {
+                    openSidebar();
+                }
             };
 
             const setSection = (target) => {
@@ -811,6 +857,7 @@
                 if (sidebar && sidebar.classList.contains('is-open')) {
                     closeSidebar();
                 }
+                renderIcons();
             };
 
             const applyRoomsView = (view) => {
@@ -850,6 +897,7 @@
                         bindAjaxPagination();
                         bindRoomsTabs();
                         applyRoomsView(currentRoomsView);
+                        renderIcons();
                     })
                     .catch(() => {});
             };
@@ -866,15 +914,21 @@
                 });
             };
 
-            if (mobileToggle && sidebar) {
-                mobileToggle.addEventListener('click', openSidebar);
-            }
+            navToggles.forEach((toggle) => {
+                toggle.addEventListener('click', toggleSidebar);
+            });
             if (closeSidebarBtn) {
                 closeSidebarBtn.addEventListener('click', closeSidebar);
             }
             if (backdrop) {
                 backdrop.addEventListener('click', closeSidebar);
             }
+            desktopMedia.addEventListener('change', (event) => {
+                if (!event.matches) {
+                    layout?.classList.remove('is-collapsed');
+                }
+                closeSidebar();
+            });
             document.addEventListener('keydown', (event) => {
                 if (event.key === 'Escape') {
                     closeSidebar();
@@ -897,6 +951,7 @@
             bindAjaxPagination();
             setSection('overview');
             applyRoomsView('all');
+            renderIcons();
         });
     </script>
 </x-app-layout>
