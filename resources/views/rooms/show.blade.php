@@ -1638,61 +1638,45 @@
                 };
 
                 const renderReplyBranch = (node, depth = 0) => {
-                    const row = document.createElement('div');
-                    row.className = 'reply-detail-row';
-                    row.style.setProperty('--depth', String(depth));
+                    const branch = document.createElement('div');
+                    branch.className = 'reply-thread-branch';
+                    branch.style.setProperty('--depth', String(depth));
 
-                    const card = document.createElement('div');
-                    card.className = 'reply-detail-item';
-                    const author = escapeHtml(node?.author || 'Guest');
+                    const authorName = node?.author || 'Guest';
+                    const author = escapeHtml(authorName);
                     const time = escapeHtml(node?.time || '');
                     const isQuestion = Boolean(node?.is_question);
                     const targetId = escapeHtml(String(node?.id || ''));
-                    card.innerHTML = `
-                        <div class="reply-detail-meta">
-                            <span class="reply-detail-author">${author}</span>
-                            ${isQuestion ? '<span class="message-badge message-badge-question">To host</span>' : ''}
-                            ${time ? `<span class="reply-detail-time">${time}</span>` : ''}
-                            ${targetId ? `<button type="button" class="icon-btn reply-jump" data-reply-jump data-target-id="${targetId}" title="View in chat"><i data-lucide="arrow-up-right"></i></button>` : ''}
+                    const avatarBg = avatarColorFromName(authorName);
+                    const initials = escapeHtml(initialsFromName(authorName));
+
+                    const item = document.createElement('div');
+                    item.className = 'reply-thread-message';
+                    item.innerHTML = `
+                        <div class="reply-thread-avatar" style="background: ${avatarBg}; color: #fff;">${initials}</div>
+                        <div class="reply-thread-bubble">
+                            <div class="reply-thread-meta">
+                                <span class="reply-thread-author">${author}</span>
+                                ${isQuestion ? '<span class="message-badge message-badge-question">To host</span>' : ''}
+                                ${time ? `<span class="reply-thread-time">${time}</span>` : ''}
+                                ${targetId ? `<button type="button" class="icon-btn reply-jump" data-reply-jump data-target-id="${targetId}" title="View in chat"><i data-lucide="arrow-up-right"></i></button>` : ''}
+                            </div>
+                            <div class="reply-thread-text">${escapeHtml(node?.content || '')}</div>
                         </div>
-                        <div class="reply-detail-text">${escapeHtml(node?.content || '')}</div>
                     `;
-                    row.appendChild(card);
+                    branch.appendChild(item);
 
                     const children = Array.isArray(node?.replies) ? node.replies : [];
                     if (children.length) {
-                        const toggle = document.createElement('button');
-                        toggle.type = 'button';
-                        toggle.className = 'reply-branch-toggle';
-                        toggle.dataset.replyBranchToggle = '1';
-                        toggle.innerHTML = `
-                            <i data-lucide="chevron-down"></i>
-                            <span>Show thread (${children.length})</span>
-                        `;
                         const childrenWrap = document.createElement('div');
-                        childrenWrap.className = 'reply-detail-children';
-                        childrenWrap.hidden = true;
+                        childrenWrap.className = 'reply-thread-children';
                         children.forEach((child) => {
                             childrenWrap.appendChild(renderReplyBranch(child, depth + 1));
                         });
-                        toggle.addEventListener('click', () => {
-                            const open = childrenWrap.hidden;
-                            childrenWrap.hidden = !open;
-                            card.classList.toggle('is-open', open);
-                            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-                            const label = toggle.querySelector('span');
-                            if (label) {
-                                label.textContent = open ? 'Hide thread' : `Show thread (${children.length})`;
-                            }
-                            if (window.refreshLucideIcons) {
-                                window.refreshLucideIcons();
-                            }
-                        });
-                        card.appendChild(toggle);
-                        row.appendChild(childrenWrap);
+                        branch.appendChild(childrenWrap);
                     }
 
-                    return row;
+                    return branch;
                 };
 
                 const renderReplyDetail = (threadData) => {
@@ -1700,6 +1684,10 @@
                     const parent = threadData.parent || {};
                     const replyCount = Number(threadData.reply_count ?? countDescendants(threadData.replies || []));
                     threadData.reply_count = replyCount;
+                    const replyLabel = replyCount === 1 ? 'reply' : 'replies';
+                    const parentName = parent.author || 'Guest';
+                    const parentInitials = initialsFromName(parentName);
+                    const parentAvatarBg = avatarColorFromName(parentName);
                     activeReplyParentId = String(parent.id || '');
                     replyThreadsState.set(String(parent.id || ''), threadData);
                     if (repliesLayout) {
@@ -1711,19 +1699,24 @@
                     replyDetailBody.innerHTML = '';
 
                     const header = document.createElement('div');
-                    header.className = 'reply-detail-parent';
+                    header.className = 'reply-detail-header';
                     header.innerHTML = `
-                        <div class="reply-detail-top">
-                            <div class="reply-detail-eyebrow">Thread for your message</div>
-                            <div class="reply-detail-meta">
-                                <span class="reply-detail-author">${escapeHtml(parent.author || 'Guest')}</span>
-                                ${parent.is_question ? '<span class="message-badge message-badge-question">To host</span>' : ''}
-                                ${parent.time ? `<span class="reply-detail-time">${escapeHtml(parent.time)}</span>` : ''}
+                        <div class="reply-question">
+                            <div class="reply-question-avatar" style="background: ${parentAvatarBg}; color: #fff;">${escapeHtml(parentInitials)}</div>
+                            <div class="reply-question-content">
+                                <div class="reply-question-meta">
+                                    <span class="reply-question-author">${escapeHtml(parentName)}</span>
+                                    ${parent.is_question ? '<span class="message-badge message-badge-question">To host</span>' : ''}
+                                    ${parent.time ? `<span class="reply-question-time">${escapeHtml(parent.time)}</span>` : ''}
+                                </div>
+                                <div class="reply-question-text">${escapeHtml(parent.content || '')}</div>
                             </div>
-                            <div class="reply-detail-text">${escapeHtml(parent.content || '')}</div>
                         </div>
                         <div class="reply-detail-actions">
-                            <span class="pill-soft">${replyCount}</span>
+                            <div class="reply-count">
+                                <span class="pill-soft">${replyCount}</span>
+                                <span class="reply-count-label">${replyLabel}</span>
+                            </div>
                             <button type="button" class="icon-btn reply-detail-close" data-reply-detail-close aria-label="Hide thread">
                                 <i data-lucide="x"></i>
                             </button>
@@ -1735,7 +1728,7 @@
                     }
 
                     const threadWrap = document.createElement('div');
-                    threadWrap.className = 'reply-detail-thread';
+                    threadWrap.className = 'reply-thread';
                     const replies = Array.isArray(threadData.replies) ? threadData.replies : [];
                     if (replies.length) {
                         replies.forEach((child) => {
@@ -1743,7 +1736,7 @@
                         });
                     } else {
                         const empty = document.createElement('div');
-                        empty.className = 'panel-subtitle';
+                        empty.className = 'panel-subtitle reply-thread-empty';
                         empty.textContent = 'No replies yet.';
                         threadWrap.appendChild(empty);
                     }
@@ -2355,6 +2348,12 @@
                     }
                     const idx = Math.abs(hash) % avatarPalette.length;
                     return avatarPalette[idx];
+                };
+                const initialsFromName = (name = 'Guest') => {
+                    const parts = String(name || 'Guest').trim().split(/\s+/).filter(Boolean);
+                    if (!parts.length) return 'GU';
+                    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+                    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
                 };
 
                 const setReplyContext = (author, text, id) => {
