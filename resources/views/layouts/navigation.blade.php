@@ -20,6 +20,9 @@
         <div class="app-nav-primary">
           <a class="btn btn-sm btn-ghost" href="{{ route('dashboard') }}">Dashboard</a>
           <a class="btn btn-sm btn-ghost" href="{{ route('rooms.create') }}" data-onboarding-target="create-room-nav">New room</a>
+          @if(Auth::user()?->is_dev)
+            <a class="btn btn-sm btn-ghost" href="{{ route('admin.index') }}">Admin</a>
+          @endif
         </div>
         <div class="app-nav-room-actions">
           @stack('room-header-actions')
@@ -68,6 +71,12 @@
               <i data-lucide="layout-dashboard"></i>
               <span>Dashboard</span>
             </a>
+            @if(Auth::user()?->is_dev)
+              <a class="btn btn-sm btn-ghost" href="{{ route('admin.index') }}" data-close-menu>
+                <i data-lucide="shield-check"></i>
+                <span>Admin</span>
+              </a>
+            @endif
             <a class="btn btn-sm btn-ghost" href="{{ route('rooms.create') }}" data-close-menu>
               <i data-lucide="plus"></i>
               <span>New room</span>

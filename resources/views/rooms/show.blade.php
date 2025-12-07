@@ -2486,6 +2486,16 @@
                         setReplyContext(btn.dataset.replyAuthor, btn.dataset.replyText, btn.dataset.replyId);
                         scrollChatToBottom();
                     });
+
+                    chatContainer.addEventListener('dblclick', (event) => {
+                        const messageEl = event.target.closest('.message');
+                        if (!messageEl) return;
+                        const replyBtn = messageEl.querySelector('[data-reply-id]');
+                        if (!replyBtn) return;
+                        event.preventDefault();
+                        setReplyContext(replyBtn.dataset.replyAuthor, replyBtn.dataset.replyText, replyBtn.dataset.replyId);
+                        scrollChatToBottom();
+                    });
                 }
 
                 document.addEventListener('click', (event) => {

@@ -18,4 +18,9 @@ class InviteCode extends Model
     protected $casts = [
         'used_at' => 'datetime',
     ];
+
+    public function usedBy()
+    {
+        return $this->belongsTo(User::class, 'used_by');
+    }
 }

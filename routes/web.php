@@ -8,6 +8,7 @@ use App\Http\Controllers\MessageController;
 use App\Http\Controllers\MessageReactionController;
 use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\RoomBanController;
+use App\Http\Controllers\AdminController;
 
 Route::get('/', [RoomController::class, 'landing'])->name('home');
 Route::get('/presentation', LandingController::class)->name('presentation');
@@ -85,6 +86,14 @@ Route::get('/rooms/{room}/questions-panel', [RoomController::class, 'questionsPa
     ->name('rooms.questionsPanel');
 Route::get('/rooms/{room}/my-questions-panel', [RoomController::class, 'myQuestionsPanel'])
     ->name('rooms.myQuestionsPanel');
+
+Route::middleware(['auth', 'dev'])->group(function () {
+    Route::get('/admin', [AdminController::class, 'index'])->name('admin.index');
+    Route::post('/admin/invites', [AdminController::class, 'storeInvite'])->name('admin.invites.store');
+    Route::delete('/admin/invites/{invite}', [AdminController::class, 'destroyInvite'])->name('admin.invites.destroy');
+    Route::post('/admin/bans', [AdminController::class, 'storeBan'])->name('admin.bans.store');
+    Route::delete('/admin/bans/{ban}', [AdminController::class, 'destroyBan'])->name('admin.bans.destroy');
+});
 
 Route::view('/legal/privacy', 'legal.privacy')
     ->name('privacy');

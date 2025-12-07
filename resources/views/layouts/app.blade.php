@@ -69,6 +69,7 @@
         'resources/js/design.js',
         'resources/js/onboarding.js'
     ])
+    @stack('styles')
 </head>
 @php
     $authUser = Auth::user();
