@@ -504,6 +504,8 @@
 
 .admin-table-wrapper {
   overflow-x: auto;
+  border-radius: var(--admin-radius);
+  border: 1px solid var(--admin-border);
 }
 
 .admin-table {
