@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'throttle' => ThrottleRequests::class,
             'dev' => \App\Http\Middleware\EnsureDev::class,
+            'admin.ip' => \App\Http\Middleware\AdminIpGuard::class,
         ]);
 
         // Throttle all web routes: 20 req/sec (~1200 per minute) per IP

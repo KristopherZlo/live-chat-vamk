@@ -6,6 +6,7 @@ use App\Models\Setting;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -36,6 +37,28 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(1200)->by($request->ip());
         });
 
+        RateLimiter::for('login', function (Request $request) {
+            $emailKey = Str::lower((string) $request->input('email'));
+
+            return [
+                Limit::perMinute(10)->by($request->ip()),
+                Limit::perMinute(8)->by($emailKey.'|'.$request->ip()),
+            ];
+        });
+
+        RateLimiter::for('register', function (Request $request) {
+            return Limit::perMinute(5)->by($request->ip());
+        });
+
+        RateLimiter::for('password-reset', function (Request $request) {
+            $emailKey = Str::lower((string) $request->input('email'));
+
+            return [
+                Limit::perMinute(5)->by($request->ip()),
+                Limit::perMinute(5)->by($emailKey),
+            ];
+        });
+
         RateLimiter::for('room-messages', function (Request $request) {
             $room = $request->route('room');
             $roomId = is_object($room) && method_exists($room, 'getKey') ? $room->getKey() : $room;
@@ -45,8 +68,8 @@ class AppServiceProvider extends ServiceProvider
             $compositeKey = implode('|', array_filter([$roomId, $userId, $sessionId, $ip]));
 
             return [
-                Limit::perMinute(30)->by($compositeKey),
-                Limit::perMinute(60)->by($ip),
+                Limit::perMinute(20)->by($compositeKey),
+                Limit::perMinute(40)->by($ip),
             ];
         });
     }

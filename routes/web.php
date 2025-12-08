@@ -93,7 +93,7 @@ Route::get('/rooms/{room}/questions-panel', [RoomController::class, 'questionsPa
 Route::get('/rooms/{room}/my-questions-panel', [RoomController::class, 'myQuestionsPanel'])
     ->name('rooms.myQuestionsPanel');
 
-Route::middleware(['auth', 'dev'])->group(function () {
+Route::middleware(['auth', 'dev', 'admin.ip'])->group(function () {
     Route::get('/admin', [AdminController::class, 'index'])->name('admin.index');
     Route::post('/admin/invites', [AdminController::class, 'storeInvite'])->name('admin.invites.store');
     Route::delete('/admin/invites/{invite}', [AdminController::class, 'destroyInvite'])->name('admin.invites.destroy');
