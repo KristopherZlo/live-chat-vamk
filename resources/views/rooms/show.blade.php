@@ -747,6 +747,8 @@
                 const replyDetailEmpty = document.querySelector('[data-replies-empty]');
                 const repliesPane = document.querySelector('[data-chat-panel=\"replies\"]');
                 const repliesLayout = document.querySelector('.replies-layout');
+                const repliesMobileQuery = window.matchMedia('(max-width: 720px)');
+                const isRepliesMobile = () => repliesMobileQuery.matches;
                 const repliesBadge = document.querySelector('[data-replies-unread]');
                 const replyThreadsState = new Map();
                 let activeReplyParentId = null;
@@ -1488,6 +1490,12 @@
                     setChatTab(chatActiveTab || 'chat');
                 }
 
+                function syncRepliesDetailLayout() {
+                    if (!repliesLayout) return;
+                    const shouldOverlay = !replyDetail?.hidden && isRepliesMobile();
+                    repliesLayout.classList.toggle('mobile-thread-open', shouldOverlay);
+                }
+
                 const hideReplyDetail = () => {
                     if (replyDetail) {
                         replyDetail.hidden = true;
@@ -1495,6 +1503,7 @@
                     }
                     if (repliesLayout) {
                         repliesLayout.classList.add('is-collapsed');
+                        repliesLayout.classList.remove('mobile-thread-open');
                     }
                     if (replyDetailBody) {
                         replyDetailBody.innerHTML = '';
@@ -1510,6 +1519,7 @@
                             item.removeAttribute('aria-current');
                         });
                     }
+                    syncRepliesDetailLayout();
                 };
                 const setChatTab = (tabName = 'chat') => {
                     chatActiveTab = tabName;
@@ -1697,6 +1707,7 @@
                     replyDetail.classList.add('is-open');
                     replyDetailBody.hidden = false;
                     replyDetailBody.innerHTML = '';
+                    syncRepliesDetailLayout();
 
                     const header = document.createElement('div');
                     header.className = 'reply-detail-header';
@@ -1831,6 +1842,13 @@
                     });
                     bootstrapRepliesState();
                     hideReplyDetail();
+                    if (repliesMobileQuery?.addEventListener) {
+                        repliesMobileQuery.addEventListener('change', syncRepliesDetailLayout);
+                    } else if (repliesMobileQuery?.addListener) {
+                        repliesMobileQuery.addListener(syncRepliesDetailLayout);
+                    }
+                    window.addEventListener('resize', syncRepliesDetailLayout);
+                    syncRepliesDetailLayout();
                 }
 
                 const handleReplyJump = (event) => {
