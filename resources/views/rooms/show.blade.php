@@ -2345,6 +2345,7 @@
                                 'X-Requested-With': 'XMLHttpRequest',
                                 'X-CSRF-TOKEN': token,
                             },
+                            credentials: 'same-origin', // include session cookie for CSRF validation
                             body: formData,
                         });
                         if (!response.ok) {

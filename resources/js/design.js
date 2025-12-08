@@ -1,6 +1,7 @@
 const THEME_KEY = 'lc-theme';
 const QUEUE_SEEN_KEY_PREFIX = 'lc-queue-seen';
 const QUEUE_SOUND_KEY = 'lc-queue-sound';
+const QUEUE_FILTER_KEY_PREFIX = 'lc-queue-filter';
 const HOUR_MS = 60 * 60 * 1000;
 const WHATS_NEW_STORAGE_KEY = 'lc-whats-new-version';
 
@@ -29,6 +30,12 @@ function getQueueStorageKey(queuePanel = getQueuePanel()) {
   const viewerId = queuePanel.dataset.viewerId || 'viewer';
   if (!roomId) return null;
   return `${QUEUE_SEEN_KEY_PREFIX}:${roomId}:${viewerId}`;
+}
+
+function getQueueFilterStorageKey(queuePanel = getQueuePanel()) {
+  if (!queuePanel) return null;
+  const roomId = queuePanel.dataset.roomId;
+  return roomId ? `${QUEUE_FILTER_KEY_PREFIX}:${roomId}` : null;
 }
 
 function loadQueueSeenState(queuePanel = getQueuePanel()) {
@@ -499,6 +506,26 @@ function setupQueueFilter(root = document) {
   if (!filter || !list) return;
 
   const emptyState = queuePanel.querySelector('[data-queue-filter-empty]');
+  const storageKey = getQueueFilterStorageKey(queuePanel);
+
+  const loadStoredFilter = () => {
+    if (!storageKey) return null;
+    try {
+      const stored = localStorage.getItem(storageKey);
+      return typeof stored === 'string' && stored.length ? stored : null;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  const persistFilter = (value) => {
+    if (!storageKey) return;
+    try {
+      localStorage.setItem(storageKey, value);
+    } catch (e) {
+      /* ignore */
+    }
+  };
 
   const applyFilter = () => {
     const value = (filter.value || 'new').toLowerCase();
@@ -518,13 +545,24 @@ function setupQueueFilter(root = document) {
     list.classList.toggle('queue-list-filter-empty', visible === 0);
   };
 
+  const stored = loadStoredFilter();
+  if (stored) {
+    const option = Array.from(filter.options).find((opt) => (opt.value || '').toLowerCase() === stored.toLowerCase());
+    if (option) {
+      filter.value = option.value;
+    }
+  }
+
   if (filter.dataset.queueFilterBound === '1') {
     applyFilter();
     return;
   }
 
   filter.dataset.queueFilterBound = '1';
-  filter.addEventListener('change', applyFilter);
+  filter.addEventListener('change', () => {
+    persistFilter(filter.value || 'new');
+    applyFilter();
+  });
   applyFilter();
 }
 
