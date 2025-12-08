@@ -8,6 +8,8 @@ use App\Models\Participant;
 use App\Models\Question;
 use App\Models\Room;
 use App\Models\RoomBan;
+use App\Models\Setting;
+use App\Models\UpdatePost;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -67,6 +69,37 @@ class AdminController extends Controller
             ->paginate(20, ['*'], 'participants_page');
 
         $health = $this->resolveHealthStatus();
+        $appVersion = Setting::getValue('app_version', config('app.version', '1.0.0'));
+
+        $blogUpdates = UpdatePost::query()
+            ->where('type', UpdatePost::TYPE_BLOG)
+            ->orderByDesc('created_at')
+            ->paginate(8, ['*'], 'updates_page');
+
+        $whatsNewEntries = UpdatePost::query()
+            ->where('type', UpdatePost::TYPE_WHATS_NEW)
+            ->orderByDesc('published_at')
+            ->orderByDesc('created_at')
+            ->paginate(8, ['*'], 'whatsnew_page');
+
+        $editingBlog = null;
+        $editingRelease = null;
+
+        $editPostId = request()->query('edit_post');
+        if ($editPostId) {
+            $editingBlog = UpdatePost::query()
+                ->where('id', $editPostId)
+                ->where('type', UpdatePost::TYPE_BLOG)
+                ->first();
+        }
+
+        $editReleaseId = request()->query('edit_release');
+        if ($editReleaseId) {
+            $editingRelease = UpdatePost::query()
+                ->where('id', $editReleaseId)
+                ->where('type', UpdatePost::TYPE_WHATS_NEW)
+                ->first();
+        }
 
         return view('admin.index', compact(
             'stats',
@@ -78,7 +111,12 @@ class AdminController extends Controller
             'recentBans',
             'allRooms',
             'participants',
-            'health'
+            'health',
+            'blogUpdates',
+            'whatsNewEntries',
+            'editingBlog',
+            'editingRelease',
+            'appVersion'
         ));
     }
 

@@ -52,13 +52,56 @@
         };
     </script>
     @php
-        $whatsNewVersion = config('app.version');
-        $whatsNewRelease = $whatsNewVersion
-            ? (config('whatsnew.releases')[$whatsNewVersion] ?? null)
+        use App\Models\Setting;
+        use App\Models\UpdatePost;
+        use Illuminate\Support\Str;
+
+        $appVersion = Setting::getValue('app_version', config('app.version'));
+        $whatsNewEntry = null;
+        $whatsNewContentHtml = null;
+        $whatsNewSections = [];
+        $whatsNewImageUrl = null;
+        $whatsNewDate = null;
+        $whatsNewTitle = null;
+        $configRelease = null;
+
+        try {
+            $whatsNewEntry = UpdatePost::query()
+                ->type(UpdatePost::TYPE_WHATS_NEW)
+                ->published()
+                ->when($appVersion, fn ($query) => $query->where('version', $appVersion))
+                ->latestPublished()
+                ->first();
+
+            if (! $whatsNewEntry) {
+                $whatsNewEntry = UpdatePost::query()
+                    ->type(UpdatePost::TYPE_WHATS_NEW)
+                    ->published()
+                    ->latestPublished()
+                    ->first();
+            }
+        } catch (\Throwable $e) {
+            $whatsNewEntry = null;
+        }
+
+        $whatsNewVersion = $whatsNewEntry->version ?? $appVersion ?? config('app.version');
+
+        if (! $whatsNewEntry && $whatsNewVersion) {
+            $configRelease = config('whatsnew.releases')[$whatsNewVersion] ?? null;
+        }
+
+        $whatsNewRelease = $whatsNewEntry ?: $configRelease;
+        $whatsNewImageUrl = $whatsNewEntry?->cover_url
+            ?? ($configRelease['image'] ?? false ? asset($configRelease['image']) : null);
+        $whatsNewContentHtml = $whatsNewEntry?->body
+            ? Str::markdown($whatsNewEntry->body, ['html_input' => 'strip'])
             : null;
-        $whatsNewImageUrl = $whatsNewRelease && $whatsNewRelease['image']
-            ? asset($whatsNewRelease['image'])
-            : null;
+        $whatsNewSections = is_array($configRelease['sections'] ?? null) ? $configRelease['sections'] : [];
+        $whatsNewDate = $whatsNewEntry?->published_at?->format('Y-m-d') ?? ($configRelease['date'] ?? null);
+        $whatsNewTitle = $whatsNewEntry?->title ?? ($configRelease['title'] ?? null);
+        if (! $whatsNewVersion) {
+            $whatsNewVersion = config('app.version', '1.0.0');
+        }
     @endphp
     @vite([
         'resources/js/lucide.js',
@@ -136,6 +179,7 @@
                 <div class="footer-heading">Product</div>
                 <div class="footer-links-list">
                     <a href="{{ route('dashboard') }}">Dashboard</a>
+                    <a href="{{ route('updates.index') }}">Updates</a>
                     <a href="{{ route('rooms.create') }}">New room</a>
                     <a href="{{ route('profile.edit') }}">Profile</a>
                 </div>
@@ -149,7 +193,7 @@
                         GitHub repository
                     </a>
                     <span class="footer-muted footer-version">
-                        v{{ config('app.version', '1.0.0') }}
+                        v{{ $appVersion ?? config('app.version', '1.0.0') }}
                     </span>
                 </div>
             </div>
@@ -249,9 +293,11 @@
             <div class="modal-header">
                 <div class="modal-title-group">
                     <span class="modal-eyebrow">what's new?</span>
-                    <h2 id="whatsNewTitle" class="modal-title">Version {{ $whatsNewVersion }}</h2>
-                    @if (!empty($whatsNewRelease['date']))
-                        <p class="modal-text">Released {{ $whatsNewRelease['date'] }}</p>
+                    <h2 id="whatsNewTitle" class="modal-title">
+                        {{ $whatsNewTitle ?? 'Version '.$whatsNewVersion }}
+                    </h2>
+                    @if ($whatsNewDate)
+                        <p class="modal-text">Released {{ $whatsNewDate }}</p>
                     @endif
                 </div>
             </div>
@@ -260,14 +306,18 @@
                     <div class="whats-new-media">
                         <img
                             src="{{ $whatsNewImageUrl }}"
-                            alt="{{ $whatsNewRelease['image_alt'] ?? 'Update preview' }}"
+                            alt="{{ is_array($whatsNewRelease) ? ($whatsNewRelease['image_alt'] ?? ($whatsNewTitle ?? 'Update preview')) : ($whatsNewTitle ?? 'Update preview') }}"
                             loading="lazy"
                         >
                     </div>
                 @endif
-                @if (!empty($whatsNewRelease['sections']))
+                @if (!empty($whatsNewContentHtml))
+                    <div class="whats-new-content markdown-body">
+                        {!! $whatsNewContentHtml !!}
+                    </div>
+                @elseif (!empty($whatsNewSections))
                     <div class="whats-new-sections">
-                        @foreach ($whatsNewRelease['sections'] as $section)
+                        @foreach ($whatsNewSections as $section)
                             <div class="whats-new-section">
                                 <h3 class="whats-new-section-title">{{ $section['title'] }}</h3>
                                 @if (!empty($section['items']))
@@ -282,6 +332,8 @@
                             </div>
                         @endforeach
                     </div>
+                @else
+                    <p class="modal-text">No details yet.</p>
                 @endif
             </div>
             <div class="modal-actions">

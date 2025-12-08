@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\Setting;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -22,6 +23,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        try {
+            $version = Setting::getValue('app_version', config('app.version'));
+            if ($version) {
+                config(['app.version' => $version]);
+            }
+        } catch (\Throwable $e) {
+            // Settings table may not exist during early migrations.
+        }
+
         RateLimiter::for('web', function (Request $request) {
             return Limit::perMinute(1200)->by($request->ip());
         });

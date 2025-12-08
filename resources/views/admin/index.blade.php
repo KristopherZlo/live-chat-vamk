@@ -76,6 +76,14 @@
                 </div>
 
                 <div class="admin-nav-group">
+                    <div class="admin-nav-label">Product</div>
+                    <button class="admin-nav-btn" type="button" data-section-target="updates">
+                        <span class="admin-dot admin-dot--info"></span>
+                        Updates & releases
+                    </button>
+                </div>
+
+                <div class="admin-nav-group">
                     <div class="admin-nav-label">Support</div>
                     <button class="admin-nav-btn" type="button" data-section-target="support">
                         <span class="admin-dot admin-dot--info"></span>
@@ -98,7 +106,7 @@
 
             <div class="admin-sidebar__foot">
                 <span class="admin-chip admin-chip--success">is_dev: true</span>
-                <span class="admin-muted">v{{ config('app.version', '1.0.0') }}</span>
+                <span class="admin-muted">v{{ $appVersion ?? config('app.version', '1.0.0') }}</span>
             </div>
         </aside>
 
@@ -730,12 +738,316 @@
                                     <div class="admin-stat__label">Questions per room</div>
                                     <div class="admin-stat__value">{{ $avgQuestionsPerRoom }}</div>
                                 </div>
-                                <div class="admin-stat">
-                                    <div class="admin-stat__label">Total bans</div>
-                                    <div class="admin-stat__value">{{ $recentBans->count() }}</div>
+                    <div class="admin-stat">
+                        <div class="admin-stat__label">Total bans</div>
+                        <div class="admin-stat__value">{{ $recentBans->count() }}</div>
+                    </div>
+                </div>
+                <p class="admin-muted">Use "Rooms" and "Ban controls" tabs for detailed actions. Automated moderation is manual for now.</p>
+            </div>
+        </div>
+    </section>
+
+                <section class="admin-section" data-section="updates" id="updates">
+                    @if ($errors->any())
+                        <div class="flash flash-danger admin-flash" data-flash>
+                            <span>{{ $errors->first() }}</span>
+                            <button class="icon-btn flash-close" type="button" data-flash-close aria-label="Close">
+                                <i data-lucide="x"></i>
+                            </button>
+                        </div>
+                    @endif
+                    <div class="admin-grid admin-grid--cols-2">
+                        <div class="admin-column">
+                            <div class="admin-card">
+                                <div class="admin-card__header">
+                                    <div>
+                                        <h2 class="admin-card__title">Project version</h2>
+                                        <p class="admin-card__subtitle">Controls the "what's new" modal version gate</p>
+                                    </div>
+                                </div>
+                                <div class="admin-card__body">
+                                    <div class="admin-list">
+                                        <div class="admin-list__item">
+                                            <span>Current version</span>
+                                            <span class="admin-chip admin-chip--ghost">{{ $appVersion ?? '1.0.0' }}</span>
+                                        </div>
+                                    </div>
+                                    <form class="admin-form-grid" method="POST" action="{{ route('admin.updates.version') }}">
+                                        @csrf
+                                        <div class="admin-field">
+                                            <label class="admin-label" for="appVersion">Set version</label>
+                                            <input class="admin-input" id="appVersion" name="version" type="text" value="{{ old('version', $appVersion) }}" placeholder="e.g. 1.3.0">
+                                        </div>
+                                        <div class="admin-field" style="align-self: end;">
+                                            <button class="admin-btn admin-btn--primary" type="submit">Update version</button>
+                                        </div>
+                                    </form>
+                                    <p class="admin-muted">Users see the what's-new modal when their stored version is lower than this value.</p>
                                 </div>
                             </div>
-                            <p class="admin-muted">Use “Rooms” and “Ban controls” tabs for detailed actions. Automated moderation is manual for now.</p>
+
+                            @php
+                                $releaseFormAction = $editingRelease
+                                    ? route('admin.updates.releases.update', $editingRelease)
+                                    : route('admin.updates.releases.store');
+                                $releasePublishedAt = old('published_at', optional($editingRelease?->published_at)->format('Y-m-d\TH:i'));
+                            @endphp
+                            <div class="admin-card">
+                                <div class="admin-card__header">
+                                    <div>
+                                        <h2 class="admin-card__title">{{ $editingRelease ? 'Edit “What\'s new” modal' : 'New “What\'s new” modal' }}</h2>
+                                        <p class="admin-card__subtitle">Markdown supported. Publish to show in the modal.</p>
+                                    </div>
+                                    @if($editingRelease)
+                                        <a class="admin-link-btn" href="{{ route('admin.index') }}#updates">Cancel edit</a>
+                                    @endif
+                                </div>
+                                <div class="admin-card__body">
+                                    <form class="admin-form" method="POST" action="{{ $releaseFormAction }}" enctype="multipart/form-data">
+                                        @csrf
+                                        @if($editingRelease)
+                                            @method('PATCH')
+                                        @endif
+                                        <div class="admin-form-grid">
+                                            <div class="admin-field">
+                                                <label class="admin-label" for="releaseTitle">Title</label>
+                                                <input class="admin-input" id="releaseTitle" name="title" type="text" value="{{ old('title', $editingRelease->title ?? '') }}" required>
+                                            </div>
+                                            <div class="admin-field">
+                                                <label class="admin-label" for="releaseVersion">Version</label>
+                                                <input class="admin-input" id="releaseVersion" name="version" type="text" value="{{ old('version', $editingRelease->version ?? '') }}" required placeholder="1.3.0">
+                                            </div>
+                                            <div class="admin-field">
+                                                <label class="admin-label" for="releasePublishedAt">Publish at</label>
+                                                <input class="admin-input" id="releasePublishedAt" name="published_at" type="datetime-local" value="{{ $releasePublishedAt }}">
+                                            </div>
+                                            <div class="admin-field">
+                                                <label class="admin-label" for="releaseImage">Cover image</label>
+                                                <input class="admin-input" id="releaseImage" name="image" type="file" accept="image/*">
+                                                @if($editingRelease?->cover_url)
+                                                    <label class="admin-label">
+                                                        <input type="checkbox" name="remove_image" value="1">
+                                                        <span>Remove current image</span>
+                                                    </label>
+                                                    <div class="admin-muted">Current: <a href="{{ $editingRelease->cover_url }}" target="_blank" rel="noreferrer">view</a></div>
+                                                @endif
+                                            </div>
+                                            <div class="admin-field">
+                                                <label class="admin-label" for="releasePublished">
+                                                    <input type="checkbox" id="releasePublished" name="is_published" value="1" {{ old('is_published', $editingRelease ? $editingRelease->is_published : true) ? 'checked' : '' }}>
+                                                    <span>Publish</span>
+                                                </label>
+                                                <label class="admin-label" for="setAsVersion">
+                                                    <input type="checkbox" id="setAsVersion" name="set_as_version" value="1" {{ old('set_as_version', !$editingRelease || ($editingRelease && $editingRelease->version === $appVersion)) ? 'checked' : '' }}>
+                                                    <span>Mark as current version</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="admin-field">
+                                            <label class="admin-label" for="releaseBody">Content (Markdown)</label>
+                                            <textarea class="admin-input" id="releaseBody" name="body" rows="8" required>{{ old('body', $editingRelease->body ?? '') }}</textarea>
+                                        </div>
+                                        <div class="admin-actions" style="margin-top: 0.5rem;">
+                                            <button class="admin-btn admin-btn--primary" type="submit">{{ $editingRelease ? 'Update release' : 'Save release' }}</button>
+                                            @if($editingRelease)
+                                                <a class="admin-btn admin-btn--ghost" href="{{ route('admin.index') }}#updates">Cancel</a>
+                                            @endif
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        @php
+                            $blogFormAction = $editingBlog
+                                ? route('admin.updates.posts.update', $editingBlog)
+                                : route('admin.updates.posts.store');
+                            $blogPublishedAt = old('published_at', optional($editingBlog?->published_at)->format('Y-m-d\TH:i'));
+                        @endphp
+                        <div class="admin-column">
+                            <div class="admin-card">
+                                <div class="admin-card__header">
+                                    <div>
+                                        <h2 class="admin-card__title">{{ $editingBlog ? 'Edit update post' : 'New update post' }}</h2>
+                                        <p class="admin-card__subtitle">Publish to show on the public updates page.</p>
+                                    </div>
+                                    @if($editingBlog)
+                                        <a class="admin-link-btn" href="{{ route('admin.index') }}#updates">Cancel edit</a>
+                                    @endif
+                                </div>
+                                <div class="admin-card__body">
+                                    <form class="admin-form" method="POST" action="{{ $blogFormAction }}" enctype="multipart/form-data">
+                                        @csrf
+                                        @if($editingBlog)
+                                            @method('PATCH')
+                                        @endif
+                                        <div class="admin-form-grid">
+                                            <div class="admin-field">
+                                                <label class="admin-label" for="postTitle">Title</label>
+                                                <input class="admin-input" id="postTitle" name="title" type="text" value="{{ old('title', $editingBlog->title ?? '') }}" required>
+                                            </div>
+                                            <div class="admin-field">
+                                                <label class="admin-label" for="postSlug">Slug</label>
+                                                <input class="admin-input" id="postSlug" name="slug" type="text" value="{{ old('slug', $editingBlog->slug ?? '') }}" placeholder="auto-generated if empty">
+                                            </div>
+                                            <div class="admin-field">
+                                                <label class="admin-label" for="postPublishedAt">Publish at</label>
+                                                <input class="admin-input" id="postPublishedAt" name="published_at" type="datetime-local" value="{{ $blogPublishedAt }}">
+                                            </div>
+                                            <div class="admin-field">
+                                                <label class="admin-label" for="postImage">Cover image</label>
+                                                <input class="admin-input" id="postImage" name="image" type="file" accept="image/*">
+                                                @if($editingBlog?->cover_url)
+                                                    <label class="admin-label">
+                                                        <input type="checkbox" name="remove_image" value="1">
+                                                        <span>Remove current image</span>
+                                                    </label>
+                                                    <div class="admin-muted">Current: <a href="{{ $editingBlog->cover_url }}" target="_blank" rel="noreferrer">view</a></div>
+                                                @endif
+                                            </div>
+                                            <div class="admin-field">
+                                                <label class="admin-label" for="postPublished">
+                                                    <input type="checkbox" id="postPublished" name="is_published" value="1" {{ old('is_published', $editingBlog ? $editingBlog->is_published : false) ? 'checked' : '' }}>
+                                                    <span>Publish</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="admin-field">
+                                            <label class="admin-label" for="postExcerpt">Excerpt</label>
+                                            <textarea class="admin-input" id="postExcerpt" name="excerpt" rows="2" placeholder="Optional short summary">{{ old('excerpt', $editingBlog->excerpt ?? '') }}</textarea>
+                                        </div>
+                                        <div class="admin-field">
+                                            <label class="admin-label" for="postBody">Content (Markdown)</label>
+                                            <textarea class="admin-input" id="postBody" name="body" rows="10" required>{{ old('body', $editingBlog->body ?? '') }}</textarea>
+                                        </div>
+                                        <div class="admin-actions" style="margin-top: 0.5rem;">
+                                            <button class="admin-btn admin-btn--primary" type="submit">{{ $editingBlog ? 'Update post' : 'Save post' }}</button>
+                                            @if($editingBlog)
+                                                <a class="admin-btn admin-btn--ghost" href="{{ route('admin.index') }}#updates">Cancel</a>
+                                            @endif
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="admin-grid admin-grid--cols-2 admin-grid--offset-top">
+                        <div class="admin-card">
+                            <div class="admin-card__header">
+                                <div>
+                                    <h2 class="admin-card__title">Releases & modals</h2>
+                                    <p class="admin-card__subtitle">Latest first</p>
+                                </div>
+                            </div>
+                            <div class="admin-card__body admin-table-wrapper">
+                                <table class="admin-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Version</th>
+                                            <th>Title</th>
+                                            <th>Status</th>
+                                            <th>Published</th>
+                                            <th class="text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @forelse($whatsNewEntries as $release)
+                                            <tr>
+                                                <td class="admin-mono">{{ $release->version ?? '—' }}</td>
+                                                <td>{{ $release->title }}</td>
+                                                <td>
+                                                    @if($release->is_live)
+                                                        <span class="admin-chip admin-chip--success">Published</span>
+                                                    @elseif($release->is_published)
+                                                        <span class="admin-chip admin-chip--warn">Scheduled</span>
+                                                    @else
+                                                        <span class="admin-chip admin-chip--muted">Draft</span>
+                                                    @endif
+                                                </td>
+                                                <td class="admin-muted">{{ $release->published_at?->format('Y-m-d H:i') ?? '—' }}</td>
+                                                <td class="text-right">
+                                                    <div class="admin-inline-actions">
+                                                        <a class="admin-link-btn" href="{{ route('admin.index', ['edit_release' => $release->id]) }}#updates">Edit</a>
+                                                        @if($release->version)
+                                                            <form method="POST" action="{{ route('admin.updates.version') }}" style="display:inline;">
+                                                                @csrf
+                                                                <input type="hidden" name="version" value="{{ $release->version }}">
+                                                                <button class="admin-link-btn" type="submit" title="Mark version {{ $release->version }}">Use</button>
+                                                            </form>
+                                                        @endif
+                                                        <form method="POST" action="{{ route('admin.updates.releases.destroy', $release) }}" style="display:inline;" onsubmit="return confirm('Delete this release?');">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button class="admin-link-btn admin-link-btn--danger" type="submit">Delete</button>
+                                                        </form>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        @empty
+                                            <tr><td colspan="5" class="admin-muted">No releases yet.</td></tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="admin-pagination">
+                                <div class="admin-pagination__meta">Page {{ $whatsNewEntries->currentPage() }} / {{ $whatsNewEntries->lastPage() }}</div>
+                                {{ $whatsNewEntries->links() }}
+                            </div>
+                        </div>
+                        <div class="admin-card">
+                            <div class="admin-card__header">
+                                <div>
+                                    <h2 class="admin-card__title">Blog posts</h2>
+                                    <p class="admin-card__subtitle">Public updates page</p>
+                                </div>
+                            </div>
+                            <div class="admin-card__body admin-table-wrapper">
+                                <table class="admin-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Title</th>
+                                            <th>Status</th>
+                                            <th>Published</th>
+                                            <th class="text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @forelse($blogUpdates as $post)
+                                            <tr>
+                                                <td>{{ $post->title }}</td>
+                                                <td>
+                                                    @if($post->is_live)
+                                                        <span class="admin-chip admin-chip--success">Published</span>
+                                                    @elseif($post->is_published)
+                                                        <span class="admin-chip admin-chip--warn">Scheduled</span>
+                                                    @else
+                                                        <span class="admin-chip admin-chip--muted">Draft</span>
+                                                    @endif
+                                                </td>
+                                                <td class="admin-muted">{{ $post->published_at?->format('Y-m-d H:i') ?? '—' }}</td>
+                                                <td class="text-right">
+                                                    <div class="admin-inline-actions">
+                                                        <a class="admin-link-btn" href="{{ route('admin.index', ['edit_post' => $post->id]) }}#updates">Edit</a>
+                                                        <form method="POST" action="{{ route('admin.updates.posts.destroy', $post) }}" style="display:inline;" onsubmit="return confirm('Delete this post?');">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button class="admin-link-btn admin-link-btn--danger" type="submit">Delete</button>
+                                                        </form>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        @empty
+                                            <tr><td colspan="4" class="admin-muted">No update posts yet.</td></tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="admin-pagination">
+                                <div class="admin-pagination__meta">Page {{ $blogUpdates->currentPage() }} / {{ $blogUpdates->lastPage() }}</div>
+                                {{ $blogUpdates->links() }}
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -818,6 +1130,7 @@
             const navToggles = document.querySelectorAll('[data-nav-toggle]');
             const desktopMedia = window.matchMedia('(min-width: 961px)');
             let currentRoomsView = 'all';
+            const initialHash = window.location.hash ? window.location.hash.replace('#', '') : '';
             const renderIcons = (root = document) => {
                 if (window.lucide?.createIcons && window.lucide?.icons) {
                     window.lucide.createIcons({ icons: window.lucide.icons }, root);
@@ -847,17 +1160,23 @@
             };
 
             const setSection = (target) => {
+                const key = Array.from(sections).some((section) => section.dataset.section === target)
+                    ? target
+                    : 'overview';
                 sections.forEach((section) => {
-                    const match = section.dataset.section === target;
+                    const match = section.dataset.section === key;
                     section.classList.toggle('is-active', match);
                 });
                 navButtons.forEach((btn) => {
-                    btn.classList.toggle('is-active', btn.dataset.sectionTarget === target);
+                    btn.classList.toggle('is-active', btn.dataset.sectionTarget === key);
                 });
                 if (sidebar && sidebar.classList.contains('is-open')) {
                     closeSidebar();
                 }
                 renderIcons();
+                if (key) {
+                    history.replaceState(null, '', `#${key}`);
+                }
             };
 
             const applyRoomsView = (view) => {
@@ -949,7 +1268,7 @@
             bindNavButtons();
             bindRoomsTabs();
             bindAjaxPagination();
-            setSection('overview');
+            setSection(initialHash || 'overview');
             applyRoomsView('all');
             renderIcons();
         });

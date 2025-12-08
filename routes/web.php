@@ -9,11 +9,16 @@ use App\Http\Controllers\MessageReactionController;
 use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\RoomBanController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AdminUpdatePostController;
+use App\Http\Controllers\UpdatePostController;
 
 Route::get('/', [RoomController::class, 'landing'])->name('home');
 Route::get('/presentation', LandingController::class)->name('presentation');
 Route::get('/live-chat-vamk/presentation', LandingController::class);
 Route::get('/live-chat-vamk/live-chat-vamk/presentation', LandingController::class);
+
+Route::get('/updates', [UpdatePostController::class, 'index'])->name('updates.index');
+Route::get('/updates/{post:slug}', [UpdatePostController::class, 'show'])->name('updates.show');
 
 Route::get('/join', [RoomController::class, 'joinForm'])->name('rooms.join');
 Route::post('/join', [RoomController::class, 'joinSubmit'])->name('rooms.join.submit');
@@ -94,6 +99,13 @@ Route::middleware(['auth', 'dev'])->group(function () {
     Route::delete('/admin/invites/{invite}', [AdminController::class, 'destroyInvite'])->name('admin.invites.destroy');
     Route::post('/admin/bans', [AdminController::class, 'storeBan'])->name('admin.bans.store');
     Route::delete('/admin/bans/{ban}', [AdminController::class, 'destroyBan'])->name('admin.bans.destroy');
+    Route::post('/admin/updates/version', [AdminUpdatePostController::class, 'updateVersion'])->name('admin.updates.version');
+    Route::post('/admin/updates/posts', [AdminUpdatePostController::class, 'storeBlog'])->name('admin.updates.posts.store');
+    Route::patch('/admin/updates/posts/{post}', [AdminUpdatePostController::class, 'updateBlog'])->name('admin.updates.posts.update');
+    Route::delete('/admin/updates/posts/{post}', [AdminUpdatePostController::class, 'destroyBlog'])->name('admin.updates.posts.destroy');
+    Route::post('/admin/updates/releases', [AdminUpdatePostController::class, 'storeRelease'])->name('admin.updates.releases.store');
+    Route::patch('/admin/updates/releases/{post}', [AdminUpdatePostController::class, 'updateRelease'])->name('admin.updates.releases.update');
+    Route::delete('/admin/updates/releases/{post}', [AdminUpdatePostController::class, 'destroyRelease'])->name('admin.updates.releases.destroy');
 });
 
 Route::view('/legal/privacy', 'legal.privacy')
