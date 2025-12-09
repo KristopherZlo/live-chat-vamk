@@ -889,6 +889,22 @@
                         return fallback;
                     }
                 };
+                const isMineMessageEl = (el) => {
+                    if (!el) return false;
+                    const userId = normalizeId(el.dataset.userId);
+                    const participantId = normalizeId(el.dataset.participantId);
+                    if (currentUserId && userId && Number(currentUserId) === userId) return true;
+                    if (currentParticipantId && participantId && Number(currentParticipantId) === participantId) return true;
+                    return false;
+                };
+                const isMineMessageData = (data) => {
+                    if (!data) return false;
+                    const userId = normalizeId(data.user_id ?? data.userId);
+                    const participantId = normalizeId(data.participant_id ?? data.participantId);
+                    if (currentUserId && userId && Number(currentUserId) === userId) return true;
+                    if (currentParticipantId && participantId && Number(currentParticipantId) === participantId) return true;
+                    return false;
+                };
                 const countDescendants = (list = []) => list.reduce((acc, node) => acc + 1 + countDescendants(node?.replies || []), 0);
                 const formatTime = (value) => {
                     if (!value) return '';
@@ -2107,6 +2123,11 @@
 
                     const rootData = findReplyRootData(replyParentId) || parentData;
                     const rootId = rootData?.id ? String(rootData.id) : String(replyParentId);
+
+                    const isMineRoot = isMineMessageEl(parentEl) || isMineMessageData(parentData) || isMineMessageData(rootData);
+                    if (!isOwnReply && !isMineRoot) {
+                        return;
+                    }
 
                     let state = existingThread || replyThreadsState.get(rootId);
                     if (!state && rootData) {
