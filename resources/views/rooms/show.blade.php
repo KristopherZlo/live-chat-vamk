@@ -276,6 +276,7 @@
                                 data-participant-id="{{ $message->participant_id ?? '' }}"
                                 data-author="{{ e($authorName) }}"
                                 data-content="{{ e($message->content) }}"
+                                data-reply-to="{{ $replyTo?->id ?? '' }}"
                                 data-question="{{ $isQuestionMessage ? '1' : '0' }}"
                                 data-time="{{ $message->created_at?->format('H:i') }}"
                                 data-created="{{ $message->created_at?->toIso8601String() }}"
@@ -842,6 +843,32 @@
                     if (currentParticipantId && participantId && Number(currentParticipantId) === participantId) return true;
                     return false;
                 };
+                const getMessageElById = (id) => {
+                    if (!id || !chatContainer) return null;
+                    return chatContainer.querySelector(`.message[data-message-id="${id}"]`);
+                };
+                const threadContainsId = (state, targetId) => {
+                    if (!state || !targetId) return false;
+                    const target = String(targetId);
+                    if (String(state.parent?.id) === target) return true;
+                    const walk = (list = []) => {
+                        for (const child of list) {
+                            if (String(child.id) === target) return true;
+                            if (walk(child.replies || [])) return true;
+                        }
+                        return false;
+                    };
+                    return walk(state.replies || []);
+                };
+                const findThreadContainingId = (id) => {
+                    if (!id) return null;
+                    for (const state of replyThreadsState.values()) {
+                        if (threadContainsId(state, id)) {
+                            return state;
+                        }
+                    }
+                    return null;
+                };
                 const getParentDataFromMessageEl = (el) => {
                     if (!el) return null;
                     return {
@@ -873,6 +900,21 @@
                         return reactionUrlTemplate.replace('__MESSAGE__', messageEl.dataset.messageId);
                     }
                     return '';
+                };
+                const findReplyRootData = (startId) => {
+                    if (!startId) return null;
+                    let current = getMessageElById(startId);
+                    let last = current;
+                    let safety = 0;
+                    while (current && current.dataset.replyTo && safety < 20) {
+                        const parentId = current.dataset.replyTo;
+                        const parentEl = getMessageElById(parentId);
+                        if (!parentEl) break;
+                        last = parentEl;
+                        current = parentEl;
+                        safety += 1;
+                    }
+                    return last ? getParentDataFromMessageEl(last) : null;
                 };
                 const renderReactions = (messageEl, reactions = [], myReactions = []) => {
                     if (!messageEl) return;
@@ -937,6 +979,7 @@
                     container.dataset.reactionsUrl = reactionUrlTemplate && messageId ? reactionUrlTemplate.replace('__MESSAGE__', messageId) : '';
                     container.dataset.reactions = JSON.stringify(reactions || []);
                     container.dataset.myReactions = JSON.stringify(myReactions || []);
+                    container.dataset.replyTo = replyTo?.id ? String(replyTo.id) : '';
                     if (pending) {
                         container.classList.add('message--pending');
                         container.dataset.tempId = messageId;
@@ -1544,12 +1587,15 @@
                 };
 
                 const buildReplyBranchFromPayload = (payload) => {
+                    if (!payload) return null;
+                    const replyToId = normalizeId(payload.reply_to_id || payload.reply_to?.id);
                     return {
                         id: payload.id,
                         author: payload.author?.name || payload.author || 'Guest',
                         time: formatTime(payload.created_at),
                         content: payload.content || '',
                         is_question: Boolean(payload.as_question || payload.question),
+                        reply_to_id: replyToId,
                         replies: [],
                         reply_count: 0,
                     };
@@ -1558,23 +1604,31 @@
                 const insertReplyNode = (state, parentId, replyNode) => {
                     if (!state || !parentId || !replyNode) return false;
                     const parentStr = String(parentId);
-                    if (String(state.parent?.id) === parentStr) {
-                        state.replies = state.replies || [];
-                        state.replies.push(replyNode);
-                        return true;
-                    }
-                    const walk = (list = []) => {
+                    const alreadyInTree = (list = []) => list.some((child) => {
+                        if (String(child.id) === String(replyNode.id)) return true;
+                        return alreadyInTree(child.replies || []);
+                    });
+                    if (alreadyInTree(state.replies || [])) return true;
+
+                    const attach = (list = []) => {
                         for (const child of list) {
                             if (String(child.id) === parentStr) {
                                 child.replies = child.replies || [];
                                 child.replies.push(replyNode);
                                 return true;
                             }
-                            if (walk(child.replies || [])) return true;
+                            if (attach(child.replies || [])) return true;
                         }
                         return false;
                     };
-                    return walk(state.replies || []);
+
+                    if (String(state.parent?.id) === parentStr) {
+                        state.replies = state.replies || [];
+                        state.replies.push(replyNode);
+                        return true;
+                    }
+
+                    return attach(state.replies || []);
                 };
 
                 const syncReplyInboxItem = (item, state) => {
@@ -1786,38 +1840,63 @@
                 const handleIncomingReplyThread = (payload) => {
                     const replyParentId = normalizeId(payload?.reply_to?.id);
                     if (!replyParentId) return;
-                    const parentEl = document.querySelector(`.message[data-message-id="${replyParentId}"]`);
-                    if (!parentEl || !isMyMessage(parentEl)) return;
+
                     const replyAuthorUserId = normalizeId(payload.author?.user_id);
                     const replyAuthorParticipantId = normalizeId(payload.author?.participant_id);
                     const isOwnReply = (currentUserId && replyAuthorUserId && Number(currentUserId) === replyAuthorUserId)
                         || (currentParticipantId && replyAuthorParticipantId && Number(currentParticipantId) === replyAuthorParticipantId);
-                    const parentData = getParentDataFromMessageEl(parentEl);
-                    if (!parentData) return;
-                    const parentKey = String(parentData.id);
-                    let state = replyThreadsState.get(parentKey);
-                    if (!state) {
+
+                    const existingThread = findThreadContainingId(replyParentId);
+                    const parentEl = getMessageElById(replyParentId);
+                    let parentData = existingThread?.parent || getParentDataFromMessageEl(parentEl);
+                    if (!parentData && payload?.reply_to) {
+                        parentData = {
+                            id: replyParentId,
+                            author: payload.reply_to.author || 'Guest',
+                            time: payload.reply_to.time || formatTime(payload.reply_to.created_at),
+                            content: payload.reply_to.content || '',
+                            is_question: !!payload.reply_to.is_question,
+                        };
+                    }
+
+                    const rootData = findReplyRootData(replyParentId) || parentData;
+                    const rootId = rootData?.id ? String(rootData.id) : String(replyParentId);
+
+                    let state = existingThread || replyThreadsState.get(rootId);
+                    if (!state && rootData) {
                         state = {
-                            parent: parentData,
+                            parent: rootData,
                             replies: [],
                             reply_count: 0,
                             unread: 0,
                         };
-                        replyThreadsState.set(parentKey, state);
+                        replyThreadsState.set(rootId, state);
                     }
+                    if (!state) return;
+
+                    // Keep parent info aligned to the root message
+                    if (rootData) {
+                        state.parent = rootData;
+                    }
+
                     const replyNode = buildReplyBranchFromPayload(payload);
+                    if (!replyNode) return;
+
                     const inserted = insertReplyNode(state, payload.reply_to?.id, replyNode);
                     if (!inserted) {
                         state.replies = state.replies || [];
                         state.replies.push(replyNode);
                     }
+
                     syncReplyThreadCounts(state);
-                    if (activeReplyParentId === parentKey && repliesPane && !repliesPane.hidden) {
+                    const activeKey = String(state.parent?.id || rootId);
+                    if (activeReplyParentId === activeKey && repliesPane && !repliesPane.hidden) {
                         state.unread = 0;
                         renderReplyDetail(state);
                     } else if (!isOwnReply) {
                         state.unread = Number(state.unread || 0) + 1;
                     }
+
                     const inboxItem = ensureInboxItem(state);
                     if (inboxItem) {
                         syncReplyInboxItem(inboxItem, state);

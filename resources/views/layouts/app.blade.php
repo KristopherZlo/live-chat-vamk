@@ -51,6 +51,9 @@
             scheme: @json($reverbScheme),
         };
     </script>
+    <script>
+        window.queueSoundUrl = window.queueSoundUrl || @json(asset('audio/new-question-sound.mp3'));
+    </script>
     @php
         use App\Models\Setting;
         use App\Models\UpdatePost;

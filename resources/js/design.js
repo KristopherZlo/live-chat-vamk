@@ -16,6 +16,21 @@ function normalizeId(value) {
   return Number.isInteger(num) && num > 0 ? num : null;
 }
 
+function syncLogoutForms() {
+  const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+  if (!token) return;
+  document.querySelectorAll('form[action$="logout"]').forEach((form) => {
+    let input = form.querySelector('input[name="_token"]');
+    if (!input) {
+      input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = '_token';
+      form.appendChild(input);
+    }
+    input.value = token;
+  });
+}
+
 function getQueuePanel(root = document) {
   if (root && typeof root.querySelector === 'function') {
     const found = root.querySelector('#queuePanel');
@@ -1032,6 +1047,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupQueueFilter();
   setupQueueNewHandlers();
   setupFlashMessages();
+  syncLogoutForms();
   setupInlineEditors();
   setupRoomDescriptions();
   setupRoomDeleteModals();
@@ -1048,6 +1064,7 @@ window.rebindQueuePanels = (root = document) => {
   if (!isExternalDoc) {
     setupFlashMessages(root);
     setupRoomDescriptions(root);
+    syncLogoutForms();
   }
 
   setupQueueFilter(root);
