@@ -621,6 +621,11 @@ main,.layout {
   background: color-mix(in srgb, var(--accent-soft) 40%, transparent);
 }
 
+.message-reply[data-reply-deleted="1"] .reply-text {
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
 .message-reply .reply-author {
   font-weight: 600;
   color: var(--text-primary);
@@ -917,21 +922,30 @@ main,.layout {
   pointer-events: none;
 }
 
-.message-ban-form {
+.message-admin-actions {
   position: absolute;
   top: 0.3rem;
   right: calc(-1.85rem - 5px);
   opacity: 0.15;
   transform: translateX(22px);
   transition: opacity 0.12s ease-out, transform 0.18s ease-out;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
 }
 
-.message:hover .message-ban-form {
+.message:hover .message-admin-actions {
   opacity: 1;
   transform: translateX(0);
 }
 
-.message-ban-btn {
+.message-ban-form,
+.message-delete-form {
+  margin: 0;
+}
+
+.message-ban-btn,
+.message-delete-btn {
   border: 1px solid var(--border-subtle);
   background: var(--bg-soft);
   border-radius: var(--radius-sm);
@@ -945,7 +959,8 @@ main,.layout {
   height: 28px;
 }
 
-.message-ban-btn:hover {
+.message-ban-btn:hover,
+.message-delete-btn:hover {
   color: var(--bad);
   border-color: var(--bad);
 }

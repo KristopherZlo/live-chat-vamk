@@ -64,7 +64,10 @@ class MessageSent implements ShouldBroadcastNow
                 'author' => $this->message->replyTo->user_id
                     ? $this->message->replyTo->user?->name
                     : ($this->message->replyTo->participant?->display_name ?? 'Guest'),
-                'content' => Str::limit($this->message->replyTo->content, 140),
+                'content' => $this->message->replyTo->trashed()
+                    ? 'Message deleted'
+                    : Str::limit($this->message->replyTo->content, 140),
+                'is_deleted' => $this->message->replyTo->trashed(),
             ] : null,
             'reactions' => $this->formatReactions(),
         ];

@@ -253,6 +253,10 @@
                                 $isOutgoing = $isOwner ? $isOwnerMessage : ($participant && $message->participant && $message->participant->id === $participant->id);
                                 $isQuestionMessage = (bool) $message->question;
                                 $replyTo = $message->replyTo;
+                                $replyDeleted = $replyTo?->trashed();
+                                $deleteUrl = route('rooms.messages.destroy', [$room, $message]);
+                                $canDeleteOwn = ($currentUserId && $message->user_id === $currentUserId)
+                                    || ($participant && $message->participant && $participant->id === $message->participant->id);
                                 $avatarBg = $avatarColor($authorName);
                                 $reactionsGrouped = $message->reactions->groupBy('emoji')->map(function ($items, $emoji) use ($currentUserId, $currentParticipantId) {
                                     return [
@@ -277,6 +281,7 @@
                                 data-author="{{ e($authorName) }}"
                                 data-content="{{ e($message->content) }}"
                                 data-reply-to="{{ $replyTo?->id ?? '' }}"
+                                data-delete-url="{{ $deleteUrl }}"
                                 data-question="{{ $isQuestionMessage ? '1' : '0' }}"
                                 data-time="{{ $message->created_at?->format('H:i') }}"
                                 data-created="{{ $message->created_at?->toIso8601String() }}"
@@ -284,18 +289,32 @@
                                 <div class="message-avatar colorized" style="background: {{ $avatarBg }}; color: #fff; border-color: transparent;">{{ $initials }}</div>
                                 <div class="message-body">
                                     @if($isOwner && $message->participant && !$isOwnerMessage)
-                                        <form
-                                            method="POST"
-                                            action="{{ route('rooms.bans.store', $room) }}"
-                                            class="message-ban-form"
-                                            data-ban-confirm="1"
-                                        >
-                                            @csrf
-                                            <input type="hidden" name="participant_id" value="{{ $message->participant->id }}">
-                                            <button type="submit" class="message-ban-btn" title="Ban participant">
-                                                <i data-lucide="gavel"></i>
-                                            </button>
-                                        </form>
+                                        <div class="message-admin-actions">
+                                            <form
+                                                method="POST"
+                                                action="{{ route('rooms.bans.store', $room) }}"
+                                                class="message-ban-form"
+                                                data-ban-confirm="1"
+                                            >
+                                                @csrf
+                                                <input type="hidden" name="participant_id" value="{{ $message->participant->id }}">
+                                                <button type="submit" class="message-ban-btn" title="Ban participant">
+                                                    <i data-lucide="gavel"></i>
+                                                </button>
+                                            </form>
+                                            <form
+                                                method="POST"
+                                                action="{{ $deleteUrl }}"
+                                                class="message-delete-form"
+                                                data-message-delete
+                                            >
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="message-delete-btn" title="Delete message">
+                                                    <i data-lucide="trash-2"></i>
+                                                </button>
+                                            </form>
+                                        </div>
                                     @endif
                                     <div class="message-header">
                                         <span class="message-author">
@@ -320,10 +339,11 @@
                                     @if($replyTo)
                                         @php
                                             $replyAuthor = $replyTo->user?->name ?? $replyTo->participant?->display_name ?? 'Guest';
+                                            $replyText = $replyDeleted ? 'Message deleted' : \Illuminate\Support\Str::limit($replyTo->content, 120);
                                         @endphp
-                                        <div class="message-reply" data-reply-target="{{ $replyTo->id }}">
+                                        <div class="message-reply" data-reply-target="{{ $replyTo->id }}" data-reply-deleted="{{ $replyDeleted ? '1' : '0' }}">
                                             <span class="reply-author">{{ $replyAuthor }}</span>
-                                            <span class="reply-text">{{ \Illuminate\Support\Str::limit($replyTo->content, 120) }}</span>
+                                            <span class="reply-text">{{ $replyText }}</span>
                                         </div>
                                     @endif
                                     <div class="message-text">{{ $message->content }}</div>
@@ -360,6 +380,18 @@
                                         >
                                             <i data-lucide="smile-plus"></i>
                                         </button>
+                                        @if($canDeleteOwn || $isOwner)
+                                            <button
+                                                type="button"
+                                                class="msg-action msg-action-delete"
+                                                data-message-delete-trigger
+                                                data-message-id="{{ $message->id }}"
+                                                data-delete-url="{{ $deleteUrl }}"
+                                            >
+                                                <i data-lucide="trash-2"></i>
+                                                <span>Delete</span>
+                                            </button>
+                                        @endif
                                     </div>
                                 </div>
                             </li>
@@ -763,7 +795,9 @@
                 const replyPreviewCancel = document.getElementById('replyPreviewCancel');
                 const avatarPalette = ['#2563eb', '#0ea5e9', '#6366f1', '#8b5cf6', '#14b8a6', '#f97316', '#f59e0b', '#10b981', '#ef4444'];
                 const reactionUrlTemplate = @json(route('rooms.messages.reactions.toggle', [$room, '__MESSAGE__']));
+                const deleteUrlTemplate = @json(route('rooms.messages.destroy', [$room, '__MESSAGE__']));
                 const popularReactions = @json($popularReactions);
+                const deletedMessageText = 'Message deleted';
                 let activeReactionMessage = null;
                 let activeReactionTrigger = null;
                 let emojiPickerMode = 'input';
@@ -971,6 +1005,7 @@
                     } = options;
                     const container = document.createElement('li');
                     const messageId = id ?? `temp-${Date.now()}`;
+                    const isTempMessage = String(messageId).startsWith('temp-');
                     const authorUserId = normalizeId(author?.user_id);
                     const authorParticipantId = normalizeId(author?.participant_id);
                     const messageKey = makeMessageKey(content, authorUserId, authorParticipantId, replyTo?.id, asQuestion);
@@ -995,30 +1030,52 @@
                     const avatarColor = avatarColorFromName(authorNameRaw);
                     const initials = escapeHtml((authorNameRaw || '??').slice(0, 2).toUpperCase());
                     const devBadge = author.is_dev ? '<span class="message-badge message-badge-dev">dev</span>' : '';
+                    const replyDeleted = Boolean(replyTo?.is_deleted);
+                    const replyContent = replyDeleted ? deletedMessageText : (replyTo?.content || '');
                     const replyTargetAttr = replyTo?.id ? ` data-reply-target="${escapeHtml(String(replyTo.id))}"` : '';
-                    const replyHtml = replyTo ? `<div class="message-reply"${replyTargetAttr}><span class="reply-author">${escapeHtml(replyTo.author || 'Guest')}</span><span class="reply-text">${escapeHtml(replyTo.content || '')}</span></div>` : '';
+                    const replyDeletedAttr = replyDeleted ? ' data-reply-deleted="1"' : '';
+                    const replyHtml = replyTo ? `<div class="message-reply"${replyTargetAttr}${replyDeletedAttr}><span class="reply-author">${escapeHtml(replyTo.author || 'Guest')}</span><span class="reply-text">${escapeHtml(replyContent)}</span></div>` : '';
                     const time = createdAt ? new Date(createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const deleteUrl = (!isTempMessage && deleteUrlTemplate && messageId)
+                        ? deleteUrlTemplate.replace('__MESSAGE__', messageId)
+                        : '';
                     container.dataset.userId = authorUserId ?? '';
                     container.dataset.participantId = authorParticipantId ?? '';
                     container.dataset.author = authorNameRaw || 'Guest';
                     container.dataset.content = content || '';
+                    container.dataset.deleteUrl = deleteUrl;
+                    container.dataset.replyDeleted = replyDeleted ? '1' : '';
                     container.dataset.question = asQuestion ? '1' : '0';
                     container.dataset.created = createdAt || '';
                     container.dataset.time = time;
                     const canBan = allowBan && isOwnerUser && !isOwnerAuthor && author.participant_id;
-                    const banButtonHtml = canBan ? `
-                        <form method="POST" action="${banStoreUrl}" class="message-ban-form" data-ban-confirm="1">
-                            <input type="hidden" name="_token" value="${csrfToken}">
-                            <input type="hidden" name="participant_id" value="${author.participant_id}">
-                            <button type="submit" class="message-ban-btn" title="Ban participant">
-                                <i data-lucide="gavel"></i>
-                            </button>
-                        </form>
+                    const canAdminDelete = isOwnerUser && !isOwnerAuthor;
+                    const canSelfDelete = (currentUserId && authorUserId && Number(currentUserId) === Number(authorUserId))
+                        || (currentParticipantId && authorParticipantId && Number(currentParticipantId) === Number(authorParticipantId));
+                    const adminActionsHtml = (canBan || canAdminDelete) && deleteUrl ? `
+                        <div class="message-admin-actions">
+                            ${canBan ? `
+                                <form method="POST" action="${banStoreUrl}" class="message-ban-form" data-ban-confirm="1">
+                                    <input type="hidden" name="_token" value="${csrfToken}">
+                                    <input type="hidden" name="participant_id" value="${author.participant_id}">
+                                    <button type="submit" class="message-ban-btn" title="Ban participant">
+                                        <i data-lucide="gavel"></i>
+                                    </button>
+                                </form>` : ''}
+                            ${canAdminDelete ? `
+                                <form method="POST" action="${deleteUrl}" class="message-delete-form" data-message-delete>
+                                    <input type="hidden" name="_token" value="${csrfToken}">
+                                    <input type="hidden" name="_method" value="DELETE">
+                                    <button type="submit" class="message-delete-btn" title="Delete message">
+                                        <i data-lucide="trash-2"></i>
+                                    </button>
+                                </form>` : ''}
+                        </div>
                     ` : '';
                     container.innerHTML = `
                         <div class="message-avatar colorized" style="background:${avatarColor}; color:#fff; border-color:transparent;">${initials}</div>
                         <div class="message-body">
-                            ${banButtonHtml}
+                            ${adminActionsHtml}
                             <div class="message-header">
                                 <span class="message-author">${authorName}${devBadge}</span>
                                 <div class="message-meta">
@@ -1041,6 +1098,11 @@
                                 <button type="button" class="msg-action msg-action-react" data-reaction-trigger>
                                     <i data-lucide="smile-plus"></i>
                                 </button>
+                                ${(canSelfDelete || isOwnerUser) && deleteUrl ? `
+                                    <button type="button" class="msg-action msg-action-delete" data-message-delete-trigger data-message-id="${messageId}" data-delete-url="${deleteUrl}">
+                                        <i data-lucide="trash-2"></i>
+                                        <span>Delete</span>
+                                    </button>` : ''}
                             </div>
                         </div>`;
                         const replyBtn = container.querySelector('.msg-action');
@@ -1517,6 +1579,134 @@
                     });
                 };
 
+                const deleteModal = (() => {
+                    let overlay = null;
+                    let confirmBtn = null;
+                    let cancelBtn = null;
+                    let resolver = null;
+
+                    const ensureModal = () => {
+                        if (overlay) return;
+                        overlay = document.createElement('div');
+                        overlay.className = 'modal-overlay';
+                        overlay.hidden = true;
+                        overlay.innerHTML = `
+                            <div class="modal-dialog">
+                                <div class="modal-header">
+                                    <div class="modal-title-group">
+                                        <div class="modal-eyebrow">Moderation</div>
+                                        <div class="modal-title">Delete message?</div>
+                                    </div>
+                                    <button type="button" class="modal-close" data-delete-cancel aria-label="Close">
+                                        <i data-lucide="x"></i>
+                                    </button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="modal-text">This action cannot be undone. Remove the message for everyone?</div>
+                                </div>
+                                <div class="modal-actions">
+                                    <button type="button" class="btn btn-sm btn-ghost" data-delete-cancel>Cancel</button>
+                                    <button type="button" class="btn btn-sm btn-danger" data-delete-confirm>Delete</button>
+                                </div>
+                            </div>
+                        `;
+                        document.body.appendChild(overlay);
+                        confirmBtn = overlay.querySelector('[data-delete-confirm]');
+                        cancelBtn = overlay.querySelectorAll('[data-delete-cancel]');
+
+                        const close = (result = false) => {
+                            overlay.classList.remove('show');
+                            document.body.classList.remove('modal-open');
+                            if (resolver) {
+                                resolver(result);
+                                resolver = null;
+                            }
+                            setTimeout(() => overlay.hidden = true, 120);
+                        };
+
+                        overlay.addEventListener('click', (event) => {
+                            if (event.target === overlay) {
+                                close(false);
+                            }
+                        });
+
+                        cancelBtn.forEach((btn) => btn.addEventListener('click', () => close(false)));
+                        confirmBtn?.addEventListener('click', () => close(true));
+                    };
+
+                    const open = () => new Promise((resolve) => {
+                        ensureModal();
+                        resolver = resolve;
+                        overlay.hidden = false;
+                        requestAnimationFrame(() => overlay.classList.add('show'));
+                        document.body.classList.add('modal-open');
+                        if (window.refreshLucideIcons) {
+                            window.refreshLucideIcons();
+                        }
+                    });
+
+                    return { open };
+                })();
+
+                const requestDeleteMessage = async (url) => {
+                    if (!url) return false;
+                    try {
+                        const response = await fetch(url, {
+                            method: 'DELETE',
+                            headers: {
+                                'X-CSRF-TOKEN': csrfToken,
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json',
+                            },
+                        });
+                        return response.ok;
+                    } catch (error) {
+                        console.error('Delete message error', error);
+                        return false;
+                    }
+                };
+
+                const bindDeleteForms = (scope = document) => {
+                    const forms = scope.querySelectorAll('form[data-message-delete]');
+                    forms.forEach((form) => {
+                        if (form.dataset.deleteBound === '1') return;
+                        form.dataset.deleteBound = '1';
+                        form.addEventListener('submit', async (event) => {
+                            event.preventDefault();
+                            const confirmed = await deleteModal.open();
+                            if (!confirmed) return;
+                            const url = form.getAttribute('action');
+                            const ok = await requestDeleteMessage(url);
+                            if (ok) {
+                                const messageEl = form.closest('.message');
+                                handleMessageDeleted(messageEl?.dataset?.messageId || null);
+                                return;
+                            }
+                            form.submit();
+                        });
+                    });
+                };
+
+                const bindDeleteTriggers = (scope = document) => {
+                    const triggers = scope.querySelectorAll('[data-message-delete-trigger]');
+                    triggers.forEach((btn) => {
+                        if (btn.dataset.deleteTriggerBound === '1') return;
+                        btn.dataset.deleteTriggerBound = '1';
+                        btn.addEventListener('click', async (event) => {
+                            event.preventDefault();
+                            const url = btn.dataset.deleteUrl || btn.closest('.message')?.dataset.deleteUrl || '';
+                            if (!url) return;
+                            const confirmed = await deleteModal.open();
+                            if (!confirmed) return;
+                            const ok = await requestDeleteMessage(url);
+                            const messageId = btn.dataset.messageId || btn.closest('.message')?.dataset.messageId;
+                            if (ok) {
+                                handleMessageDeleted(messageId);
+                            }
+                        });
+                    });
+                };
+
                 function setupChatTabs() {
                     if (!chatTabButtons.length || !chatPanes.length) return;
                     const current = Array.from(chatTabButtons).find((btn) => btn.classList.contains('active'));
@@ -1648,7 +1838,8 @@
                     }
                     const textEl = item.querySelector('.reply-inbox-text');
                     if (textEl) {
-                        textEl.textContent = truncateText(state.parent?.content || '');
+                        const preview = state.parent?.deleted ? deletedMessageText : (state.parent?.content || '');
+                        textEl.textContent = truncateText(preview);
                     }
                 };
 
@@ -1666,6 +1857,7 @@
                     item.dataset.replyThread = JSON.stringify(state);
                     item.dataset.replyCount = state.reply_count ?? 0;
                     item.dataset.replyUnread = state.unread ?? 0;
+                    const inboxPreview = truncateText(state.parent?.deleted ? deletedMessageText : state.parent?.content || '');
                     item.innerHTML = `
                         <div class="reply-inbox-top">
                             <span class="reply-inbox-author">${escapeHtml(state.parent.author || 'Guest')}</span>
@@ -1674,7 +1866,7 @@
                                 ${state.parent.time ? `<span class="reply-inbox-time">${escapeHtml(state.parent.time)}</span>` : ''}
                             </div>
                         </div>
-                        <div class="reply-inbox-text">${escapeHtml(truncateText(state.parent.content || ''))}</div>
+                        <div class="reply-inbox-text">${escapeHtml(inboxPreview)}</div>
                         <div class="reply-inbox-meta">
                             <span class="pill-soft">${state.reply_count ?? 0}</span>
                             <span class="reply-inbox-meta-label">${Number(state.reply_count ?? 0) === 1 ? 'reply' : 'replies'}</span>
@@ -1713,6 +1905,7 @@
                     const targetId = escapeHtml(String(node?.id || ''));
                     const avatarBg = avatarColorFromName(authorName);
                     const initials = escapeHtml(initialsFromName(authorName));
+                    const nodeContent = node?.deleted ? deletedMessageText : (node?.content || '');
 
                     const item = document.createElement('div');
                     item.className = 'reply-thread-message';
@@ -1725,7 +1918,7 @@
                                 ${time ? `<span class="reply-thread-time">${time}</span>` : ''}
                                 ${targetId ? `<button type="button" class="icon-btn reply-jump" data-reply-jump data-target-id="${targetId}" title="View in chat"><i data-lucide="arrow-up-right"></i></button>` : ''}
                             </div>
-                            <div class="reply-thread-text">${escapeHtml(node?.content || '')}</div>
+                            <div class="reply-thread-text">${escapeHtml(nodeContent)}</div>
                         </div>
                     `;
                     branch.appendChild(item);
@@ -1752,6 +1945,7 @@
                     const parentName = parent.author || 'Guest';
                     const parentInitials = initialsFromName(parentName);
                     const parentAvatarBg = avatarColorFromName(parentName);
+                    const parentContent = parent.deleted ? deletedMessageText : (parent.content || '');
                     activeReplyParentId = String(parent.id || '');
                     replyThreadsState.set(String(parent.id || ''), threadData);
                     if (repliesLayout) {
@@ -1774,7 +1968,7 @@
                                     ${parent.is_question ? '<span class="message-badge message-badge-question">To host</span>' : ''}
                                     ${parent.time ? `<span class="reply-question-time">${escapeHtml(parent.time)}</span>` : ''}
                                 </div>
-                                <div class="reply-question-text">${escapeHtml(parent.content || '')}</div>
+                                <div class="reply-question-text">${escapeHtml(parentContent)}</div>
                             </div>
                         </div>
                         <div class="reply-detail-actions">
@@ -1841,6 +2035,7 @@
                     const replyParentId = normalizeId(payload?.reply_to?.id);
                     if (!replyParentId) return;
 
+                    const replyParentDeleted = Boolean(payload?.reply_to?.is_deleted);
                     const replyAuthorUserId = normalizeId(payload.author?.user_id);
                     const replyAuthorParticipantId = normalizeId(payload.author?.participant_id);
                     const isOwnReply = (currentUserId && replyAuthorUserId && Number(currentUserId) === replyAuthorUserId)
@@ -1854,9 +2049,15 @@
                             id: replyParentId,
                             author: payload.reply_to.author || 'Guest',
                             time: payload.reply_to.time || formatTime(payload.reply_to.created_at),
-                            content: payload.reply_to.content || '',
+                            content: replyParentDeleted ? deletedMessageText : (payload.reply_to.content || ''),
                             is_question: !!payload.reply_to.is_question,
+                            deleted: replyParentDeleted,
                         };
+                    } else if (parentData) {
+                        parentData.deleted = replyParentDeleted || Boolean(parentData.deleted);
+                        if (replyParentDeleted) {
+                            parentData.content = deletedMessageText;
+                        }
                     }
 
                     const rootData = findReplyRootData(replyParentId) || parentData;
@@ -1902,6 +2103,93 @@
                         syncReplyInboxItem(inboxItem, state);
                     }
                     updateRepliesBadge();
+                };
+
+                const markRepliesDeleted = (deletedId) => {
+                    if (!deletedId || !chatContainer) return;
+                    const target = String(deletedId);
+                    const replies = chatContainer.querySelectorAll(`.message[data-reply-to="${target}"]`);
+                    replies.forEach((msg) => {
+                        msg.dataset.replyDeleted = '1';
+                        const replyEl = msg.querySelector('.message-reply');
+                        if (replyEl) {
+                            replyEl.dataset.replyDeleted = '1';
+                            const textEl = replyEl.querySelector('.reply-text');
+                            if (textEl) {
+                                textEl.textContent = deletedMessageText;
+                            }
+                        }
+                    });
+                };
+
+                const pruneReplyThreadsForDeletion = (deletedId) => {
+                    if (!deletedId) return;
+                    const target = String(deletedId);
+                    const pruneNode = (node) => {
+                        if (!node) return null;
+                        if (String(node.id) === target) return null;
+                        if (Array.isArray(node.replies)) {
+                            node.replies = node.replies.map(pruneNode).filter(Boolean);
+                        }
+                        return node;
+                    };
+
+                    replyThreadsState.forEach((state) => {
+                        if (!state || !state.parent) return;
+                        const parentId = String(state.parent.id);
+                        if (parentId === target) {
+                            state.parent.deleted = true;
+                            state.parent.content = deletedMessageText;
+                        }
+                        state.replies = (state.replies || []).map(pruneNode).filter(Boolean);
+                        syncReplyThreadCounts(state);
+                        if (replyInbox) {
+                            const inboxItem = replyInbox.querySelector(`.reply-inbox-item[data-reply-parent="${state.parent.id}"]`);
+                            if (inboxItem) {
+                                syncReplyInboxItem(inboxItem, state);
+                            }
+                        }
+                        if (activeReplyParentId === parentId && replyDetail && !replyDetail.hidden) {
+                            renderReplyDetail(state);
+                        }
+                    });
+                    updateRepliesBadge();
+                };
+
+                const ensureEmptyMessageState = () => {
+                    if (!chatContainer) return;
+                    const hasMessages = chatContainer.querySelector('.message:not(.message-empty)');
+                    if (hasMessages) return;
+                    let empty = chatContainer.querySelector('.message-empty');
+                    if (!empty) {
+                        empty = document.createElement('li');
+                        empty.className = 'message message-empty';
+                        empty.innerHTML = '<div class="message-body"><div class="message-text">No messages yet.</div></div>';
+                        chatContainer.appendChild(empty);
+                    }
+                    empty.hidden = false;
+                };
+
+                const handleMessageDeleted = (messageId) => {
+                    const targetId = normalizeId(messageId) ?? messageId;
+                    if (!targetId) return;
+                    const target = String(targetId);
+                    const container = chatContainer || document.querySelector('.messages-container');
+                    if (container) {
+                        const el = container.querySelector(`.message[data-message-id="${target}"]`);
+                        if (el) {
+                            el.remove();
+                        }
+                    }
+                    if (replyToInput && replyToInput.value === target) {
+                        replyToInput.value = '';
+                        if (replyPreviewAuthor) replyPreviewAuthor.textContent = '';
+                        if (replyPreviewText) replyPreviewText.textContent = '';
+                        if (replyPreview) replyPreview.hidden = true;
+                    }
+                    markRepliesDeleted(target);
+                    pruneReplyThreadsForDeletion(target);
+                    ensureEmptyMessageState();
                 };
 
                 function setupRepliesPane() {
@@ -1953,6 +2241,8 @@
 
                 setupChatTabs();
                 bindBanForms();
+                bindDeleteForms();
+                bindDeleteTriggers();
                 setupRepliesPane();
                 setupInitialReactions();
                 renderReactionMenuOptions();
@@ -2620,16 +2910,20 @@
                     const channelName = 'room.' + roomId;
                     window.Echo.channel(channelName)
                         .listen('MessageSent', (e) => {
-                        const container = document.querySelector('.messages-container');
-                        if (!container) return;
-                        const existing = container.querySelector(`.message[data-message-id="${e.id}"]`);
-                        if (existing) {
-                            existing.classList.remove('message--pending');
+                            const container = document.querySelector('.messages-container');
+                            if (!container) return;
+                            const existing = container.querySelector(`.message[data-message-id="${e.id}"]`);
+                            if (existing) {
+                                existing.classList.remove('message--pending');
                                 existing.removeAttribute('data-temp-id');
                                 existing.removeAttribute('data-temp-key');
+                                bindBanForms(existing);
+                                bindDeleteForms(existing);
+                                bindDeleteTriggers(existing);
                                 handleIncomingReplyThread(e);
                                 return;
                             }
+
                             const authorUserId = normalizeId(e.author?.user_id);
                             const authorParticipantId = normalizeId(e.author?.participant_id);
                             const tempKey = makeMessageKey(e.content, authorUserId, authorParticipantId, e.reply_to?.id, e.as_question);
@@ -2637,6 +2931,8 @@
                             if (pendingMatch) {
                                 updateMessageElementFromPayload(pendingMatch, e);
                                 bindBanForms(pendingMatch);
+                                bindDeleteForms(pendingMatch);
+                                bindDeleteTriggers(pendingMatch);
                                 scrollChatToBottom();
                                 if (window.refreshLucideIcons) {
                                     window.refreshLucideIcons();
@@ -2644,10 +2940,13 @@
                                 handleIncomingReplyThread(e);
                                 return;
                             }
+
                             removeEmptyMessageState();
                             const wrapper = createMessageElement(e, { pending: false });
                             container.appendChild(wrapper);
                             bindBanForms(wrapper);
+                            bindDeleteForms(wrapper);
+                            bindDeleteTriggers(wrapper);
                             scrollChatToBottom();
                             if (window.refreshLucideIcons) {
                                 window.refreshLucideIcons();
@@ -2656,6 +2955,9 @@
                         })
                         .listen('ReactionUpdated', (payload) => {
                             updateReactionsFromEvent(payload.message_id, payload.reactions, payload);
+                        })
+                        .listen('MessageDeleted', (payload) => {
+                            handleMessageDeleted(payload.id);
                         })
                         .listen('QuestionCreated', () => {
                             if (questionsPanel) {
@@ -2786,6 +3088,9 @@
                                         id: payload.message_id,
                                     };
                                     updateMessageElementFromPayload(optimisticEl, merged);
+                                    bindBanForms(optimisticEl);
+                                    bindDeleteForms(optimisticEl);
+                                    bindDeleteTriggers(optimisticEl);
                                     containerEl?.scrollTo?.(0, containerEl.scrollHeight);
                                 }
                             }

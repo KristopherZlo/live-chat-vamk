@@ -8,8 +8,11 @@ use App\Models\Question;
 use App\Models\Room;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use App\Events\MessageSent;
 use App\Events\QuestionCreated;
+use App\Events\MessageDeleted;
+use App\Events\QuestionUpdated;
 
 class MessageController extends Controller
 {
@@ -132,5 +135,85 @@ class MessageController extends Controller
         return redirect()
             ->route('rooms.public', $room->slug)
             ->with('status', 'Message sent.');
+    }
+
+    public function destroy(Request $request, Room $room, Message $message)
+    {
+        if ($message->room_id !== $room->id) {
+            abort(404);
+        }
+
+        $user = Auth::user();
+        $isOwner = $user && $user->id === $room->user_id;
+
+        $participant = null;
+        $sessionKey = 'room_participant_' . $room->id;
+
+        if (!$isOwner) {
+            $participantId = $request->session()->get($sessionKey);
+            if ($participantId) {
+                $participant = Participant::find($participantId);
+            }
+        }
+
+        $isAuthor = false;
+
+        if ($user && $message->user_id && $message->user_id === $user->id) {
+            $isAuthor = true;
+        } elseif ($participant && $message->participant_id && $message->participant_id === $participant->id) {
+            $isAuthor = true;
+        }
+
+        if (!$isOwner && !$isAuthor) {
+            $response = ['message' => 'You cannot delete this message.'];
+            return $request->expectsJson()
+                ? response()->json($response, 403)
+                : abort(403, $response['message']);
+        }
+
+        $message->loadMissing('question');
+
+        if ($message->trashed()) {
+            return $request->expectsJson()
+                ? response()->json(['status' => 'deleted'])
+                : back()->with('status', 'Message removed.');
+        }
+
+        $deletedByUserId = $isOwner || ($user && $message->user_id === $user->id)
+            ? $user?->id
+            : null;
+        $deletedByParticipantId = !$deletedByUserId && $participant && $message->participant_id === $participant->id
+            ? $participant->id
+            : null;
+
+        DB::transaction(function () use ($message, $deletedByUserId, $deletedByParticipantId, $isOwner) {
+            $message->deleted_by_user_id = $deletedByUserId;
+            $message->deleted_by_participant_id = $deletedByParticipantId;
+            $message->save();
+            $message->delete();
+
+            if ($message->question) {
+                if ($isOwner) {
+                    $message->question->deleted_by_owner_at = now();
+                } elseif ($deletedByParticipantId) {
+                    $message->question->deleted_by_participant_at = now();
+                }
+                $message->question->save();
+                event(new QuestionUpdated($message->question));
+            }
+        });
+
+        event(new MessageDeleted(
+            $message->id,
+            $room->id,
+            $deletedByUserId,
+            $deletedByParticipantId
+        ));
+
+        if ($request->expectsJson()) {
+            return response()->json(['status' => 'deleted']);
+        }
+
+        return back()->with('status', 'Message removed.');
     }
 }

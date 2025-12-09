@@ -60,6 +60,8 @@ Route::get('/rooms/{slug}/exists', [RoomController::class, 'checkExists'])
 Route::post('/rooms/{room}/messages', [MessageController::class, 'store'])
     ->middleware('throttle:room-messages')
     ->name('rooms.messages.store');
+Route::delete('/rooms/{room}/messages/{message}', [MessageController::class, 'destroy'])
+    ->name('rooms.messages.destroy');
 Route::post('/rooms/{room}/messages/{message}/reactions', [MessageReactionController::class, 'toggle'])
     ->middleware('throttle:room-messages')
     ->name('rooms.messages.reactions.toggle');
