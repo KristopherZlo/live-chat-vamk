@@ -48,3 +48,7 @@ npm run build
 - Run tests: `php artisan test`
 - Clear config cache: `php artisan config:clear`
 - Rebuild frontend: `npm run build`
+
+### Dev/test-only commands
+- Seed a room with live-broadcast demo chat data (messages, replies, questions, deletions, reactions): `php artisan chat:seed-demo <room-id-or-slug> [--count=20]` (works in testing/local/dev only).
+- Generate invite codes for registration: `php artisan invite:generate {count=1} [--length=12]`
