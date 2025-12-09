@@ -635,45 +635,87 @@ function markQueueHasNew() {
   }
 }
 
+function ensureFlashContainer() {
+  let container = document.querySelector('.flash-toaster');
+  if (!container) {
+    container = document.createElement('div');
+    container.className = 'flash-toaster';
+    document.body.appendChild(container);
+  }
+  return container;
+}
+
 function setupFlashMessages(root = document) {
+  const toaster = ensureFlashContainer();
   const flashes = [];
   if (root instanceof Element && root.matches('[data-flash]')) {
     flashes.push(root);
   }
   flashes.push(...Array.from(root.querySelectorAll('[data-flash]')));
   flashes.forEach((flash) => {
+    if (!flash.classList.contains('flash-toast')) {
+      flash.classList.add('flash-toast');
+    }
+    if (!flash.parentElement || !flash.parentElement.classList.contains('flash-toaster')) {
+      toaster.appendChild(flash);
+    }
+    const duration = Number(flash.dataset.flashDuration || '4500');
+    flash.dataset.flashDuration = String(duration);
+    if (!flash.querySelector('.flash-progress')) {
+      const bar = document.createElement('div');
+      bar.className = 'flash-progress';
+      bar.innerHTML = '<span></span>';
+      flash.appendChild(bar);
+    }
+    const progress = flash.querySelector('.flash-progress');
+    if (progress) {
+      progress.style.setProperty('--flash-duration', `${duration}ms`);
+    }
     const closeBtn = flash.querySelector('[data-flash-close]');
+    let createdClose = false;
+    if (!closeBtn) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'icon-btn flash-close';
+      btn.setAttribute('aria-label', 'Close');
+      btn.dataset.flashClose = '1';
+      btn.innerHTML = '<i data-lucide="x"></i>';
+      flash.appendChild(btn);
+      createdClose = true;
+    }
     const hide = () => {
       flash.classList.add('hidden');
-      setTimeout(() => flash.remove(), 300);
+      setTimeout(() => flash.remove(), 250);
     };
-    if (closeBtn) {
-      closeBtn.addEventListener('click', hide);
+    const close = flash.querySelector('[data-flash-close]');
+    if (close) {
+      close.addEventListener('click', hide, { once: true });
     }
-    setTimeout(hide, 3500);
+    if (duration > 0) {
+      setTimeout(hide, duration);
+    }
+    if (createdClose && window.refreshLucideIcons) {
+      refreshLucideIcons(flash);
+    }
   });
 }
 
 function showFlashNotification(message, options = {}) {
-  const {
-    type = 'success',
-    host = document.querySelector('.room-header') || document.querySelector('.app-header') || document.body,
-    source,
-  } = options;
-
-  const container = host && host.parentNode ? host.parentNode : document.body;
+  const { type = 'success', source, duration = 4500 } = options;
+  const container = ensureFlashContainer();
   if (source) {
     const existing = container.querySelector(`[data-flash-source="${source}"]`);
     if (existing) {
-      const span = existing.querySelector('span');
+      const span = existing.querySelector('.flash-text');
       if (span) {
         span.textContent = message;
-      } else {
-        const newSpan = document.createElement('span');
-        newSpan.textContent = message;
-        existing.prepend(newSpan);
       }
-      existing.className = `flash flash-${type}`;
+      existing.className = `flash flash-${type} flash-toast`;
+      existing.dataset.flashDuration = String(duration);
+      const bar = existing.querySelector('.flash-progress');
+      if (bar) {
+        bar.style.setProperty('--flash-duration', `${duration}ms`);
+      }
       setupFlashMessages(existing);
       if (window.refreshLucideIcons) {
         refreshLucideIcons(existing);
@@ -683,29 +725,34 @@ function showFlashNotification(message, options = {}) {
   }
 
   const flash = document.createElement('div');
-  flash.className = `flash flash-${type}`;
+  flash.className = `flash flash-${type} flash-toast`;
   flash.dataset.flash = '1';
-  if (source) {
-    flash.dataset.flashSource = source;
-  }
+  flash.dataset.flashDuration = String(duration);
+  if (source) flash.dataset.flashSource = source;
+
   flash.innerHTML = `
-    <span>${message}</span>
+    <div class="flash-body">
+      <div class="flash-kicker">System notification</div>
+      <div class="flash-text">${message}</div>
+    </div>
     <button class="icon-btn flash-close" type="button" aria-label="Close" data-flash-close>
       <i data-lucide="x"></i>
     </button>
+    <div class="flash-progress"><span></span></div>
   `;
 
-  if (host && host.parentNode) {
-    host.parentNode.insertBefore(flash, host.nextSibling);
-  } else {
-    container.appendChild(flash);
-  }
-
+  container.appendChild(flash);
   setupFlashMessages(flash);
   if (window.refreshLucideIcons) {
     refreshLucideIcons(flash);
   }
   return flash;
+}
+
+// Expose for console/tests
+if (typeof window !== 'undefined') {
+  window.showFlashNotification = showFlashNotification;
+  window.setupFlashMessages = setupFlashMessages;
 }
 
 function setupInlineEditors(root = document) {

@@ -107,27 +107,19 @@
         'resources/js/lucide.js',
         'resources/css/app.css',
         'resources/css/design.css',
-        'resources/css/onboarding.css',
         'resources/js/app.js',
-        'resources/js/design.js',
-        'resources/js/onboarding.js'
+        'resources/js/design.js'
     ])
     @stack('styles')
 </head>
 @php
     $authUser = Auth::user();
-    $hasRooms = $authUser ? $authUser->rooms()->exists() : false;
-    $onboardingNewUser = $authUser
-        ? (session('onboarding_new_user') || !$hasRooms)
-        : false;
     $routeName = \Illuminate\Support\Facades\Route::currentRouteName();
 @endphp
 @php($pageClass = $pageClass ?? $attributes->get('page-class'))
 <body
     class="app{{ $pageClass ? ' ' . $pageClass : '' }}"
     data-route-name="{{ $routeName }}"
-    data-onboarding-new-user="{{ $onboardingNewUser ? '1' : '0' }}"
-    data-onboarding-has-rooms="{{ $hasRooms ? '1' : '0' }}"
     @if($authUser)
         data-user-name="{{ $authUser->name }}"
     @endif

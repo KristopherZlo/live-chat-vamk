@@ -28,6 +28,62 @@
   --radius-lg: 0.85rem;
   --radius-xl: 1rem;
   --radius-pill: 999px;
+
+  /* === UNIVERSAL TRANSPARENT PALETTE === */
+  --surface-alpha: 0.16;
+  --surface-hover-alpha: 0.28;
+  --border-alpha: 0.7;
+  --border-hover-alpha: 1;
+  --text-on-accent-light: rgba(255,255,255,0.9);
+  --text-on-accent-dark: rgba(0,0,0,0.85);
+  --blue-accent:#7289da;
+  --blue-bg:rgba(15,20,35,0.75);
+  --blue-bg-hover:rgba(22,32,70,0.9);
+  --blue-border:rgba(114,137,218,0.9);
+  --blue-border-hover:rgba(114,137,218,1);
+  --blue-text:rgba(255,255,255,0.95);
+  --green-accent:#67c960;
+  --green-bg:rgba(10,24,10,0.75);
+  --green-bg-hover:rgba(30,70,30,0.9);
+  --green-border:rgba(103,201,96,0.9);
+  --green-border-hover:rgba(103,201,96,1);
+  --green-text:rgba(255,255,255,0.95);
+  --cyan-accent:#2e9fd2;
+  --cyan-bg:rgba(10,24,30,0.75);
+  --cyan-bg-hover:rgba(20,70,90,0.9);
+  --cyan-border:rgba(46,159,210,0.9);
+  --cyan-border-hover:rgba(46,159,210,1);
+  --cyan-text:rgba(255,255,255,0.95);
+  --orange-accent:#da8b72;
+  --orange-bg:rgba(30,18,10,0.75);
+  --orange-bg-hover:rgba(95,55,30,0.9);
+  --orange-border:rgba(218,139,114,0.9);
+  --orange-border-hover:rgba(218,139,114,1);
+  --orange-text:rgba(255,255,255,0.95);
+  --red-accent:#da7272;
+  --red-bg:rgba(30,10,10,0.75);
+  --red-bg-hover:rgba(95,35,35,0.9);
+  --red-border:rgba(218,114,114,0.9);
+  --red-border-hover:rgba(218,114,114,1);
+  --red-text:rgba(255,255,255,0.95);
+  --purple-accent:#9a72da;
+  --purple-bg:rgba(24,14,33,0.75);
+  --purple-bg-hover:rgba(60,35,95,0.9);
+  --purple-border:rgba(154,114,218,0.9);
+  --purple-border-hover:rgba(154,114,218,1);
+  --purple-text:rgba(255,255,255,0.95);
+  --pink-accent:#da72a1;
+  --pink-bg:rgba(30,10,22,0.75);
+  --pink-bg-hover:rgba(95,35,70,0.9);
+  --pink-border:rgba(218,114,161,0.9);
+  --pink-border-hover:rgba(218,114,161,1);
+  --pink-text:rgba(255,255,255,0.95);
+  --gray-accent:#727272;
+  --gray-bg:rgba(20,20,20,0.75);
+  --gray-bg-hover:rgba(40,40,40,0.9);
+  --gray-border:rgba(114,114,114,0.9);
+  --gray-border-hover:rgba(114,114,114,1);
+  --gray-text:rgba(255,255,255,0.9);
 }
 
 @supports (height: 100dvh){
@@ -4039,10 +4095,199 @@ body.app, .app {
   color: #fca5a5;
 }
 
+.flash-toaster {
+  position: fixed;
+  inset: auto 0 1rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: center;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.flash-toast {
+  width: min(520px, 100%);
+  margin: 0;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  background: var(--blue-bg);
+  border: 1px solid var(--blue-border);
+  color: var(--blue-text);
+  pointer-events: auto;
+  position: relative;
+  overflow: hidden;
+  padding: 0.9rem 1rem 1.1rem;
+  animation: flashIn 200ms ease-out;
+}
+
+.flash-toast.flash-success {
+  background: var(--green-bg);
+  border-color: var(--green-border);
+  color: var(--green-text);
+}
+
+.flash-toast.flash-danger {
+  background: var(--red-bg);
+  border-color: var(--red-border);
+  color: var(--red-text);
+}
+
+.flash-toast.flash-warning {
+  background: var(--orange-bg);
+  border-color: var(--orange-border);
+  color: var(--orange-text);
+}
+
+.flash-toast.flash-info {
+  background: var(--cyan-bg);
+  border-color: var(--cyan-border);
+  color: var(--cyan-text);
+}
+
+.flash-toast.flash-neutral {
+  background: var(--gray-bg);
+  border-color: var(--gray-border);
+  color: var(--gray-text);
+}
+
+.flash-body {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.flash-kicker {
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.flash-text {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
 .flash-close {
-  border: none;
-  background: transparent;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-on-accent-light);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.flash-close i,
+.flash-close svg {
+  color: inherit;
+  stroke: currentColor;
+}
+
+.flash-close:hover,
+.flash-close:focus-visible {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #fff;
+  outline: none;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+.flash-progress {
+  position: absolute;
+  left: 0.85rem;
+  right: 0.85rem;
+  bottom: 0.6rem;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.flash-progress span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--blue-border);
+  animation: flashProgress linear forwards;
+  animation-duration: var(--flash-duration, 4500ms);
+  transform-origin: left center;
+}
+
+.flash-toast.flash-success .flash-progress span { background: var(--green-border); }
+.flash-toast.flash-danger .flash-progress span { background: var(--red-border); }
+.flash-toast.flash-warning .flash-progress span { background: var(--orange-border); }
+.flash-toast.flash-info .flash-progress span { background: var(--cyan-border); }
+.flash-toast.flash-neutral .flash-progress span { background: var(--gray-border); }
+
+@keyframes flashProgress {
+  from { transform: scaleX(1); opacity: 1; }
+  to { transform: scaleX(0); opacity: 0.6; }
+}
+
+@keyframes flashIn {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.driver-popover {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.25);
+}
+
+.driver-popover-next-btn,
+.driver-popover-prev-btn,
+.driver-popover-close-btn {
+  border-radius: 10px;
+  border: 1px solid var(--border-strong);
+  font-weight: 600;
+  padding: 0.45rem 0.9rem;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.driver-popover-next-btn {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent-strong, var(--accent));
+  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.25);
+}
+
+.driver-popover-prev-btn {
+  background: var(--bg-soft);
+  color: var(--text-secondary);
+}
+
+.driver-popover-close-btn {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-secondary);
+}
+
+.driver-popover-next-btn:hover,
+.driver-popover-prev-btn:hover,
+.driver-popover-close-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
+}
+
+.driver-popover-next-btn:focus-visible,
+.driver-popover-prev-btn:focus-visible,
+.driver-popover-close-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 body.modal-open {
