@@ -55,11 +55,6 @@
                             <span>Stay signed in</span>
                         </label>
 
-                        @if (Route::has('password.request'))
-                            <a class="login-link" href="{{ route('password.request') }}">
-                                Forgot password?
-                            </a>
-                        @endif
                     </div>
 
                     <button class="login-submit" type="submit">

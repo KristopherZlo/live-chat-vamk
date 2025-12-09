@@ -817,6 +817,38 @@
                     '"': '&quot;',
                     "'": '&#039;',
                 }[char] ?? char));
+                const showThrottleNotice = (text) => {
+                    const message = text || 'You are doing that too quickly. Please slow down.';
+                    if (typeof window.showFlashNotification === 'function') {
+                        window.showFlashNotification(message, { type: 'warning', source: 'throttle-alert', duration: 4800 });
+                        return;
+                    }
+                    const host = chatInputWrapper?.parentElement || document.querySelector('[data-chat-panel="chat"]') || document.body;
+                    const existing = host.querySelector('.flash[data-throttle-alert]');
+                    if (existing) {
+                        existing.remove();
+                    }
+                    const flash = document.createElement('div');
+                    flash.className = 'flash flash-warning';
+                    flash.dataset.throttleAlert = '1';
+                    flash.innerHTML = `
+                        <span>${escapeHtml(message)}</span>
+                        <button class="icon-btn flash-close" type="button" data-throttle-close aria-label="Close">
+                            <i data-lucide="x"></i>
+                        </button>
+                    `;
+                    host.prepend(flash);
+                    const closer = flash.querySelector('[data-throttle-close]');
+                    if (closer) {
+                        closer.addEventListener('click', () => flash.remove());
+                    }
+                    window.setTimeout(() => {
+                        flash.remove();
+                    }, 4800);
+                    if (window.refreshLucideIcons) {
+                        window.refreshLucideIcons();
+                    }
+                };
                 const removeEmptyMessageState = () => {
                     if (!chatContainer) return;
                     const empty = chatContainer.querySelector('.message-empty');
@@ -1649,7 +1681,8 @@
                 })();
 
                 const requestDeleteMessage = async (url) => {
-                    if (!url) return false;
+                    const result = { ok: false, status: 0, message: '' };
+                    if (!url) return result;
                     try {
                         const response = await fetch(url, {
                             method: 'DELETE',
@@ -1659,10 +1692,14 @@
                                 'Accept': 'application/json',
                             },
                         });
-                        return response.ok;
+                        result.ok = response.ok;
+                        result.status = response.status;
+                        const payload = await response.json().catch(() => ({}));
+                        result.message = payload?.message || '';
+                        return result;
                     } catch (error) {
                         console.error('Delete message error', error);
-                        return false;
+                        return result;
                     }
                 };
 
@@ -1676,7 +1713,11 @@
                             const confirmed = await deleteModal.open();
                             if (!confirmed) return;
                             const url = form.getAttribute('action');
-                            const ok = await requestDeleteMessage(url);
+                            const { ok, status, message } = await requestDeleteMessage(url);
+                            if (status === 429) {
+                                showThrottleNotice(message || 'You are deleting messages too quickly. Please wait a moment.');
+                                return;
+                            }
                             if (ok) {
                                 const messageEl = form.closest('.message');
                                 handleMessageDeleted(messageEl?.dataset?.messageId || null);
@@ -1698,7 +1739,11 @@
                             if (!url) return;
                             const confirmed = await deleteModal.open();
                             if (!confirmed) return;
-                            const ok = await requestDeleteMessage(url);
+                            const { ok, status, message } = await requestDeleteMessage(url);
+                            if (status === 429) {
+                                showThrottleNotice(message || 'You are deleting messages too quickly. Please wait a moment.');
+                                return;
+                            }
                             const messageId = btn.dataset.messageId || btn.closest('.message')?.dataset.messageId;
                             if (ok) {
                                 handleMessageDeleted(messageId);
@@ -3057,6 +3102,14 @@
                             if (response.status === 403) {
                                 if (optimisticEl) optimisticEl.remove();
                                 showBanState('You were banned by the host. Chat is locked.');
+                                return;
+                            }
+
+                            if (response.status === 429) {
+                                if (optimisticEl) optimisticEl.remove();
+                                const payload = await response.json().catch(() => ({}));
+                                const message = payload?.message || 'You are sending messages too quickly. Please slow down.';
+                                showThrottleNotice(message);
                                 return;
                             }
 

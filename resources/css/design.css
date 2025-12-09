@@ -4122,7 +4122,7 @@ body.app, .app {
 }
 
 .flash-toast {
-  width: min(520px, 100%);
+  width: min(520px, calc(100% - 1.5rem));
   margin: 0;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
   background: var(--blue-bg);
@@ -4184,8 +4184,9 @@ body.app, .app {
 }
 
 .flash-close {
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 1.9rem;
+  height: 1.9rem;
+  max-width: 2rem;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.22);
   background: rgba(255, 255, 255, 0.1);
@@ -4210,6 +4211,34 @@ body.app, .app {
   color: #fff;
   outline: none;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+@media (max-width: 640px) {
+  .flash-toaster {
+    inset: auto 0 0.75rem 0;
+    padding: 0 0.5rem;
+  }
+
+  .flash-toast {
+    width: calc(100% - 1rem);
+    padding: 0.8rem 0.85rem 1rem;
+    border-radius: var(--radius-lg, 14px);
+  }
+
+  .flash-text {
+    font-size: 0.95rem;
+    line-height: 1.35;
+  }
+
+  .flash-close {
+    width: 1.65rem;
+    height: 1.65rem;
+  }
+
+  .flash-progress {
+    left: 0.75rem;
+    right: 0.75rem;
+  }
 }
 
 .flash-progress {
