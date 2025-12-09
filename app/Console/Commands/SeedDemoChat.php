@@ -284,34 +284,44 @@ class SeedDemoChat extends Command
 
         $emojis = ['👍', '👏', '🔥', '🎯', '🤔', '🙌', '😊', '💡'];
         foreach ($messages as $message) {
-            if (random_int(0, 1) === 0) {
+            // Some messages may have zero reactions
+            if (random_int(0, 3) === 0) {
                 continue;
             }
 
-            $actorIsHost = $host && random_int(0, 4) === 0;
-            $actor = $actorIsHost ? $host : $participants->random();
-            $emoji = Arr::random($emojis);
+            $reactorCount = random_int(1, max(2, (int) floor($participants->count() / 2)));
+            $actors = $participants->shuffle()->take($reactorCount)->values();
 
-            $reaction = MessageReaction::updateOrCreate(
-                [
-                    'message_id' => $message->id,
-                    'user_id' => $actorIsHost ? $actor->id : null,
-                    'participant_id' => $actorIsHost ? null : $actor->id,
-                    'emoji' => $emoji,
-                ],
-                []
-            );
+            // Optionally include host as a reactor
+            if ($host && random_int(0, 1) === 0) {
+                $actors->push($host);
+            }
+
+            foreach ($actors as $actor) {
+                $actorIsHost = $host && $actor && $actor->id === ($host->id ?? null);
+                $emoji = Arr::random($emojis);
+
+                MessageReaction::updateOrCreate(
+                    [
+                        'message_id' => $message->id,
+                        'user_id' => $actorIsHost ? $actor->id : null,
+                        'participant_id' => $actorIsHost ? null : $actor->id,
+                        'emoji' => $emoji,
+                    ],
+                    []
+                );
+            }
 
             $summary = $this->summarizeReactions($message->id);
-            $yourReactions = [$emoji];
+            $yourReactions = [];
 
             event(new ReactionUpdated(
                 $room->id,
                 $message->id,
                 $summary,
                 $yourReactions,
-                $reaction->user_id,
-                $reaction->participant_id
+                null,
+                null
             ));
         }
     }
