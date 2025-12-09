@@ -77,6 +77,17 @@ class SeedDemoChat extends Command
             'I tried the homework, and step 3 confused me.',
             'Quick check: do we submit today or tomorrow?',
             'Thanks for clarifying earlier, that helped a lot.',
+            'I got stuck on the diagram on slide 6.',
+            'Is there a shortcut to remember the core steps?',
+            'My code works locally but fails in the example—any ideas?',
+            'Can we review the edge cases for this algorithm?',
+            'Is the group project still due next week?',
+            'What is the simplest way to test this feature?',
+            'How deep do we need to go for the optional part?',
+            'Could you recap the main takeaway in one sentence?',
+            'I tried the new syntax, but the linter complains.',
+            'Are there recommended readings to go deeper?',
+            'What is the grading weight for this section?',
         ];
 
         $replyLines = [
@@ -97,6 +108,59 @@ class SeedDemoChat extends Command
             'I’ll share a link with extra examples in a moment.',
             'Yes, the deadline is tomorrow at noon.',
             'Good question — think about the data flow first.',
+        ];
+
+        // Override with richer demo pools
+        $conversationStarters = [
+            'Hey everyone, ready for the session?',
+            'I had a question about the last topic we covered.',
+            'Does anyone have a good mnemonic for this formula?',
+            'I tried the homework, and step 3 confused me.',
+            'Quick check: do we submit today or tomorrow?',
+            'Thanks for clarifying earlier, that helped a lot.',
+            'I got stuck on the diagram on slide 6.',
+            'Is there a shortcut to remember the core steps?',
+            'My code works locally but fails in the example—any ideas?',
+            'Can we review the edge cases for this algorithm?',
+            'Is the group project still due next week?',
+            'What is the simplest way to test this feature?',
+            'How deep do we need to go for the optional part?',
+            'Could you recap the main takeaway in one sentence?',
+            'I tried the new syntax, but the linter complains.',
+            'Are there recommended readings to go deeper?',
+            'What is the grading weight for this section?',
+        ];
+
+        $replyLines = [
+            'Ah, that makes sense now.',
+            'Could you expand on that with an example?',
+            'Following up on this — where can I read more?',
+            'I think the answer is in the second slide deck.',
+            'Good catch! I missed that detail.',
+            'Same question here, also curious.',
+            'Here is a quick tip: write it down as a flow.',
+            'I would try visualizing it; that helped me.',
+            'Got it, thanks!',
+            'Does this apply to async tasks too?',
+            'I will try that and report back.',
+            'Sharing a snippet that worked for me.',
+            'Maybe the config is missing an entry?',
+            'I think we need to reset the cache for that.',
+            'Try stepping through with a debugger.',
+            'I saw a similar issue on the forum yesterday.',
+            'Could the dataset size be the problem?',
+            'Nice catch, I did not think of that.',
+        ];
+
+        $hostLines = [
+            'Welcome! Let’s warm up with a quick recap.',
+            'I’ll share a link with extra examples in a moment.',
+            'Yes, the deadline is tomorrow at noon.',
+            'Good question — think about the data flow first.',
+            'Focus on clarity over brevity for this exercise.',
+            'Remember to test with both happy and edge paths.',
+            'The rubric is posted in the docs section.',
+            'Start with a small prototype, then iterate.',
         ];
 
         $messages = collect();
@@ -140,8 +204,8 @@ class SeedDemoChat extends Command
             $isQuestion = !$authorIsHost && random_int(0, 5) === 0; // some participant replies are questions.
 
             $content = Arr::random($replyLines);
-            if ($isQuestion) {
-                $content = 'Question: ' . Str::lower($content);
+            if ($isQuestion && random_int(0, 1) === 1) {
+                $content = 'Question: ' . $content;
             }
 
             $message = $this->createMessage(
@@ -283,23 +347,27 @@ class SeedDemoChat extends Command
         }
 
         $emojis = ['👍', '👏', '🔥', '🎯', '🤔', '🙌', '😊', '💡'];
+        $actorsPool = $participants->values();
+        if ($host) {
+            $actorsPool->push($host);
+        }
+
         foreach ($messages as $message) {
-            // Some messages may have zero reactions
-            if (random_int(0, 3) === 0) {
+            if ($actorsPool->isEmpty()) {
                 continue;
             }
 
-            $reactorCount = random_int(1, max(2, (int) floor($participants->count() / 2)));
-            $actors = $participants->shuffle()->take($reactorCount)->values();
-
-            // Optionally include host as a reactor
-            if ($host && random_int(0, 1) === 0) {
-                $actors->push($host);
+            $totalReactions = random_int(0, 15);
+            if ($totalReactions === 0) {
+                continue;
             }
 
-            foreach ($actors as $actor) {
+            $prevEmoji = null;
+            for ($i = 0; $i < $totalReactions; $i++) {
+                $actor = $actorsPool->random();
                 $actorIsHost = $host && $actor && $actor->id === ($host->id ?? null);
-                $emoji = Arr::random($emojis);
+                $emoji = (random_int(0, 3) === 0 && $prevEmoji) ? $prevEmoji : Arr::random($emojis);
+                $prevEmoji = $emoji;
 
                 MessageReaction::updateOrCreate(
                     [
