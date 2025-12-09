@@ -5,6 +5,8 @@ namespace App\Console\Commands;
 use App\Events\MessageDeleted;
 use App\Events\MessageSent;
 use App\Events\QuestionCreated;
+use App\Events\ReactionUpdated;
+use App\Models\MessageReaction;
 use App\Events\QuestionUpdated;
 use App\Models\Message;
 use App\Models\Participant;
@@ -210,6 +212,8 @@ class SeedDemoChat extends Command
             }
         }
 
+        $this->seedReactions($messages, $room, $participants, $host);
+
         $this->info("Seeded {$messages->count()} messages into room {$room->id}.");
 
         return self::SUCCESS;
@@ -270,5 +274,68 @@ class SeedDemoChat extends Command
         }
 
         return $message;
+    }
+
+    private function seedReactions($messages, Room $room, $participants, $host): void
+    {
+        if ($messages->isEmpty()) {
+            return;
+        }
+
+        $emojis = ['👍', '👏', '🔥', '🎯', '🤔', '🙌', '😊', '💡'];
+        foreach ($messages as $message) {
+            if (random_int(0, 1) === 0) {
+                continue;
+            }
+
+            $actorIsHost = $host && random_int(0, 4) === 0;
+            $actor = $actorIsHost ? $host : $participants->random();
+            $emoji = Arr::random($emojis);
+
+            $reaction = MessageReaction::updateOrCreate(
+                [
+                    'message_id' => $message->id,
+                    'user_id' => $actorIsHost ? $actor->id : null,
+                    'participant_id' => $actorIsHost ? null : $actor->id,
+                    'emoji' => $emoji,
+                ],
+                []
+            );
+
+            $summary = $this->summarizeReactions($message->id);
+            $yourReactions = [$emoji];
+
+            event(new ReactionUpdated(
+                $room->id,
+                $message->id,
+                $summary,
+                $yourReactions,
+                $reaction->user_id,
+                $reaction->participant_id
+            ));
+        }
+    }
+
+    private function summarizeReactions(int $messageId): array
+    {
+        $grouped = MessageReaction::where('message_id', $messageId)
+            ->get()
+            ->groupBy('emoji')
+            ->map(fn ($group, $emoji) => [
+                'emoji' => $emoji,
+                'count' => $group->count(),
+            ])
+            ->values();
+
+        return $grouped
+            ->sort(function ($a, $b) {
+                $countDiff = $b['count'] <=> $a['count'];
+                if ($countDiff !== 0) {
+                    return $countDiff;
+                }
+                return strcasecmp($a['emoji'], $b['emoji']);
+            })
+            ->values()
+            ->toArray();
     }
 }
