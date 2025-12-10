@@ -18,6 +18,7 @@ class RoomController extends Controller
     private const MAX_MESSAGES = 200;
     private const MAX_QUEUE_ITEMS = 200;
     private const MAX_MY_QUESTIONS = 200;
+    private static array $identityColumnCache = [];
 
     public function landing()
     {
@@ -255,8 +256,7 @@ class RoomController extends Controller
     {
         $user = $request->user();
         $ipAddress = $ipAddress ?? $request->ip();
-        $hasIdentityColumns = Schema::hasColumn('participants', 'ip_address')
-            && Schema::hasColumn('participants', 'fingerprint');
+        $hasIdentityColumns = $this->hasIdentityColumns('participants');
 
         //      
         if ($user && $user->id === $room->user_id) {
@@ -408,15 +408,28 @@ class RoomController extends Controller
         }
 
         $fingerprint = (string) Str::uuid();
-        Cookie::queue(cookie('lc_fp', $fingerprint, 60 * 24 * 365, '/', null, false, false));
+        $secure = (bool) config('session.secure', $request->isSecure());
+        $sameSite = config('session.same_site', 'lax') ?: 'lax';
+        $domain = config('session.domain');
+
+        Cookie::queue(cookie(
+            'lc_fp',
+            $fingerprint,
+            60 * 24 * 365,
+            '/',
+            $domain,
+            $secure,
+            true,
+            false,
+            $sameSite
+        ));
 
         return $fingerprint;
     }
 
     protected function isIdentityBanned(Room $room, ?string $ipAddress, ?string $fingerprint): bool
     {
-        $hasIdentityColumns = Schema::hasColumn('room_bans', 'ip_address')
-            && Schema::hasColumn('room_bans', 'fingerprint');
+        $hasIdentityColumns = $this->hasIdentityColumns('room_bans');
 
         if (!$hasIdentityColumns) {
             return false;
@@ -442,4 +455,13 @@ class RoomController extends Controller
     {
         return auth()->check() && auth()->id() === $room->user_id;
     }
-}
+
+    protected function hasIdentityColumns(string $table): bool
+    {
+        if (array_key_exists($table, self::$identityColumnCache)) {
+            return self::$identityColumnCache[$table];
+        }
+
+        return self::$identityColumnCache[$table] = Schema::hasColumns($table, ['ip_address', 'fingerprint']);
+    }
+}

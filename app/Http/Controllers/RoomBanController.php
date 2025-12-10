@@ -11,6 +11,8 @@ use Illuminate\Validation\Rule;
 
 class RoomBanController extends Controller
 {
+    private static ?bool $banIdentityColumns = null;
+
     public function store(Request $request, Room $room)
     {
         $this->ensureOwner($room);
@@ -25,8 +27,7 @@ class RoomBanController extends Controller
 
         $participant = Participant::findOrFail($data['participant_id']);
 
-        $hasIdentityColumns = Schema::hasColumn('room_bans', 'ip_address')
-            && Schema::hasColumn('room_bans', 'fingerprint');
+        $hasIdentityColumns = $this->bansHaveIdentityColumns();
 
         $banData = [
             'participant_id' => $participant->id,
@@ -64,5 +65,14 @@ class RoomBanController extends Controller
         if (!Auth::check() || Auth::id() !== $room->user_id) {
             abort(403);
         }
+    }
+
+    protected function bansHaveIdentityColumns(): bool
+    {
+        if (self::$banIdentityColumns !== null) {
+            return self::$banIdentityColumns;
+        }
+
+        return self::$banIdentityColumns = Schema::hasColumns('room_bans', ['ip_address', 'fingerprint']);
     }
 }
