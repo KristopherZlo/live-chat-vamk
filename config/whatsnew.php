@@ -2,6 +2,62 @@
 
 return [
     'releases' => [
+        '1.3.0' => [
+            'date' => '2025-12-10',
+            'image' => 'whats-new/130.png',
+            'image_alt' => 'Preview of the 1.3.0 classroom updates',
+            'excerpt' => 'Replies moved to their own tab, quick-reply buttons, room speed-dial, new filters, and a public updates page polish the experience.',
+            'sections' => [
+                [
+                    'title' => '💬 Replies got their own tab',
+                    'items' => [
+                        'No more "where did that answer go?". Threads, unread badges, jump-to-source - chaos retired.',
+                    ],
+                ],
+                [
+                    'title' => '⚡ Quick-reply buttons',
+                    'items' => [
+                        'Up to three saved phrases per teacher. One click, message sent. More teaching, less typing.',
+                    ],
+                ],
+                [
+                    'title' => '🧹 You can delete your messages now.',
+                    'items' => [
+                        'With confirmation and proper syncing — no more ghost texts haunting the chat.',
+                    ],
+                ],
+                [
+                    'title' => '📍 Recently visited rooms',
+                    'items' => [
+                        'Your last nine rooms show right on the join page. Like speed-dial, but for classrooms.',
+                    ],
+                ],
+                [
+                    'title' => '🧘 Message history is gone - filters are in',
+                    'items' => [
+                        'All / Answered / Ignored / Deferred / New. Pick a lane, see only what you need. Zen restored.',
+                    ],
+                ],
+                [
+                    'title' => '📣 Public Updates page',
+                    'items' => [
+                        'You can finally check changes without guessing or asking devs nicely.',
+                    ],
+                ],
+                [
+                    'title' => '✨ UI cleaned up, bugs moved out',
+                    'items' => [
+                        'Smoother layouts, calmer mobile view. The small gremlins have been evicted.',
+                    ],
+                ],
+                [
+                    'title' => '🧪 TypeScript is taking over the frontend',
+                    'items' => [
+                        'Don\'t panic - things just break less and behave more like code that knows what it\'s doing.',
+                    ],
+                ],
+            ],
+        ],
         '1.2.0' => [
             'date' => '2025-12-01',
             'image' => 'whats-new/message-reactions.png',
