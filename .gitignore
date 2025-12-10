@@ -3,6 +3,7 @@
 /design-tests
 /design-tests/*
 /backup-css
+/.cursor
 
 # Laravel
 /public/hot
