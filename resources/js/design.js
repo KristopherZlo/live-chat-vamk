@@ -764,10 +764,57 @@ function showFlashNotification(message, options = {}) {
   return flash;
 }
 
+const NETWORK_STATUS_OFFLINE_SOURCE = 'network-status-offline';
+const NETWORK_STATUS_ONLINE_SOURCE = 'network-status-online';
+const NETWORK_STATUS_OFFLINE_MESSAGE = 'Internet connection lost. Some features may be unavailable.';
+const NETWORK_STATUS_ONLINE_MESSAGE = 'Internet connection restored.';
+
+function clearNetworkOfflineNotice() {
+  const container = document.querySelector('.flash-toaster');
+  if (!container) return;
+  const offlineNotice = container.querySelector(`[data-flash-source="${NETWORK_STATUS_OFFLINE_SOURCE}"]`);
+  if (offlineNotice) {
+    offlineNotice.remove();
+  }
+}
+
+function setupNetworkStatusNotification() {
+  if (typeof window === 'undefined' || window.__networkStatusNotificationBound) {
+    return;
+  }
+  window.__networkStatusNotificationBound = true;
+
+  const showOfflineNotice = () => {
+    showFlashNotification(NETWORK_STATUS_OFFLINE_MESSAGE, {
+      type: 'danger',
+      duration: 0,
+      source: NETWORK_STATUS_OFFLINE_SOURCE,
+    });
+  };
+
+  const showOnlineNotice = () => {
+    clearNetworkOfflineNotice();
+    showFlashNotification(NETWORK_STATUS_ONLINE_MESSAGE, {
+      type: 'success',
+      duration: 3500,
+      source: NETWORK_STATUS_ONLINE_SOURCE,
+    });
+  };
+
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    showOfflineNotice();
+  }
+
+  window.addEventListener('offline', showOfflineNotice);
+  window.addEventListener('online', showOnlineNotice);
+}
+
 // Expose for console/tests
 if (typeof window !== 'undefined') {
   window.showFlashNotification = showFlashNotification;
   window.setupFlashMessages = setupFlashMessages;
+  window.setupNetworkStatusNotification = setupNetworkStatusNotification;
+  setupNetworkStatusNotification();
 }
 
 function setupInlineEditors(root = document) {
