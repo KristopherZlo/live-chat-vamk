@@ -341,8 +341,34 @@
 <script>
 (() => {
     const style = 'color: red; font-size: 24px; font-weight: 900;';
-    console.log('%cSTOP! DO NOT TYPE ANYTHING IN THIS CONSOLE. DOING SO CAN EXPOSE YOUR ACCOUNT AND LEAD TO DATA LOSS.', style);
-    console.log('%cÄLÄ KOSKAAN KIRJOITA MITÄÄN TÄHÄN KONSOLIIN. SE VOI PALJASTAA TILISI JA JOHTAA TIETOJEN MENETYKSEEN.', style);
+    const warn = () => {
+        console.log('%cSTOP! DO NOT TYPE ANYTHING IN THIS CONSOLE. DOING SO CAN EXPOSE YOUR ACCOUNT AND LEAD TO DATA LOSS.', style);
+        console.log('%cÄLÄ KOSKAAN KIRJOITA MITÄÄN TÄHÄN KONSOLIIN. SE VOI PALJASTAA TILISI JA JOHTAA TIETOJEN MENETYKSEEN.', style);
+    };
+    const threshold = 160;
+    let devtoolsOpen = false;
+    const detectDevtools = () => {
+        const widthGap = Math.abs(window.outerWidth - window.innerWidth);
+        const heightGap = Math.abs(window.outerHeight - window.innerHeight);
+        const opened = widthGap > threshold || heightGap > threshold;
+        if (opened !== devtoolsOpen) {
+            devtoolsOpen = opened;
+            window.dispatchEvent(new CustomEvent('devtoolschange', { detail: { open: devtoolsOpen } }));
+        }
+    };
+    window.addEventListener('resize', detectDevtools);
+    window.addEventListener('keydown', (event) => {
+        if (event.key === 'F12' || (event.ctrlKey && event.shiftKey && event.key?.toLowerCase?.() === 'i')) {
+            setTimeout(detectDevtools, 50);
+        }
+    });
+    window.addEventListener('devtoolschange', (event) => {
+        if (event.detail?.open) {
+            warn();
+        }
+    });
+    warn();
+    detectDevtools();
 })();
 </script>
 </body>

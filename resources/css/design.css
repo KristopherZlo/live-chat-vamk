@@ -3016,7 +3016,7 @@ body.app, .app {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
-  margin-top: -0.3rem;
+  margin-top: -1rem;
 }
 
 .room-description-row {
@@ -4035,6 +4035,13 @@ body.app, .app {
   transition: opacity 0.2s ease;
   padding: 0.2rem;
   border-radius: 0.5rem;
+}
+
+.inline-edit-trigger.icon-btn {
+  width: 2.2rem;
+  min-width: 2.2rem;
+  height: 2.2rem;
+  flex: 0 0 2.2rem;
 }
 
 .inline-edit-display {
@@ -5090,13 +5097,19 @@ body.modal-open {
   
   .room-page,.layout {
     flex: 1 1 auto;
-    min-height: var(--app-viewport-height, 100vh);
     display: flex;
     flex-direction: column;
     gap: 0.65rem;
-    padding-bottom: calc(var(--mobile-tab-bar-height) + var(--mobile-safe-bottom, 0px));
     height: auto;
     overflow: hidden;
+  }
+  
+  .room-page {
+    padding-bottom: calc(var(--mobile-tab-bar-height) + var(--mobile-safe-bottom, 0px));
+  }
+  
+  .layout {
+    padding-bottom: 0;
   }
   
   .panel {
@@ -5693,7 +5706,6 @@ body.modal-open {
     body,
     .app,
     .app-shell {
-    min-height: var(--app-viewport-height, 100vh);
     height: auto;
   }
 
@@ -5937,6 +5949,19 @@ body.modal-open {
     padding: 1.1rem 1.15rem;
   }
   
+  .layout,
+        .layout.teacher,
+        #layoutRoot {
+    padding-bottom: 0 !important;
+  }
+  
+  .room-page,
+        .room-page .layout {
+    padding-bottom: 0 !important;
+    min-height: var(--app-viewport-height, 100vh);
+    height: auto;
+  }
+  
   .qr-body {
     flex-direction: column;
     align-items: flex-start;
@@ -5944,9 +5969,6 @@ body.modal-open {
   
   .qr-box {
     width: min(260px, 90vw);
-  }
-  main {
-    padding: 0.65rem 0.85rem calc(var(--mobile-tab-bar-height) + var(--mobile-safe-bottom) + 0.75rem);
   }
   
   .app-header {
@@ -5966,6 +5988,12 @@ body.modal-open {
   .btn,
         .icon-btn {
     width: 100%;
+  }
+  
+  .layout,
+        .layout.teacher,
+        #layoutRoot {
+    padding-bottom: 0 !important;
   }
   
   .mobile-tabs {
