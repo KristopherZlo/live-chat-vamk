@@ -14,7 +14,7 @@
     @if($isAuthPage)
         @vite(['resources/css/login.css', 'resources/js/login.js'])
     @else
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @vite(['resources/css/app.css', 'resources/js/app.ts'])
     @endif
 </head>
 <body class="{{ $isAuthPage ? 'login-page' : 'font-sans text-gray-900 antialiased' }}">
@@ -33,5 +33,12 @@
         </div>
     </div>
 @endif
+<script>
+(() => {
+    const style = 'color: red; font-size: 24px; font-weight: 900;';
+    console.log('%cSTOP! DO NOT TYPE ANYTHING IN THIS CONSOLE. DOING SO CAN EXPOSE YOUR ACCOUNT AND LEAD TO DATA LOSS.', style);
+    console.log('%cÄLÄ KOSKAAN KIRJOITA MITÄÄN TÄHÄN KONSOLIIN. SE VOI PALJASTAA TILISI JA JOHTAA TIETOJEN MENETYKSEEN.', style);
+})();
+</script>
 </body>
 </html>

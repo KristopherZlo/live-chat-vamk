@@ -33,7 +33,7 @@ export default defineConfig({
                 'resources/css/app.css',
                 'resources/css/design.css',
                 'resources/css/login.css',
-                'resources/js/app.js',
+                'resources/js/app.ts',
                 'resources/js/design.js',
                 'resources/js/login.js',
                 'resources/js/lucide.js',

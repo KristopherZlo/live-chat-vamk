@@ -380,7 +380,7 @@
                                         >
                                             <i data-lucide="smile-plus"></i>
                                         </button>
-                                        @if($canDeleteOwn || $isOwner)
+                                        @if($canDeleteOwn || ($isOwner && $isOwnerMessage))
                                             <button
                                                 type="button"
                                                 class="msg-action msg-action-delete"
@@ -1100,6 +1100,7 @@
                     const canAdminDelete = isOwnerUser && !isOwnerAuthor;
                     const canSelfDelete = (currentUserId && authorUserId && Number(currentUserId) === Number(authorUserId))
                         || (currentParticipantId && authorParticipantId && Number(currentParticipantId) === Number(authorParticipantId));
+                    const canInlineDelete = (canSelfDelete || (isOwnerUser && isOwnerAuthor)) && (Boolean(deleteUrl) || pending);
                     const adminActionsHtml = (canBan || canAdminDelete) && deleteUrl ? `
                         <div class="message-admin-actions">
                             ${canBan ? `
@@ -1146,7 +1147,7 @@
                                 <button type="button" class="msg-action msg-action-react" data-reaction-trigger>
                                     <i data-lucide="smile-plus"></i>
                                 </button>
-                                ${(canSelfDelete || isOwnerUser) && deleteUrl ? `
+                                ${canInlineDelete ? `
                                     <button type="button" class="msg-action msg-action-delete" data-message-delete-trigger data-message-id="${messageId}" data-delete-url="${deleteUrl}">
                                         <i data-lucide="trash-2"></i>
                                         <span>Delete</span>
@@ -3198,5 +3199,5 @@
         </script>
     @endpush
     @vite('resources/js/quick-responses.js')
-    @vite('resources/js/track-last-visited-room.js')
+    @vite('resources/js/track-last-visited-room.ts')
 </x-app-layout>

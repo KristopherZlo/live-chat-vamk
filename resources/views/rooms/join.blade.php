@@ -58,5 +58,5 @@
             <div class="visited-rooms-grid" data-last-visited-list></div>
         </div>
     </section>
-    @vite('resources/js/join-last-visited.js')
+    @vite('resources/js/join-last-visited.ts')
 </x-app-layout>

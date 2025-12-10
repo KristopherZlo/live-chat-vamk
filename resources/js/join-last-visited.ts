@@ -1,5 +1,14 @@
+import type { RoomMeta, StoredRoom } from './types/rooms';
+
 const STORAGE_KEY = 'gr:lastVisitedRooms';
 const MAX_ROOMS = 9;
+
+const sanitize = (value: unknown): string => String(value ?? '').trim();
+const toRoomMeta = (value: StoredRoom): RoomMeta => ({
+    slug: sanitize(value?.slug),
+    title: sanitize(value?.title),
+    description: sanitize(value?.description),
+});
 
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof window.localStorage === 'undefined') {
@@ -12,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    const readStoredRooms = () => {
+    const readStoredRooms = (): RoomMeta[] => {
         try {
             const raw = localStorage.getItem(STORAGE_KEY);
             if (!raw) {
@@ -22,20 +31,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!Array.isArray(parsed)) {
                 return [];
             }
-            return parsed
-                .map((item) => ({
-                    slug: String(item?.slug || '').trim(),
-                    title: String(item?.title || '').trim(),
-                    description: String(item?.description || '').trim(),
-                }))
-                .filter((room) => room.slug);
+            return parsed.map((item) => toRoomMeta(item)).filter((room) => room.slug);
         } catch (error) {
             console.error('Unable to read last visited rooms', error);
             return [];
         }
     };
 
-    const persistRooms = (rooms) => {
+    const persistRooms = (rooms: RoomMeta[]): void => {
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(rooms));
         } catch (error) {
@@ -43,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const clearRooms = () => {
+    const clearRooms = (): void => {
         try {
             localStorage.removeItem(STORAGE_KEY);
         } catch (error) {
@@ -51,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const renderCard = (room) => {
+    const renderCard = (room: RoomMeta) => {
         const card = document.createElement('article');
         card.className = 'room-card panel visited-room-card';
 
@@ -93,12 +96,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const baseMeta = document.querySelector('meta[name="app-base-url"]');
     const appBase = baseMeta?.getAttribute('content') || window.location.origin;
     const normalizeBase = appBase.endsWith('/') ? appBase.slice(0, -1) : appBase;
-    const buildUrl = (path) => {
+    const buildUrl = (path: string): string => {
         const cleanPath = path.replace(/^\/+/, '');
         return `${normalizeBase}/${cleanPath}`;
     };
 
-    const checkRoomExists = async (slug) => {
+    const checkRoomExists = async (slug: string): Promise<boolean> => {
         try {
             const response = await fetch(buildUrl(`/rooms/${encodeURIComponent(slug)}/exists`));
             if (!response.ok) {
@@ -112,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const render = async () => {
+    const render = async (): Promise<void> => {
         const stored = readStoredRooms().slice(0, MAX_ROOMS);
         if (!stored.length) {
             panel.hidden = true;

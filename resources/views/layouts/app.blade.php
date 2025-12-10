@@ -110,7 +110,7 @@
         'resources/js/lucide.js',
         'resources/css/app.css',
         'resources/css/design.css',
-        'resources/js/app.js',
+        'resources/js/app.ts',
         'resources/js/design.js'
     ])
     @stack('styles')
@@ -338,5 +338,12 @@
     </div>
 @endif
 @stack('scripts')
+<script>
+(() => {
+    const style = 'color: red; font-size: 24px; font-weight: 900;';
+    console.log('%cSTOP! DO NOT TYPE ANYTHING IN THIS CONSOLE. DOING SO CAN EXPOSE YOUR ACCOUNT AND LEAD TO DATA LOSS.', style);
+    console.log('%cÄLÄ KOSKAAN KIRJOITA MITÄÄN TÄHÄN KONSOLIIN. SE VOI PALJASTAA TILISI JA JOHTAA TIETOJEN MENETYKSEEN.', style);
+})();
+</script>
 </body>
 </html>

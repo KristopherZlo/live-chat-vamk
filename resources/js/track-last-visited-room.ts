@@ -1,5 +1,15 @@
+import type { RoomMeta, StoredRoom } from './types/rooms';
+
 const STORAGE_KEY = 'gr:lastVisitedRooms';
 const MAX_ROOMS = 9;
+
+const sanitize = (value: unknown): string => String(value ?? '').trim();
+
+const normalizeRoom = (input: StoredRoom): RoomMeta => ({
+    slug: sanitize(input?.slug),
+    title: sanitize(input?.title),
+    description: sanitize(input?.description),
+});
 
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof window.localStorage === 'undefined') {
@@ -11,18 +21,17 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    const sanitize = (value) => String(value ?? '').trim();
-    const currentRoom = {
-        slug: sanitize(roomEl.dataset.roomSlug),
-        title: sanitize(roomEl.dataset.roomTitle),
-        description: sanitize(roomEl.dataset.roomDescription),
-    };
+    const currentRoom: RoomMeta = normalizeRoom({
+        slug: roomEl.dataset.roomSlug,
+        title: roomEl.dataset.roomTitle,
+        description: roomEl.dataset.roomDescription,
+    });
 
     if (!currentRoom.slug) {
         return;
     }
 
-    const loadRooms = () => {
+    const loadRooms = (): RoomMeta[] => {
         try {
             const raw = localStorage.getItem(STORAGE_KEY);
             if (!raw) {
@@ -32,17 +41,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!Array.isArray(parsed)) {
                 return [];
             }
-            return parsed.map((item) => ({
-                slug: sanitize(item?.slug),
-                title: sanitize(item?.title),
-                description: sanitize(item?.description),
-            }));
+            return parsed.map((item) => normalizeRoom(item)).filter((room) => room.slug);
         } catch {
             return [];
         }
     };
 
-    const saveRooms = (rooms) => {
+    const saveRooms = (rooms: RoomMeta[]): void => {
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(rooms));
         } catch (error) {
