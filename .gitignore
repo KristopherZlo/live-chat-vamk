@@ -2,6 +2,7 @@
 /node_modules
 /design-tests
 /design-tests/*
+/backup-css
 
 # Laravel
 /public/hot
