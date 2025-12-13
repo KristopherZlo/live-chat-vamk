@@ -1,4 +1,8 @@
-<x-app-layout page-class="page-join">
+<x-app-layout
+    page-class="page-join"
+    meta-title="Join a Ghost Room"
+    meta-description="Enter a room code to join anonymous live Q&A rooms in Ghost Room."
+>
     <section class="panel join-hero">
         <div class="join-hero__content">
             <div class="eyebrow">Join a room</div>

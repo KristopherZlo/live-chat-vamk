@@ -6,7 +6,31 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="app-base-url" content="{{ url('/') }}">
 
-    <title>{{ config('app.name', 'Ghost Room') }}</title>
+    @php
+        $appName = config('app.name', 'Ghost Room');
+        $defaultDescription = 'Ghost Room is an anonymous live Q&A chat for lectures so attendees can send questions without interrupting the class.';
+        $metaTitle = $attributes->get('meta-title') ?? ($metaTitle ?? null);
+        $metaDescription = $attributes->get('meta-description') ?? ($metaDescription ?? null) ?? $defaultDescription;
+        $metaImage = $attributes->get('meta-image') ?? ($metaImage ?? null) ?? asset('icons/logo_black.svg');
+        $fullTitle = $metaTitle ? $metaTitle.' | '.$appName : $appName;
+        $currentUrl = url()->current();
+    @endphp
+
+    <title>{{ $fullTitle }}</title>
+    <meta name="description" content="{{ $metaDescription }}">
+    <link rel="canonical" href="{{ $currentUrl }}">
+    <meta name="application-name" content="{{ $appName }}">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="{{ $fullTitle }}">
+    <meta property="og:description" content="{{ $metaDescription }}">
+    <meta property="og:url" content="{{ $currentUrl }}">
+    <meta property="og:site_name" content="{{ $appName }}">
+    <meta property="og:image" content="{{ $metaImage }}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ $fullTitle }}">
+    <meta name="twitter:description" content="{{ $metaDescription }}">
+    <meta name="twitter:image" content="{{ $metaImage }}">
+    @stack('meta')
 
     <link rel="icon" type="image/svg+xml" href="{{ asset('icons/logo_white.svg') }}">
     <link rel="shortcut icon" href="{{ asset('icons/logo_white.svg') }}">

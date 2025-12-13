@@ -11,11 +11,14 @@ use App\Http\Controllers\RoomBanController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AdminUpdatePostController;
 use App\Http\Controllers\UpdatePostController;
+use App\Http\Controllers\SeoController;
 
 Route::get('/', [RoomController::class, 'landing'])->name('home');
 Route::get('/presentation', LandingController::class)->name('presentation');
 Route::get('/live-chat-vamk/presentation', LandingController::class);
 Route::get('/live-chat-vamk/live-chat-vamk/presentation', LandingController::class);
+
+Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('seo.sitemap');
 
 Route::get('/updates', [UpdatePostController::class, 'index'])->name('updates.index');
 Route::get('/updates/{post:slug}', [UpdatePostController::class, 'show'])->name('updates.show');

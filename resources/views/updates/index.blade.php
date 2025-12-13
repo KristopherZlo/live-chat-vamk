@@ -1,6 +1,10 @@
 @php use Illuminate\Support\Str; @endphp
 
-<x-app-layout page-class="page-updates">
+<x-app-layout
+    page-class="page-updates"
+    meta-title="Ghost Room product updates"
+    meta-description="Release notes and latest improvements for the Ghost Room anonymous live chat platform."
+>
     <div class="updates-shell">
         <section class="updates-hero">
             <div class="updates-hero__body">

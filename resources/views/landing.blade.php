@@ -1,4 +1,8 @@
-<x-app-layout page-class="page-presentation">
+<x-app-layout
+    page-class="page-presentation"
+    meta-title="Ghost Room live demo"
+    meta-description="Step-by-step agenda to present the Ghost Room anonymous live chat experience."
+>
     <style>
         .page-presentation .wrap { max-width: 1180px; margin: 0 auto; padding: 2.6rem 1.3rem 3.6rem; display: grid; gap: 1.4rem; }
         .page-presentation .panel { border: 1px solid var(--border-subtle); background: var(--bg-elevated); border-radius: 16px; box-shadow: 0 16px 38px rgba(15,23,42,0.08); overflow: hidden; }

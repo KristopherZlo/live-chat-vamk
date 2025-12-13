@@ -39,3 +39,6 @@ Thumbs.db
 /public/build
 /public/mix-manifest.json
 /.vite
+
+# Local security tooling (python pentest helpers)
+/scripts/*.py

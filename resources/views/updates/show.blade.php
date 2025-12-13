@@ -2,10 +2,16 @@
     use Illuminate\Support\Str;
     $publishedAt = $post->published_at?->format('M d, Y') ?? $post->created_at?->format('M d, Y');
     $coverUrl = $post->cover_url;
+    $metaDescription = $post->excerpt ?: Str::limit(strip_tags($post->body ?? ''), 180);
     $bodyHtml = $post->body ? Str::markdown($post->body, ['html_input' => 'strip']) : '';
 @endphp
 
-<x-app-layout page-class="page-updates">
+<x-app-layout
+    page-class="page-updates"
+    :meta-title="$post->title"
+    :meta-description="$metaDescription"
+    :meta-image="$coverUrl"
+>
     <div class="updates-shell">
         <article class="update-article">
             <div class="update-article__head">
