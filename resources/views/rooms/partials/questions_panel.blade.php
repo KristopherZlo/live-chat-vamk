@@ -59,6 +59,17 @@
               @endif
             </div>
             <div class="question-text">{{ $question->content }}</div>
+            @php
+              $studentRating = optional($question->ratings->first())->rating;
+            @endphp
+            @if($question->status === 'answered' && $studentRating !== null)
+              <div class="question-feedback" aria-label="Student feedback">
+                <span class="question-feedback__label">Student feedback:</span>
+                <span class="feedback-pill {{ $studentRating === 1 ? 'feedback-pill-ok' : 'feedback-pill-bad' }}">
+                  {{ $studentRating === 1 ? 'Helpful' : 'Not helpful' }}
+                </span>
+              </div>
+            @endif
             <div class="question-actions">
               @if($isOwner)
                 <div class="queue-controls">

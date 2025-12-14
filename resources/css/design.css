@@ -1937,6 +1937,35 @@ main,.layout {
   color: #64748b;
 }
 
+.queue-item[data-status]:not([data-status="new"]) .queue-action-answered,
+.queue-item[data-status]:not([data-status="new"]) .queue-action-ignored,
+.queue-item[data-status]:not([data-status="new"]) .queue-action-later {
+  background: var(--bg-soft);
+  border-color: var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+.queue-item[data-status]:not([data-status="new"]) .queue-action-answered:hover,
+.queue-item[data-status]:not([data-status="new"]) .queue-action-answered:focus-visible {
+  background: color-mix(in srgb, var(--ok) 10%, var(--bg-elevated) 90%);
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.queue-item[data-status]:not([data-status="new"]) .queue-action-ignored:hover,
+.queue-item[data-status]:not([data-status="new"]) .queue-action-ignored:focus-visible {
+  background: color-mix(in srgb, #6b7280 10%, var(--bg-elevated) 90%);
+  border-color: #6b7280;
+  color: #6b7280;
+}
+
+.queue-item[data-status]:not([data-status="new"]) .queue-action-later:hover,
+.queue-item[data-status]:not([data-status="new"]) .queue-action-later:focus-visible {
+  background: color-mix(in srgb, var(--notify) 10%, var(--bg-elevated) 90%);
+  border-color: var(--notify);
+  color: var(--notify);
+}
+
 [data-theme="dark"] .queue-action-answered {
   border-color: #16a34a;
   color: #16a34a;
@@ -2125,34 +2154,47 @@ main,.layout {
   border-radius: 999px;
   background: var(--notify);
   color: #f9fafb;
-}
-
-.queue-new-badge,.question-feedback {
   display: inline-flex;
   align-items: center;
   font-size: 0.72rem;
 }
 
 .question-feedback {
-  gap: 0.25rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.28rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.question-feedback__label {
+  font-weight: 600;
   color: var(--text-secondary);
 }
 
 .feedback-pill {
-  border-radius: 999px;
-  padding: 0.05rem 0.45rem;
-  border: 1px solid var(--border-subtle);
-  font-size: 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: var(--radius-pill);
+  padding: 0.14rem 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--border-subtle) 80%, var(--bg-elevated) 20%);
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--bg-elevated) 94%, transparent);
 }
 
 .feedback-pill-ok {
-  border-color: var(--ok);
   color: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 40%, var(--border-subtle) 60%);
+  background: color-mix(in srgb, var(--ok) 8%, var(--bg-soft) 92%);
 }
 
 .feedback-pill-bad {
-  border-color: var(--bad);
   color: var(--bad);
+  border-color: color-mix(in srgb, var(--bad) 40%, var(--border-subtle) 60%);
+  background: color-mix(in srgb, var(--bad) 7%, var(--bg-soft) 93%);
 }
 
 .queue-panel.notify {

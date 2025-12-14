@@ -202,7 +202,7 @@ class RoomController extends Controller
 
         if ($isOwner) {
             $queueQuestions = $room->questions()
-                ->with('participant')
+                ->with(['participant', 'ratings'])
                 ->whereNull('deleted_by_owner_at')
                 ->whereNull('deleted_by_participant_at')
                 ->orderByRaw("CASE status WHEN 'new' THEN 0 WHEN 'later' THEN 1 WHEN 'answered' THEN 2 WHEN 'ignored' THEN 3 ELSE 4 END")
@@ -329,7 +329,7 @@ class RoomController extends Controller
         }
 
         $queueQuestions = $room->questions()
-            ->with('participant')
+            ->with(['participant', 'ratings'])
             ->whereNull('deleted_by_owner_at')
             ->whereNull('deleted_by_participant_at')
             ->orderByRaw("CASE status WHEN 'new' THEN 0 WHEN 'later' THEN 1 WHEN 'answered' THEN 2 WHEN 'ignored' THEN 3 ELSE 4 END")
