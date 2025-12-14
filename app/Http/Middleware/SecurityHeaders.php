@@ -25,17 +25,7 @@ class SecurityHeaders
             'Cross-Origin-Resource-Policy' => 'same-origin',
         ];
 
-        // Apply a conservative CSP; adjust if inline scripts/styles are needed.
-        $headers['Content-Security-Policy'] = implode('; ', [
-            "default-src 'self'",
-            "img-src 'self' data:",
-            "style-src 'self' 'unsafe-inline'",
-            "script-src 'self'",
-            "font-src 'self' data:",
-            "connect-src 'self'",
-            "frame-ancestors 'self'",
-            "form-action 'self'",
-        ]);
+        $headers['Content-Security-Policy'] = $this->buildContentSecurityPolicy($request);
 
         // HSTS only for HTTPS requests; browsers will cache this for 180 days.
         if ($request->isSecure()) {
@@ -49,5 +39,104 @@ class SecurityHeaders
         }
 
         return $response;
+    }
+
+    /**
+     * Build the Content Security Policy header. Defaults are strict for production,
+     * but allow inline scripts and Vite dev server origins when running locally.
+     */
+    protected function buildContentSecurityPolicy(Request $request): string
+    {
+        $defaultSrc = ["'self'"];
+        $imgSrc = ["'self'", 'data:'];
+        $styleSrc = ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'];
+        $scriptSrc = ["'self'", "'unsafe-inline'"];
+        $fontSrc = ["'self'", 'data:', 'https://fonts.gstatic.com'];
+        $connectSrc = ["'self'"];
+
+        if (app()->environment('local')) {
+            $devOrigins = $this->getDevOrigins($request);
+
+            foreach ($devOrigins as $origin) {
+                $styleSrc[] = $origin;
+                $scriptSrc[] = $origin;
+                $connectSrc[] = $origin;
+            }
+
+            foreach ($this->getDevWebsocketOrigins($devOrigins) as $wsOrigin) {
+                $connectSrc[] = $wsOrigin;
+            }
+
+            // Needed for some dev tools / HMR shims.
+            $scriptSrc[] = "'unsafe-eval'";
+        }
+
+        $directives = [
+            'default-src' => $defaultSrc,
+            'img-src' => $imgSrc,
+            'style-src' => $styleSrc,
+            'script-src' => $scriptSrc,
+            'font-src' => $fontSrc,
+            'connect-src' => $connectSrc,
+            'frame-ancestors' => ["'self'"],
+            'form-action' => ["'self'"],
+        ];
+
+        $parts = [];
+        foreach ($directives as $name => $sources) {
+            $uniqueSources = array_values(array_unique(array_filter($sources)));
+            $parts[] = $name.' '.implode(' ', $uniqueSources);
+        }
+
+        return implode('; ', $parts);
+    }
+
+    /**
+     * Build a list of HTTP origins that should be allowed for dev assets.
+     */
+    protected function getDevOrigins(Request $request): array
+    {
+        $protocol = env('VITE_DEV_PROTOCOL', 'http');
+        $host = env('VITE_DEV_HOST', 'localhost');
+        $hmrHost = env('VITE_DEV_HMR_HOST', $host);
+        $port = env('VITE_DEV_PORT', 5173);
+        $origin = env('VITE_DEV_ORIGIN');
+        $requestHost = $request->getHost();
+        $localIp = gethostbyname(gethostname());
+
+        $origins = [
+            $origin,
+            sprintf('%s://%s:%s', $protocol, $host, $port),
+            sprintf('%s://%s:%s', $protocol, $hmrHost, $port),
+            sprintf('%s://localhost:%s', $protocol, $port),
+            sprintf('%s://127.0.0.1:%s', $protocol, $port),
+            $requestHost ? sprintf('%s://%s:%s', $protocol, $requestHost, $port) : null,
+            $localIp ? sprintf('%s://%s:%s', $protocol, $localIp, $port) : null,
+        ];
+
+        return array_values(array_unique(array_filter($origins)));
+    }
+
+    /**
+     * Derive websocket origins from the HTTP origins for HMR connections.
+     */
+    protected function getDevWebsocketOrigins(array $httpOrigins): array
+    {
+        $wsOrigins = [];
+
+        foreach ($httpOrigins as $origin) {
+            $parts = parse_url($origin);
+            if (! $parts || empty($parts['host'])) {
+                continue;
+            }
+
+            $scheme = ($parts['scheme'] ?? 'http') === 'https' ? 'wss' : 'ws';
+            $host = $parts['host'];
+            $port = isset($parts['port']) ? ':'.$parts['port'] : '';
+
+            $wsOrigins[] = sprintf('%s://%s%s', $scheme, $host, $port);
+        }
+
+        return array_values(array_unique($wsOrigins));
     }
 }

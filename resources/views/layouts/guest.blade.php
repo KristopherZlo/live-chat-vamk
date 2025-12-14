@@ -1,4 +1,4 @@
-@php($isAuthPage = request()->routeIs('login') || request()->routeIs('register'))
+<?php $isAuthPage = request()->routeIs('login') || request()->routeIs('register'); ?>
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
@@ -6,15 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    @php
+    <?php
         $appName = config('app.name', 'Ghost Room');
         $defaultDescription = 'Ghost Room is an anonymous live Q&A chat for lectures so attendees can send questions without interrupting the class.';
-        $metaTitle = $attributes->get('meta-title') ?? ($metaTitle ?? null);
-        $metaDescription = $attributes->get('meta-description') ?? ($metaDescription ?? null) ?? $defaultDescription;
-        $metaImage = $attributes->get('meta-image') ?? ($metaImage ?? null) ?? asset('icons/logo_black.svg');
+        $metaTitle = $attributes->get('meta-title') ?? null;
+        $metaDescription = $attributes->get('meta-description') ?? $defaultDescription;
+        $metaImage = $attributes->get('meta-image') ?? asset('icons/logo_black.svg');
         $fullTitle = $metaTitle ? $metaTitle.' | '.$appName : $appName;
         $currentUrl = url()->current();
-    @endphp
+    ?>
 
     <title>{{ $fullTitle }}</title>
     <meta name="description" content="{{ $metaDescription }}">
