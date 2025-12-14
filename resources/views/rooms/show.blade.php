@@ -2389,80 +2389,15 @@
                 }
 
                   const QR_CANVAS_SIZE = 360;
-                  const QR_FETCH_SIZE = 720;
-                  const buildQrUrl = (link, size = QR_FETCH_SIZE) =>
-                      `https://api.qrserver.com/v1/create-qr-code/?format=png&margin=16&ecc=H&size=${size}x${size}&data=${encodeURIComponent(link)}`;
-                  const getCssVar = (name, fallback = '') => {
-                      const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-                      return value || fallback;
-                  };
-                  const parseQrModules = (imageData, size) => {
-                      const isDark = (x, y) => {
-                          const idx = (y * size + x) * 4;
-                          return imageData.data[idx] < 150;
-                      };
-                      const sampleY = Math.max(1, Math.floor(size * 0.14));
-                      const runs = [];
-                      let lastColor = isDark(0, sampleY);
-                      let start = 0;
-                      for (let x = 1; x <= size; x++) {
-                          const current = x === size ? !lastColor : isDark(x, sampleY);
-                          if (current !== lastColor) {
-                              runs.push({ color: lastColor, length: x - start });
-                              start = x;
-                              lastColor = current;
-                          }
-                      }
-                      if (!runs.length) {
+                  const getQrModules = (link, canvasSize) => {
+                      if (typeof window.createQrModules !== 'function') {
                           return null;
                       }
-                      const quietZone = runs[0];
-                      const finderRun = runs.find((run) => run.color && run.length >= 5);
-                      if (!quietZone || !finderRun) {
-                          return null;
-                      }
-                      const moduleSize = Math.max(1, Math.round(finderRun.length / 7));
-                      const available = size - quietZone.length * 2;
-                      const moduleCount = Math.max(21, Math.round(available / moduleSize));
-                      if (moduleCount <= 0) {
-                          return null;
-                      }
-                      const modules = [];
-                      const offset = quietZone.length;
-                      for (let row = 0; row < moduleCount; row++) {
-                          const sampleYPos = Math.min(size - 1, Math.floor(offset + (row + 0.5) * moduleSize));
-                          const rowValues = [];
-                          for (let col = 0; col < moduleCount; col++) {
-                              const sampleXPos = Math.min(size - 1, Math.floor(offset + (col + 0.5) * moduleSize));
-                              rowValues.push(isDark(sampleXPos, sampleYPos));
-                          }
-                          modules.push(rowValues);
-                      }
-                      return { modules, moduleSize, moduleCount, offset };
-                  };
-                  async function fetchQrImage(link, size) {
-                      const response = await fetch(buildQrUrl(link, size), { cache: 'force-cache' });
-                      if (!response.ok) {
-                          throw new Error('Unable to load QR code');
-                      }
-                      const blob = await response.blob();
-                      if (typeof createImageBitmap === 'function') {
-                          return createImageBitmap(blob, { resizeWidth: size, resizeHeight: size });
-                      }
-                      return new Promise((resolve, reject) => {
-                          const url = URL.createObjectURL(blob);
-                          const img = new Image();
-                          img.onload = () => {
-                              URL.revokeObjectURL(url);
-                              resolve(img);
-                          };
-                          img.onerror = (err) => {
-                              URL.revokeObjectURL(url);
-                              reject(err);
-                          };
-                          img.src = url;
+                      return window.createQrModules(link, canvasSize, {
+                          errorCorrectionLevel: 'H',
+                          quietModules: 4,
                       });
-                  }
+                  };
                   let lastRenderedLink = null;
                   let lastRenderedTheme = null;
                   async function drawStyledQr(link) {
@@ -2485,75 +2420,56 @@
                           ctx.fillStyle = backgroundColor;
                           ctx.fillRect(0, 0, canvasSize, canvasSize);
                           try {
-                              const image = await fetchQrImage(link, QR_FETCH_SIZE);
-                              const offscreen = document.createElement('canvas');
-                              offscreen.width = canvasSize;
-                              offscreen.height = canvasSize;
-                              const offCtx = offscreen.getContext('2d');
-                              if (!offCtx) return;
-                              offCtx.drawImage(image, 0, 0, canvasSize, canvasSize);
-                              const imageData = offCtx.getImageData(0, 0, canvasSize, canvasSize);
-                              const parsed = parseQrModules(imageData, canvasSize);
-                              if (parsed) {
-                                  ctx.fillStyle = backgroundColor;
-                                  ctx.fillRect(0, 0, canvasSize, canvasSize);
-                                  const moduleSize = parsed.moduleSize;
-                                  const strokeWidth = Math.max(3, moduleSize * 1.05);
-                                  const dotRadius = Math.min(moduleSize * 0.58, strokeWidth / 1.15);
-                                  ctx.lineWidth = strokeWidth;
-                                  ctx.lineCap = 'round';
-                                  ctx.lineJoin = 'round';
-                                  ctx.fillStyle = dotColor;
-                                  ctx.strokeStyle = dotColor;
-                                  parsed.modules.forEach((row, rowIndex) => {
-                                      row.forEach((cell, colIndex) => {
-                                          if (!cell) return;
-                                          const centerX = parsed.offset + (colIndex + 0.5) * moduleSize;
-                                          const centerY = parsed.offset + (rowIndex + 0.5) * moduleSize;
+                              const parsed = getQrModules(link, canvasSize);
+                              if (!parsed) {
+                                  throw new Error('Unable to generate QR code');
+                              }
+
+                              ctx.fillStyle = backgroundColor;
+                              ctx.fillRect(0, 0, canvasSize, canvasSize);
+                              const moduleSize = parsed.moduleSize;
+                              const strokeWidth = Math.max(3, moduleSize * 1.05);
+                              const dotRadius = Math.min(moduleSize * 0.58, strokeWidth / 1.15);
+                              ctx.lineWidth = strokeWidth;
+                              ctx.lineCap = 'round';
+                              ctx.lineJoin = 'round';
+                              ctx.fillStyle = dotColor;
+                              ctx.strokeStyle = dotColor;
+                              parsed.modules.forEach((row, rowIndex) => {
+                                  row.forEach((cell, colIndex) => {
+                                      if (!cell) return;
+                                      const centerX = parsed.offset + (colIndex + 0.5) * moduleSize;
+                                      const centerY = parsed.offset + (rowIndex + 0.5) * moduleSize;
+                                      ctx.beginPath();
+                                      ctx.arc(centerX, centerY, dotRadius, 0, Math.PI * 2);
+                                      ctx.fill();
+                                      if (colIndex < parsed.moduleCount - 1 && row[colIndex + 1]) {
                                           ctx.beginPath();
-                                          ctx.arc(centerX, centerY, dotRadius, 0, Math.PI * 2);
-                                          ctx.fill();
-                                          if (colIndex < parsed.moduleCount - 1 && row[colIndex + 1]) {
-                                              ctx.beginPath();
-                                              ctx.moveTo(centerX, centerY);
-                                              ctx.lineTo(centerX + moduleSize, centerY);
-                                              ctx.stroke();
-                                          }
-                                          if (rowIndex < parsed.moduleCount - 1 && parsed.modules[rowIndex + 1][colIndex]) {
-                                              ctx.beginPath();
-                                              ctx.moveTo(centerX, centerY);
-                                              ctx.lineTo(centerX, centerY + moduleSize);
-                                              ctx.stroke();
-                                          }
-                                      });
+                                          ctx.moveTo(centerX, centerY);
+                                          ctx.lineTo(centerX + moduleSize, centerY);
+                                          ctx.stroke();
+                                      }
+                                      if (rowIndex < parsed.moduleCount - 1 && parsed.modules[rowIndex + 1][colIndex]) {
+                                          ctx.beginPath();
+                                          ctx.moveTo(centerX, centerY);
+                                          ctx.lineTo(centerX, centerY + moduleSize);
+                                          ctx.stroke();
+                                      }
                                   });
-                                  const blankRadius = Math.min(canvasSize / 2.2, parsed.moduleSize * 4);
-                                  ctx.globalCompositeOperation = 'destination-out';
-                                  ctx.beginPath();
-                                  ctx.arc(canvasSize / 2, canvasSize / 2, blankRadius, 0, Math.PI * 2);
-                                  ctx.fill();
-                                  ctx.globalCompositeOperation = 'source-over';
-                                  ctx.fillStyle = backgroundColor;
-                                  ctx.beginPath();
-                                  ctx.arc(canvasSize / 2, canvasSize / 2, Math.max(blankRadius - 4, 4), 0, Math.PI * 2);
-                                  ctx.fill();
-                                  ctx.globalCompositeOperation = 'source-over';
-                              } else {
-                                  ctx.drawImage(image, 0, 0, canvasSize, canvasSize);
-                              }
-                              if (image && typeof image.close === 'function') {
-                                  image.close();
-                              }
+                              });
+                              const blankRadius = Math.min(canvasSize / 2.2, parsed.moduleSize * 4);
+                              ctx.globalCompositeOperation = 'destination-out';
+                              ctx.beginPath();
+                              ctx.arc(canvasSize / 2, canvasSize / 2, blankRadius, 0, Math.PI * 2);
+                              ctx.fill();
+                              ctx.globalCompositeOperation = 'source-over';
+                              ctx.fillStyle = backgroundColor;
+                              ctx.beginPath();
+                              ctx.arc(canvasSize / 2, canvasSize / 2, Math.max(blankRadius - 4, 4), 0, Math.PI * 2);
+                              ctx.fill();
+                              ctx.globalCompositeOperation = 'source-over';
                           } catch (error) {
                               console.error('Styled QR build failed', error);
-                              const fallbackUrl = buildQrUrl(link, QR_FETCH_SIZE);
-                              const fallback = new Image();
-                              fallback.crossOrigin = 'anonymous';
-                              fallback.src = fallbackUrl;
-                              await new Promise((resolve) => {
-                                  fallback.onload = fallback.onerror = () => resolve();
-                              });
-                              ctx.drawImage(fallback, 0, 0, canvasSize, canvasSize);
                               return;
                           }
                             lastRenderedLink = link;

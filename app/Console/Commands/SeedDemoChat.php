@@ -43,7 +43,7 @@ class SeedDemoChat extends Command
         $roomInput = $this->argument('room');
         $countOption = $this->option('count');
         $targetCount = is_numeric($countOption)
-            ? max(5, min(60, (int) $countOption))
+            ? max(1, min(200, (int) $countOption)) // allow larger simulations, but clamp
             : random_int(5, 30);
 
         /** @var Room|null $room */
@@ -167,7 +167,11 @@ class SeedDemoChat extends Command
 
         // Seed a few host messages first (if a host exists).
         if ($host) {
-            foreach (Arr::random($hostLines, min(count($hostLines), 3)) as $index => $line) {
+            $hostSeeds = Arr::random($hostLines, min(count($hostLines), 3));
+            foreach ($hostSeeds as $index => $line) {
+                if ($messages->count() >= $targetCount) {
+                    break;
+                }
                 $messages->push($this->createMessage(
                     room: $room,
                     content: $line,
@@ -178,7 +182,11 @@ class SeedDemoChat extends Command
         }
 
         // Seed base participant conversation.
-        foreach (Arr::random($conversationStarters, min(count($conversationStarters), 5)) as $index => $line) {
+        $starterCount = min(5, max(0, $targetCount - $messages->count()));
+        foreach (Arr::random($conversationStarters, $starterCount) as $index => $line) {
+            if ($messages->count() >= $targetCount) {
+                break;
+            }
             $participant = $participants->random();
             $messages->push($this->createMessage(
                 room: $room,
@@ -189,10 +197,14 @@ class SeedDemoChat extends Command
         }
 
         // Generate replies, nested replies, and questions.
-        $replyCount = max(5, min(30, $targetCount));
+        // Use the requested count (bounded above) for reply generation so it is predictable.
+        $replyCount = max(0, $targetCount - $messages->count());
         $replyParents = [];
 
         for ($i = 0; $i < $replyCount; $i++) {
+            if ($messages->count() >= $targetCount) {
+                break;
+            }
             if ($messages->isEmpty()) {
                 break;
             }
@@ -222,7 +234,7 @@ class SeedDemoChat extends Command
             $replyParents[] = $parent->id;
 
             // Occasionally add a reply to this reply (nested).
-            if (random_int(0, 3) === 0) {
+            if ($messages->count() < $targetCount && random_int(0, 3) === 0) {
                 $nestedAuthor = $participants->random();
                 $nestedContent = Arr::random($replyLines);
                 $messages->push($this->createMessage(

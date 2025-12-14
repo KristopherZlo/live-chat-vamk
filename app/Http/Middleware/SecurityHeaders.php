@@ -49,10 +49,10 @@ class SecurityHeaders
     {
         $defaultSrc = ["'self'"];
         $imgSrc = ["'self'", 'data:'];
-        $styleSrc = ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'];
-        $scriptSrc = ["'self'", "'unsafe-inline'"];
+        $styleSrc = ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdn.jsdelivr.net'];
+        $scriptSrc = ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'];
         $fontSrc = ["'self'", 'data:', 'https://fonts.gstatic.com'];
-        $connectSrc = ["'self'"];
+        $connectSrc = ["'self'", 'https://cdn.jsdelivr.net'];
 
         if (app()->environment('local')) {
             $devOrigins = $this->getDevOrigins($request);
@@ -69,6 +69,11 @@ class SecurityHeaders
 
             // Needed for some dev tools / HMR shims.
             $scriptSrc[] = "'unsafe-eval'";
+        }
+
+        // Allow realtime connections (e.g., Reverb/Pusher).
+        foreach ($this->getRealtimeOrigins($request) as $origin) {
+            $connectSrc[] = $origin;
         }
 
         $directives = [
@@ -98,7 +103,10 @@ class SecurityHeaders
     {
         $protocol = env('VITE_DEV_PROTOCOL', 'http');
         $host = env('VITE_DEV_HOST', 'localhost');
-        $hmrHost = env('VITE_DEV_HMR_HOST', $host);
+        $hmrHost = env('VITE_DEV_HMR_HOST');
+        if (!$hmrHost) {
+            $hmrHost = $host;
+        }
         $port = env('VITE_DEV_PORT', 5173);
         $origin = env('VITE_DEV_ORIGIN');
         $requestHost = $request->getHost();
@@ -106,8 +114,8 @@ class SecurityHeaders
 
         $origins = [
             $origin,
-            sprintf('%s://%s:%s', $protocol, $host, $port),
-            sprintf('%s://%s:%s', $protocol, $hmrHost, $port),
+            $host ? sprintf('%s://%s:%s', $protocol, $host, $port) : null,
+            $hmrHost ? sprintf('%s://%s:%s', $protocol, $hmrHost, $port) : null,
             sprintf('%s://localhost:%s', $protocol, $port),
             sprintf('%s://127.0.0.1:%s', $protocol, $port),
             $requestHost ? sprintf('%s://%s:%s', $protocol, $requestHost, $port) : null,
@@ -138,5 +146,21 @@ class SecurityHeaders
         }
 
         return array_values(array_unique($wsOrigins));
+    }
+
+    /**
+     * Build websocket/HTTP origins for realtime (Reverb/Pusher) connections.
+     */
+    protected function getRealtimeOrigins(Request $request): array
+    {
+        $host = env('REVERB_HOST', env('VITE_REVERB_HOST', $request->getHost() ?: 'localhost'));
+        $port = env('REVERB_PORT', env('VITE_REVERB_PORT', 8080));
+        $scheme = env('REVERB_SCHEME', env('VITE_REVERB_SCHEME', 'http'));
+
+        $httpOrigin = sprintf('%s://%s:%s', $scheme, $host, $port);
+        $wsScheme = $scheme === 'https' ? 'wss' : 'ws';
+        $wsOrigin = sprintf('%s://%s:%s', $wsScheme, $host, $port);
+
+        return array_values(array_unique([$httpOrigin, $wsOrigin]));
     }
 }

@@ -411,7 +411,7 @@ main,.layout {
 .layout {
   display: grid;
   grid-template-columns: 2fr 1.2fr;
-  height: calc(var(--app-viewport-height, 100vh) - 100px);
+  height: calc(var(--app-viewport-height, 100vh) - 200px);
   max-height: none;
   flex: 1 1 auto;
   grid-auto-rows: minmax(0, 1fr);
@@ -6007,7 +6007,7 @@ body.modal-open {
 
 @media (max-width: 1024px) {
   .layout {
-    height: calc(var(--app-viewport-height, 100vh) - 100px);
+    height: calc(var(--app-viewport-height, 100vh) - 200px);
     min-height: calc(var(--app-viewport-height, 100vh) - 100px);
     max-height: none;
     grid-auto-rows: minmax(0, 1fr);

@@ -17,6 +17,11 @@ declare global {
         Alpine: typeof Alpine;
         Pusher: typeof Pusher;
         Echo: Echo;
+        createQrModules?: (
+            link: string,
+            canvasSize: number,
+            options?: { quietModules?: number; errorCorrectionLevel?: string },
+        ) => null | { modules: boolean[][]; moduleSize: number; moduleCount: number; offset: number };
     }
 }
 
