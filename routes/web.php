@@ -63,19 +63,27 @@ Route::get('/rooms/{slug}/exists', [RoomController::class, 'checkExists'])
 Route::post('/rooms/{room}/messages', [MessageController::class, 'store'])
     ->middleware('throttle:room-messages')
     ->name('rooms.messages.store');
+Route::get('/rooms/{room}/messages', [RoomController::class, 'messagesHistory'])
+    ->name('rooms.messages.history');
 Route::delete('/rooms/{room}/messages/{message}', [MessageController::class, 'destroy'])
     ->middleware('throttle:room-messages')
     ->name('rooms.messages.destroy');
-Route::post('/rooms/{room}/messages/{message}/reactions', [MessageReactionController::class, 'toggle'])
-    ->middleware('throttle:room-messages')
-    ->name('rooms.messages.reactions.toggle');
+    Route::post('/rooms/{room}/messages/{message}/reactions', [MessageReactionController::class, 'toggle'])
+        ->middleware('throttle:room-messages')
+        ->name('rooms.messages.reactions.toggle');
 
-Route::middleware(['auth'])->group(function () {
+    Route::middleware(['auth'])->group(function () {
     // ... тут уже есть dashboard / rooms.create / rooms.store
 
     // Изменить статус вопроса (только владелец комнаты)
     Route::post('/questions/{question}/status', [QuestionController::class, 'updateStatus'])
         ->name('questions.updateStatus');
+    Route::get('/rooms/{room}/questions/{question}', [RoomController::class, 'questionItem'])
+        ->name('rooms.questions.item');
+    Route::get('/rooms/{room}/questions/chunk', [RoomController::class, 'questionsChunk'])
+        ->name('rooms.questions.chunk');
+    Route::get('/rooms/{room}/questions/batch', [RoomController::class, 'questionItemsBatch'])
+        ->name('rooms.questions.batch');
 
     // Удалить вопрос со стороны владельца (soft delete)
     Route::delete('/questions/{question}/owner-delete', [QuestionController::class, 'ownerDelete'])

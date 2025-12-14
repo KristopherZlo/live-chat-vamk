@@ -12,6 +12,8 @@ class Room extends Model
 {
     use HasFactory;
 
+    private static ?bool $banIdentityColumns = null;
+
     protected $fillable = [
         'user_id',
         'title',
@@ -53,15 +55,17 @@ class Room extends Model
             return false;
         }
 
-        $hasIdentityColumns = Schema::hasColumn('room_bans', 'ip_address')
-            && Schema::hasColumn('room_bans', 'fingerprint');
+        if (self::$banIdentityColumns === null) {
+            self::$banIdentityColumns = Schema::hasColumn('room_bans', 'ip_address')
+                && Schema::hasColumn('room_bans', 'fingerprint');
+        }
 
         return $this->bans()
-            ->where(function ($query) use ($participant, $ipAddress, $fingerprint, $hasIdentityColumns) {
+            ->where(function ($query) use ($participant, $ipAddress, $fingerprint) {
                 $query->where('participant_id', $participant->id)
                     ->orWhere('session_token', $participant->session_token);
 
-                if ($hasIdentityColumns) {
+                if (self::$banIdentityColumns) {
                     if ($ipAddress) {
                         $query->orWhere('ip_address', $ipAddress);
                     }

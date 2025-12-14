@@ -148,22 +148,18 @@ class MessageReactionController extends Controller
 
     protected function summarizeReactions(int $messageId): array
     {
-        $reactions = MessageReaction::where('message_id', $messageId)->get();
-        $grouped = $reactions->groupBy('emoji')->map(function ($group, $emoji) {
-            return [
-                'emoji' => $emoji,
-                'count' => $group->count(),
-            ];
-        })->values();
-
-        $sorted = $grouped->sort(function ($a, $b) {
-            $countDiff = $b['count'] <=> $a['count'];
-            if ($countDiff !== 0) {
-                return $countDiff;
-            }
-            return strcasecmp($a['emoji'], $b['emoji']);
-        });
-
-        return $sorted->values()->toArray();
+        return MessageReaction::query()
+            ->select('emoji', DB::raw('count(*) as count'))
+            ->where('message_id', $messageId)
+            ->groupBy('emoji')
+            ->orderByDesc('count')
+            ->orderBy('emoji')
+            ->get()
+            ->map(fn ($row) => [
+                'emoji' => $row->emoji,
+                'count' => (int) $row->count,
+            ])
+            ->values()
+            ->toArray();
     }
 }

@@ -6,6 +6,8 @@ use App\Models\Room;
 use App\Models\Message;
 use App\Models\Participant;
 use App\Models\RoomBan;
+use App\Models\Question;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
@@ -15,8 +17,8 @@ use Illuminate\Validation\Rule;
 
 class RoomController extends Controller
 {
-    private const MAX_MESSAGES = 200;
-    private const MAX_QUEUE_ITEMS = 200;
+    private const MESSAGE_PAGE_SIZE = 50;
+    private const QUEUE_PAGE_SIZE = 50;
     private const MAX_MY_QUESTIONS = 200;
     private static array $identityColumnCache = [];
 
@@ -186,29 +188,39 @@ class RoomController extends Controller
 
         $participant = $this->getOrCreateParticipant($request, $room, $fingerprint, $ipAddress);
 
-        $messages = $room->messages()
-            ->with(['participant', 'user', 'question', 'replyTo.user', 'replyTo.participant', 'reactions'])
-            ->orderByDesc('created_at')
-            ->limit(self::MAX_MESSAGES)
-            ->get()
+        $messagesQuery = $this->baseMessagesQuery($room);
+        $messagesCollection = $messagesQuery
+            ->limit(self::MESSAGE_PAGE_SIZE + 1)
+            ->get();
+
+        $hasMoreMessages = $messagesCollection->count() > self::MESSAGE_PAGE_SIZE;
+        $messages = $messagesCollection
+            ->take(self::MESSAGE_PAGE_SIZE)
             ->reverse()
             ->values();
+        $oldestMessageId = $messages->first()?->id;
 
         $isOwner = $this->isOwner($room);
         $isBanned = false;
 
         $queueQuestions = collect();
         $bannedParticipants = collect();
+        $queueHasMore = false;
+        $queueStatusCounts = [
+            'new' => 0,
+            'later' => 0,
+            'answered' => 0,
+            'ignored' => 0,
+            'all' => 0,
+        ];
 
         if ($isOwner) {
-            $queueQuestions = $room->questions()
-                ->with(['participant', 'ratings'])
-                ->whereNull('deleted_by_owner_at')
-                ->whereNull('deleted_by_participant_at')
-                ->orderByRaw("CASE status WHEN 'new' THEN 0 WHEN 'later' THEN 1 WHEN 'answered' THEN 2 WHEN 'ignored' THEN 3 ELSE 4 END")
-                ->orderBy('created_at')
-                ->limit(self::MAX_QUEUE_ITEMS)
+            $queueCollection = $this->baseQueueQuery($room)
+                ->limit(self::QUEUE_PAGE_SIZE + 1)
                 ->get();
+            $queueHasMore = $queueCollection->count() > self::QUEUE_PAGE_SIZE;
+            $queueQuestions = $queueCollection->take(self::QUEUE_PAGE_SIZE);
+            $queueStatusCounts = $this->getQueueStatusCounts($room);
 
             $bannedParticipants = $room->bans()
                 ->with('participant')
@@ -235,13 +247,23 @@ class RoomController extends Controller
         return view('rooms.show', [
             'room' => $room,
             'messages' => $messages,
+            'messagesHasMore' => $hasMoreMessages,
+            'messagesOldestId' => $oldestMessageId,
             'participant' => $participant,
             'isOwner' => $isOwner,
             'isBanned' => $isBanned,
             'bannedParticipants' => $bannedParticipants,
             'queueQuestions' => $queueQuestions,
-            'queueStatusCounts' => $this->getQueueStatusCounts($queueQuestions),
+            'queueStatusCounts' => $queueStatusCounts,
+            'queueHasMore' => $queueHasMore,
+            'queueOffset' => $queueQuestions->count(),
             'myQuestions' => $myQuestions,
+            'messagePageSize' => self::MESSAGE_PAGE_SIZE,
+            'queuePageSize' => self::QUEUE_PAGE_SIZE,
+            'messagesHistoryUrl' => route('rooms.messages.history', $room),
+            'queueTotal' => $queueStatusCounts['all'] ?? $queueQuestions->count(),
+            'queueInitialCount' => $queueQuestions->count(),
+            'queueItemUrlTemplate' => route('rooms.questions.item', [$room, '__QUESTION__']),
         ]);
     }
 
@@ -328,20 +350,26 @@ class RoomController extends Controller
             abort(403);
         }
 
-        $queueQuestions = $room->questions()
-            ->with(['participant', 'ratings'])
-            ->whereNull('deleted_by_owner_at')
-            ->whereNull('deleted_by_participant_at')
-            ->orderByRaw("CASE status WHEN 'new' THEN 0 WHEN 'later' THEN 1 WHEN 'answered' THEN 2 WHEN 'ignored' THEN 3 ELSE 4 END")
-            ->orderBy('created_at')
-            ->limit(self::MAX_QUEUE_ITEMS)
+        $offset = max(0, (int) $request->integer('offset', 0));
+        $limit = max(1, min(self::QUEUE_PAGE_SIZE, (int) $request->integer('limit', self::QUEUE_PAGE_SIZE)));
+
+        $queueCollection = $this->baseQueueQuery($room)
+            ->offset($offset)
+            ->limit($limit + 1)
             ->get();
+
+        $queueHasMore = $queueCollection->count() > $limit;
+        $queueQuestions = $queueCollection->take($limit);
+        $queueOffset = $offset + $queueQuestions->count();
 
         $viewData = [
             'room'            => $room,
             'queueQuestions'  => $queueQuestions,
-            'queueStatusCounts' => $this->getQueueStatusCounts($queueQuestions),
+            'queueStatusCounts' => $this->getQueueStatusCounts($room),
             'isOwner'         => $isOwner,
+            'queuePageSize' => self::QUEUE_PAGE_SIZE,
+            'queueHasMore' => $queueHasMore,
+            'queueOffset' => $queueOffset,
         ];
 
         if ($request->ajax()) {
@@ -351,7 +379,90 @@ class RoomController extends Controller
         return view('rooms.questions_panel_page', $viewData);
     }
 
-    private function getQueueStatusCounts($queueQuestions)
+    public function questionsChunk(Request $request, Room $room)
+    {
+        $user = $request->user();
+        $isOwner = $user && ($user->id === $room->user_id || $user->is_dev);
+
+        if (!$isOwner) {
+            abort(403);
+        }
+
+        $offset = max(0, (int) $request->integer('offset', 0));
+        $limit = max(1, min(self::QUEUE_PAGE_SIZE, (int) $request->integer('limit', self::QUEUE_PAGE_SIZE)));
+
+        $queueCollection = $this->baseQueueQuery($room)
+            ->offset($offset)
+            ->limit($limit + 1)
+            ->get();
+
+        $hasMore = $queueCollection->count() > $limit;
+        $queueQuestions = $queueCollection->take($limit);
+        $nextOffset = $offset + $queueQuestions->count();
+
+        $html = view('rooms.partials.queue_items', [
+            'queueQuestions' => $queueQuestions,
+            'room' => $room,
+            'isOwner' => true,
+        ])->render();
+
+        return response()->json([
+            'html' => $html,
+            'has_more' => $hasMore,
+            'next_offset' => $nextOffset,
+        ]);
+    }
+
+    public function questionItemsBatch(Request $request, Room $room)
+    {
+        $user = $request->user();
+        $isOwner = $user && ($user->id === $room->user_id || $user->is_dev);
+
+        if (!$isOwner) {
+            abort(403);
+        }
+
+        $ids = $request->input('ids', []);
+        if (is_string($ids)) {
+            $ids = array_filter(array_map('trim', explode(',', $ids)), static fn ($value) => $value !== '');
+        }
+
+        $ids = collect($ids)
+            ->map(static fn ($id) => (int) $id)
+            ->filter(static fn ($id) => $id > 0)
+            ->unique()
+            ->values();
+
+        if ($ids->isEmpty()) {
+            return response()->json(['items' => []]);
+        }
+
+        $questions = $this->baseQueueQuery($room)
+            ->whereIn('id', $ids)
+            ->get()
+            ->keyBy('id');
+
+        $items = [];
+        foreach ($ids as $id) {
+            $question = $questions->get($id);
+            if (!$question) {
+                continue;
+            }
+
+            $items[] = [
+                'id' => $id,
+                'html' => view('rooms.partials.queue_item', [
+                    'question' => $question,
+                    'room' => $room,
+                    'isOwner' => true,
+                ])->render(),
+            ];
+        }
+
+        return response()->json(['items' => $items]);
+    }
+
+    private function getQueueStatusCounts(Room $room)
     {
         $counts = [
             'new' => 0,
@@ -360,14 +471,21 @@ class RoomController extends Controller
             'ignored' => 0,
         ];
 
-        foreach ($queueQuestions as $question) {
-            $status = $question->status ?? 'new';
+        $statusCounts = $room->questions()
+            ->whereNull('deleted_by_owner_at')
+            ->whereNull('deleted_by_participant_at')
+            ->selectRaw('status, count(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status')
+            ->all();
+
+        foreach ($statusCounts as $status => $value) {
             if (array_key_exists($status, $counts)) {
-                $counts[$status]++;
+                $counts[$status] = (int) $value;
             }
         }
 
-        $counts['all'] = $queueQuestions->count();
+        $counts['all'] = array_sum($counts);
 
         return $counts;
     }
@@ -398,6 +516,143 @@ class RoomController extends Controller
             'room' => $room,
             'myQuestions' => $myQuestions,
         ]);
+    }
+
+    public function questionItem(Request $request, Room $room, Question $question)
+    {
+        $user = $request->user();
+        $isOwner = $user && ($user->id === $room->user_id || $user->is_dev);
+
+        if (!$isOwner || $question->room_id !== $room->id) {
+            abort(403);
+        }
+
+        $question->load(['participant', 'ratings']);
+
+        return view('rooms.partials.queue_item', [
+            'question' => $question,
+            'room' => $room,
+            'isOwner' => true,
+        ]);
+    }
+
+    public function messagesHistory(Request $request, Room $room)
+    {
+        if ($room->status === 'finished' && !$room->is_public_read && !$this->isOwner($room)) {
+            abort(403);
+        }
+
+        $limit = max(1, min(self::MESSAGE_PAGE_SIZE, (int) $request->integer('limit', self::MESSAGE_PAGE_SIZE)));
+        $beforeId = $request->integer('before_id');
+
+        $query = $this->baseMessagesQuery($room);
+
+        if ($beforeId) {
+            $query->where('id', '<', $beforeId);
+        }
+
+        $messagesCollection = $query
+            ->limit($limit + 1)
+            ->get();
+
+        $hasMore = $messagesCollection->count() > $limit;
+        $messages = $messagesCollection
+            ->take($limit)
+            ->reverse()
+            ->values();
+
+        $viewer = $request->user();
+        $participant = $this->getOrCreateParticipant($request, $room, $this->resolveFingerprint($request), $request->ip());
+        $payload = $messages->map(fn (Message $message) => $this->formatMessagePayload($message, $participant, $viewer));
+
+        return response()->json([
+            'data' => $payload,
+            'has_more' => $hasMore,
+            'next_before_id' => $messages->first()?->id,
+        ]);
+    }
+
+    protected function baseMessagesQuery(Room $room)
+    {
+        return $room->messages()
+            ->with(['participant', 'user', 'question', 'replyTo.user', 'replyTo.participant', 'reactions'])
+            ->orderByDesc('created_at')
+            ->orderByDesc('id');
+    }
+
+    protected function baseQueueQuery(Room $room)
+    {
+        return $room->questions()
+            ->with(['participant', 'ratings'])
+            ->whereNull('deleted_by_owner_at')
+            ->whereNull('deleted_by_participant_at')
+            ->orderByRaw("CASE status WHEN 'new' THEN 0 WHEN 'later' THEN 1 WHEN 'answered' THEN 2 WHEN 'ignored' THEN 3 ELSE 4 END")
+            ->orderBy('created_at');
+    }
+
+    protected function formatMessagePayload(Message $message, ?Participant $participant = null, ?User $user = null): array
+    {
+        $message->loadMissing(['user', 'participant', 'question', 'replyTo.user', 'replyTo.participant', 'reactions', 'room']);
+
+        $room = $message->room;
+        $isOwner = $message->user_id && $room && $room->user_id === $message->user_id;
+
+        $myReactions = $message->reactions
+            ->filter(function ($reaction) use ($participant, $user) {
+                if ($user && $reaction->user_id === $user->id) {
+                    return true;
+                }
+                if ($participant && $reaction->participant_id === $participant->id) {
+                    return true;
+                }
+                return false;
+            })
+            ->pluck('emoji')
+            ->values();
+
+        $replyTo = null;
+        if ($message->replyTo) {
+            $replyTo = [
+                'id' => $message->replyTo->id,
+                'author' => $message->replyTo->user_id
+                    ? ($message->replyTo->user?->name ?? 'Guest')
+                    : ($message->replyTo->participant?->display_name ?? 'Guest'),
+                'content' => $message->replyTo->trashed()
+                    ? 'Message deleted'
+                    : Str::limit($message->replyTo->content, 140),
+                'is_deleted' => $message->replyTo->trashed(),
+            ];
+        }
+
+        $reactions = $message->reactions
+            ->groupBy('emoji')
+            ->map(fn ($items, $emoji) => [
+                'emoji' => $emoji,
+                'count' => $items->count(),
+            ])
+            ->values()
+            ->toArray();
+
+        return [
+            'id' => $message->id,
+            'room_id' => $message->room_id,
+            'content' => $message->content,
+            'created_at' => $message->created_at?->toIso8601String(),
+            'author' => [
+                'type' => $isOwner ? 'owner' : 'participant',
+                'name' => $message->user_id
+                    ? ($message->user?->name ?? 'Guest')
+                    : ($message->participant?->display_name ?? 'Guest'),
+                'user_id' => $message->user_id,
+                'participant_id' => $message->participant_id,
+                'is_dev' => (bool) $message->user?->is_dev,
+                'is_owner' => $isOwner,
+            ],
+            'as_question' => (bool) ($message->relationLoaded('question') ? $message->question : $message->question()->exists()),
+            'reply_to' => $replyTo,
+            'reactions' => $reactions,
+            'myReactions' => $myReactions->toArray(),
+        ];
     }
 
     protected function resolveFingerprint(Request $request): string

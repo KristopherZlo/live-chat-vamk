@@ -12,6 +12,7 @@ use App\Models\Setting;
 use App\Models\UpdatePost;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -24,14 +25,16 @@ class AdminController extends Controller
 
     public function index()
     {
-        $stats = [
-            'users' => User::count(),
-            'rooms' => Room::count(),
-            'messages' => Message::count(),
-            'questions' => Question::count(),
-            'participants' => Participant::count(),
-            'active_users' => $this->countActiveUsers(),
-        ];
+        $stats = Cache::remember('admin:stats', 60, function () {
+            return [
+                'users' => User::count(),
+                'rooms' => Room::count(),
+                'messages' => Message::count(),
+                'questions' => Question::count(),
+                'participants' => Participant::count(),
+                'active_users' => $this->countActiveUsers(),
+            ];
+        });
 
         $inviteCodes = InviteCode::with('usedBy')
             ->latest()
@@ -57,7 +60,9 @@ class AdminController extends Controller
             ->limit(8)
             ->get();
 
-        $allRooms = Room::orderBy('title')->get(['id', 'title', 'slug']);
+        $allRooms = Cache::remember('admin:all_rooms_list', 60, function () {
+            return Room::orderBy('title')->get(['id', 'title', 'slug']);
+        });
 
         $recentBans = RoomBan::with(['room', 'participant'])
             ->latest()
@@ -195,14 +200,16 @@ class AdminController extends Controller
 
     protected function countActiveUsers(): int
     {
-        try {
-            return DB::table('sessions')
-                ->whereNotNull('user_id')
-                ->distinct('user_id')
-                ->count('user_id');
-        } catch (\Throwable $e) {
-            return 0;
-        }
+        return Cache::remember('admin:active_users', 60, function () {
+            try {
+                return DB::table('sessions')
+                    ->whereNotNull('user_id')
+                    ->distinct('user_id')
+                    ->count('user_id');
+            } catch (\Throwable $e) {
+                return 0;
+            }
+        });
     }
 
     protected function resolveRealtimeHealth(): array

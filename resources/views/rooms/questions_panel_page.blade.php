@@ -23,5 +23,7 @@
         'queueQuestions' => $queueQuestions,
         'queueStatusCounts' => $queueStatusCounts,
         'isOwner' => $isOwner,
+        'queueHasMore' => $queueHasMore ?? false,
+        'queueOffset' => $queueOffset ?? $queueQuestions->count(),
     ])
 </x-app-layout>

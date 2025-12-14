@@ -1,5 +1,7 @@
 @php
-    $queueCount = $queueQuestions->count();
+    $queueTotal = $queueStatusCounts['all'] ?? $queueQuestions->count();
+    $queueHasMore = $queueHasMore ?? false;
+    $queueOffset = $queueOffset ?? $queueQuestions->count();
 @endphp
 
 <section
@@ -34,7 +36,7 @@
           <i data-lucide="picture-in-picture"></i>
         </button>
       @endauth
-      <span class="queue-count-badge">{{ $queueCount }} questions</span>
+      <span class="queue-count-badge">{{ $queueTotal }} questions</span>
     </div>
   </div>
 
@@ -42,90 +44,22 @@
     @if($queueQuestions->isEmpty())
       <p class="empty-state">No pending questions.</p>
     @else
-      <ul class="queue-list">
-        @foreach($queueQuestions as $question)
-          <li
-            class="queue-item {{ $question->status === 'new' ? 'queue-item-new' : '' }}"
-            data-question-id="{{ $question->id }}"
-            data-status="{{ $question->status }}"
-          >
-            <div class="question-header">
-              <div class="question-meta">
-                <span class="message-author">{{ $question->participant?->display_name ?? 'Anonymous' }}</span>
-                <span class="message-meta">{{ $question->created_at->format('H:i') }}</span>
-              </div>
-              @if($question->status !== 'new')
-                <span class="status-pill status-{{ $question->status }}">{{ ucfirst($question->status) }}</span>
-              @endif
-            </div>
-            <div class="question-text">{{ $question->content }}</div>
-            @php
-              $studentRating = optional($question->ratings->first())->rating;
-            @endphp
-            @if($question->status === 'answered' && $studentRating !== null)
-              <div class="question-feedback" aria-label="Student feedback">
-                <span class="question-feedback__label">Student feedback:</span>
-                <span class="feedback-pill {{ $studentRating === 1 ? 'feedback-pill-ok' : 'feedback-pill-bad' }}">
-                  {{ $studentRating === 1 ? 'Helpful' : 'Not helpful' }}
-                </span>
-              </div>
-            @endif
-            <div class="question-actions">
-              @if($isOwner)
-                <div class="queue-controls">
-                  <form method="POST" action="{{ route('questions.updateStatus', $question) }}" data-remote="questions-panel">
-                    @csrf
-                    <input type="hidden" name="status" value="answered">
-                    <button type="submit" class="queue-action queue-action-answered">Answered</button>
-                  </form>
-                  <form method="POST" action="{{ route('questions.updateStatus', $question) }}" data-remote="questions-panel">
-                    @csrf
-                    <input type="hidden" name="status" value="ignored">
-                    <button type="submit" class="queue-action queue-action-ignored">Ignore</button>
-                  </form>
-                  <form method="POST" action="{{ route('questions.updateStatus', $question) }}" data-remote="questions-panel">
-                    @csrf
-                    <input type="hidden" name="status" value="later">
-                    <button type="submit" class="queue-action queue-action-later">Later</button>
-                  </form>
-                </div>
-                <div class="question-actions-secondary">
-                  @if($question->participant)
-                    <form
-                      method="POST"
-                      action="{{ route('rooms.bans.store', $room) }}"
-                      data-ban-confirm="1"
-                    >
-                      @csrf
-                      <input type="hidden" name="participant_id" value="{{ $question->participant->id }}">
-                      <button class="btn btn-sm queue-ban-btn" type="submit">
-                        <i data-lucide="gavel"></i>
-                        <span>Ban participant</span>
-                      </button>
-                    </form>
-                  @endif
-                  <form method="POST" action="{{ route('questions.ownerDelete', $question) }}" onsubmit="return confirm('Delete this question permanently?');" data-remote="questions-panel">
-                    @csrf
-                    @method('DELETE')
-                    <button class="btn btn-sm queue-delete-btn" type="submit">
-                      <i data-lucide="trash-2"></i>
-                      <span>Delete</span>
-                    </button>
-                  </form>
-                </div>
-              @else
-                <span class="panel-subtitle">Only the host can manage the queue.</span>
-              @endif
-            </div>
-          </li>
-        @endforeach
+      <ul
+        class="queue-list"
+        data-queue-has-more="{{ $queueHasMore ? '1' : '0' }}"
+        data-queue-offset="{{ $queueOffset }}"
+      >
+        @include('rooms.partials.queue_items', ['queueQuestions' => $queueQuestions, 'room' => $room, 'isOwner' => $isOwner])
       </ul>
       <p class="empty-state queue-filter-empty" data-queue-filter-empty hidden>No questions in this filter.</p>
+      <div class="queue-pagination">
+        <div class="queue-loading" data-queue-loader hidden>Loading more questions...</div>
+      </div>
     @endif
   </div>
 
   <div class="panel-footer">
-    <span>{{ $queueCount }} total</span>
+    <span>{{ $queueTotal }} total</span>
     <span class="panel-subtitle">Update status and filter to focus on what matters</span>
   </div>
 </section>

@@ -244,7 +244,27 @@
                 </div>
 
                 <div class="chat-pane" data-chat-panel="chat" data-onboarding-target="chat-pane">
-                    <ol class="chat-messages messages-container" id="chatMessages">
+                    <ol
+                        class="chat-messages messages-container"
+                        id="chatMessages"
+                        data-history-url="{{ $messagesHistoryUrl ?? '' }}"
+                        data-has-more="{{ !empty($messagesHasMore) ? '1' : '0' }}"
+                        data-oldest-id="{{ $messagesOldestId ?? '' }}"
+                        data-page-size="{{ $messagePageSize ?? 50 }}"
+                    >
+                        <li
+                            class="message message-loader"
+                            data-messages-loader
+                            hidden
+                            style="text-align:center; padding:12px; color:var(--muted, #6b7280);"
+                        >
+                            <div
+                                data-messages-loader-text
+                                style="display:inline-block; padding:8px 12px; border:1px solid #e5e7eb; border-radius:12px; background:#f8fafc; font-weight:600;"
+                            >
+                                Fetching previous messages...
+                            </div>
+                        </li>
                         @forelse($messages as $message)
                             @php
                                 $isOwnerMessage = $message->user && $message->user_id === $room->user_id;
@@ -677,6 +697,14 @@
                 const publicLink = @json($publicLink);
                 const queueSoundUrl = @json($queueSoundUrl);
                 window.queueSoundUrl = queueSoundUrl;
+                const messagesHistoryUrl = @json($messagesHistoryUrl);
+                const messagesHasMoreInitial = @json($messagesHasMore ?? false);
+                const messagesOldestId = @json($messagesOldestId);
+                const messagesPageSize = @json($messagePageSize ?? 50);
+                const queueItemUrlTemplate = @json($queueItemUrlTemplate ?? null);
+                const queueItemsBatchUrl = @json($isOwner ? route('rooms.questions.batch', $room) : null);
+                const queueChunkUrl = @json($isOwner ? route('rooms.questions.chunk', $room) : null);
+                const queuePageSize = Number(@json($queuePageSize ?? 50));
                 const questionsPanel = document.getElementById('questions-panel');
                 const questionsPanelUrl = @json(route('rooms.questionsPanel', $room));
                 const myQuestionsPanel = document.getElementById('myQuestionsPanel');
@@ -688,6 +716,11 @@
                 let queuePipWindow = null;
                 let queuePipSyncTimer = null;
                 let queuePipStylesCloned = false;
+                let questionsReloadInFlight = false;
+                let questionsReloadPending = false;
+                let questionsReloadTimeout = null;
+                let lastQuestionsReloadAt = 0;
+                const MIN_QUESTIONS_RELOAD_MS = 1200;
                 const handleQueuePipClick = () => {
                     if (queuePipWindow && !queuePipWindow.closed) {
                         closeQueuePip();
@@ -730,14 +763,319 @@
                 let queueNeedsNew = false;
                 let questionsPollTimer = null;
                 let myQuestionsPollTimer = null;
+                let queueHasMore = false;
+                let queueOffset = 0;
+                let queueLoading = false;
+                const getQueueBody = () => document.querySelector('#queuePanel .panel-body');
+                const getQueueList = () => document.querySelector('#queuePanel .queue-list');
+                const ensureQueueList = () => {
+                    let list = getQueueList();
+                    if (list) return list;
+                    const body = getQueueBody();
+                    if (!body) return null;
+                    body.innerHTML = '';
+                    list = document.createElement('ul');
+                    list.className = 'queue-list';
+                    list.dataset.queueHasMore = '0';
+                    list.dataset.queueOffset = '0';
+                    body.appendChild(list);
+
+                    let filterEmpty = body.querySelector('[data-queue-filter-empty]');
+                    if (!filterEmpty) {
+                        filterEmpty = document.createElement('p');
+                        filterEmpty.className = 'empty-state queue-filter-empty';
+                        filterEmpty.dataset.queueFilterEmpty = '1';
+                        filterEmpty.hidden = true;
+                        filterEmpty.textContent = 'No questions in this filter.';
+                        body.appendChild(filterEmpty);
+                    }
+
+                    let pagination = body.querySelector('.queue-pagination');
+                    if (!pagination) {
+                        pagination = document.createElement('div');
+                        pagination.className = 'queue-pagination';
+                        const loader = document.createElement('div');
+                        loader.className = 'queue-loading';
+                        loader.dataset.queueLoader = '1';
+                        loader.hidden = true;
+                        loader.textContent = 'Loading more questions...';
+                        pagination.append(loader);
+                        body.appendChild(pagination);
+                    } else if (!pagination.querySelector('[data-queue-loader]')) {
+                        const loader = document.createElement('div');
+                        loader.className = 'queue-loading';
+                        loader.dataset.queueLoader = '1';
+                        loader.hidden = true;
+                        loader.textContent = 'Loading more questions...';
+                        pagination.append(loader);
+                    }
+
+                    return list;
+                };
+                const buildQueueItemUrl = (questionId) => {
+                    const id = normalizeId(questionId);
+                    if (!id || !queueItemUrlTemplate) return null;
+                    return queueItemUrlTemplate.replace('__QUESTION__', String(id));
+                };
+                const fetchQueueItemHtml = async (questionId) => {
+                    const url = buildQueueItemUrl(questionId);
+                    if (!url) return null;
+                    const response = await fetch(url, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    });
+                    if (!response.ok) return null;
+                    return response.text();
+                };
+                const fetchQueueItemsBatch = async (ids = []) => {
+                    if (!queueItemsBatchUrl || !ids.length) return [];
+                    const url = new URL(queueItemsBatchUrl, window.location.origin);
+                    url.searchParams.set('ids', ids.join(','));
+                    const response = await fetch(url.toString(), {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    });
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    const payload = await response.json();
+                    return Array.isArray(payload.items) ? payload.items : [];
+                };
+                const updateQueueOffsets = () => {
+                    const list = getQueueList();
+                    if (!list) return;
+                    const count = list.querySelectorAll('.queue-item').length;
+                    queueOffset = count;
+                    list.dataset.queueOffset = String(count);
+                    if (list.dataset.queueHasMore) {
+                        queueHasMore = list.dataset.queueHasMore === '1';
+                    }
+                };
+                const upsertQueueItemFromHtml = (questionId, html) => {
+                    const list = ensureQueueList();
+                    if (!list || !html) return;
+                    const wrapper = document.createElement('div');
+                    wrapper.innerHTML = html;
+                    const item = wrapper.querySelector('.queue-item');
+                    if (!item) return;
+                    const id = normalizeId(questionId) || normalizeId(item.dataset.questionId);
+                    const existing = id ? list.querySelector(`.queue-item[data-question-id="${id}"]`) : null;
+                    if (existing) {
+                        existing.replaceWith(item);
+                    } else {
+                        list.appendChild(item);
+                    }
+                    bindQueueInteractions(list);
+                    updateQueueOffsets();
+                    maybeAutoloadQueue();
+                };
+                const pendingQueueUpserts = new Set();
+                let queueUpsertTimer = null;
+                const QUEUE_BATCH_DELAY = 220;
+                const flushQueueUpserts = async () => {
+                    const ids = Array.from(pendingQueueUpserts);
+                    pendingQueueUpserts.clear();
+                    queueUpsertTimer = null;
+                    if (!ids.length) return;
+                    try {
+                        let items = [];
+                        if (queueItemsBatchUrl) {
+                            items = await fetchQueueItemsBatch(ids);
+                        } else {
+                            items = await Promise.all(ids.map(async (id) => {
+                                const html = await fetchQueueItemHtml(id);
+                                return html ? { id, html } : null;
+                            }));
+                        }
+                        (items || [])
+                            .filter(Boolean)
+                            .forEach((item) => {
+                                upsertQueueItemFromHtml(item.id, item.html);
+                            });
+                    } catch (err) {
+                        console.warn('Queue upsert failed, falling back to reload', err);
+                        scheduleReloadQuestionsPanel();
+                    }
+                };
+                const requestQueueItemRefresh = (questionId) => {
+                    const id = normalizeId(questionId);
+                    if (!id) return;
+                    pendingQueueUpserts.add(id);
+                    if (!queueUpsertTimer) {
+                        queueUpsertTimer = window.setTimeout(flushQueueUpserts, QUEUE_BATCH_DELAY);
+                    }
+                };
+                const upsertQueueItem = (questionId) => requestQueueItemRefresh(questionId);
+                const setQueueLoader = (isLoading) => {
+                    const loader = document.querySelector('#queuePanel [data-queue-loader]');
+                    if (loader) {
+                        loader.hidden = !isLoading;
+                    }
+                };
+                const syncQueueStateFromDom = () => {
+                    const list = getQueueList();
+                    if (!list) {
+                        queueHasMore = false;
+                        queueOffset = 0;
+                        return;
+                    }
+                    queueHasMore = list.dataset.queueHasMore === '1';
+                    queueOffset = Number(list.dataset.queueOffset || list.children.length || 0);
+                };
+                const appendQueueHtml = (html) => {
+                    const list = ensureQueueList();
+                    if (!list || !html) return 0;
+                    const wrapper = document.createElement('div');
+                    wrapper.innerHTML = html;
+                    const items = Array.from(wrapper.children);
+                    const fragment = document.createDocumentFragment();
+                    items.forEach((item) => fragment.appendChild(item));
+                    list.appendChild(fragment);
+                    const added = items.filter((node) => node.classList?.contains('queue-item')).length;
+                    if (added) {
+                        updateQueueOffsets({ delta: added });
+                    }
+                    return added;
+                };
+                const isQueueNearBottom = () => {
+                    const body = getQueueBody();
+                    if (!body) return false;
+                    const nearBottom = body.scrollTop + body.clientHeight >= body.scrollHeight - 140;
+                    const notScrollable = body.scrollHeight <= body.clientHeight + 20;
+                    return nearBottom || notScrollable;
+                };
+                const maybeAutoloadQueue = () => {
+                    if (!queueHasMore || queueLoading) return;
+                    if (isQueueNearBottom()) {
+                        loadMoreQueueItems();
+                    }
+                };
+                const loadMoreQueueItems = async () => {
+                    if (queueLoading) return;
+                    const list = ensureQueueList();
+                    if (!queueChunkUrl || !list) return;
+                    if (!queueHasMore) {
+                        setQueueLoader(false);
+                        return;
+                    }
+                    queueLoading = true;
+                    setQueueLoader(true);
+                    const currentOffset = Number(list.dataset.queueOffset || queueOffset || list.children.length || 0);
+                    try {
+                        const url = new URL(queueChunkUrl, window.location.origin);
+                        url.searchParams.set('offset', currentOffset);
+                        url.searchParams.set('limit', String(queuePageSize));
+                        const response = await fetch(url.toString(), {
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        });
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
+                        const payload = await response.json();
+                        const added = appendQueueHtml(payload.html);
+                        queueHasMore = Boolean(payload.has_more);
+                        queueOffset = payload.next_offset ?? (currentOffset + added);
+                        list.dataset.queueHasMore = queueHasMore ? '1' : '0';
+                        list.dataset.queueOffset = String(queueOffset);
+                        bindQueueInteractions(list);
+                        window.setupQueueFilter?.(list.closest('#queuePanel') || document);
+                        maybeAutoloadQueue();
+                        renderQueuePipContent();
+                    } catch (error) {
+                        console.error('Failed to load more queue items', error);
+                    } finally {
+                        queueLoading = false;
+                        setQueueLoader(false);
+                    }
+                };
                   const qrButton = document.getElementById('qrButton');
                   const qrOverlay = document.getElementById('qrOverlay');
                   const qrClose = document.getElementById('qrClose');
                   const qrCanvas = document.getElementById('qrCanvas');
                 const chatContainer = document.querySelector('.messages-container');
+                const chatMessagesList = document.getElementById('chatMessages');
+                const messagesLoader = document.querySelector('[data-messages-loader]');
+                const messagesLoaderText = document.querySelector('[data-messages-loader-text]');
+                const messagePageLimit = Number(messagesPageSize) || Number(chatMessagesList?.dataset?.pageSize || '0') || 50;
+                const messagesHistoryEndpoint = (messagesHistoryUrl || chatMessagesList?.dataset?.historyUrl || '').toString();
+                let messagesHasMore = typeof messagesHasMoreInitial === 'boolean'
+                    ? messagesHasMoreInitial
+                    : (chatMessagesList?.dataset?.hasMore === '1');
+                let messagesOldestKnownId = normalizeId(messagesOldestId) || normalizeId(chatMessagesList?.dataset?.oldestId);
+                let messagesLoading = false;
                 const scrollChatToBottom = () => {
                     if (!chatContainer) return;
                     chatContainer.scrollTop = chatContainer.scrollHeight;
+                };
+                const updateMessagesStateAttributes = () => {
+                    if (!chatMessagesList) return;
+                    chatMessagesList.dataset.oldestId = messagesOldestKnownId ? String(messagesOldestKnownId) : '';
+                    chatMessagesList.dataset.hasMore = messagesHasMore ? '1' : '0';
+                };
+                const setMessagesLoader = (isLoading) => {
+                    if (messagesLoader) {
+                        messagesLoader.hidden = !isLoading && !messagesHasMore;
+                    }
+                    if (messagesLoaderText) {
+                        messagesLoaderText.textContent = isLoading
+                            ? 'Fetching previous messages...'
+                            : 'More messages available';
+                    }
+                };
+                const updateMessagesLoadMoreVisibility = () => {};
+                const loadOlderMessages = async () => {
+                    if (!chatContainer || !messagesHistoryEndpoint || messagesLoading || !messagesHasMore) return;
+                    if (!messagesOldestKnownId) return;
+                    messagesLoading = true;
+                    setMessagesLoader(true);
+                    const prevHeight = chatContainer.scrollHeight;
+                    const prevTop = chatContainer.scrollTop;
+                    try {
+                        const url = new URL(messagesHistoryEndpoint, window.location.origin);
+                        url.searchParams.set('before_id', messagesOldestKnownId);
+                        url.searchParams.set('limit', String(messagePageLimit));
+                        const response = await fetch(url.toString(), {
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        });
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
+                        const payload = await response.json();
+                        const items = Array.isArray(payload.data) ? payload.data : [];
+                        if (!items.length) {
+                            messagesHasMore = false;
+                            updateMessagesStateAttributes();
+                            updateMessagesLoadMoreVisibility();
+                            return;
+                        }
+                        const fragment = document.createDocumentFragment();
+                        items.forEach((item) => {
+                            const node = createMessageElement(item, { pending: false, allowBan: true });
+                            fragment.appendChild(node);
+                        });
+                        const loaderAnchor = chatMessagesList?.querySelector('[data-messages-loader]');
+                        if (loaderAnchor && loaderAnchor.parentNode === chatContainer) {
+                            loaderAnchor.after(fragment);
+                        } else {
+                            chatContainer.prepend(fragment);
+                        }
+                        bindBanForms(chatContainer);
+                        bindDeleteForms(chatContainer);
+                        bindDeleteTriggers(chatContainer);
+                        if (window.refreshLucideIcons) {
+                            window.refreshLucideIcons(chatContainer);
+                        }
+                        removeEmptyMessageState();
+                        const newHeight = chatContainer.scrollHeight;
+                        chatContainer.scrollTop = newHeight - (prevHeight - prevTop);
+                        messagesOldestKnownId = normalizeId(items[0]?.id) || messagesOldestKnownId;
+                        messagesHasMore = Boolean(payload.has_more);
+                        updateMessagesStateAttributes();
+                        updateMessagesLoadMoreVisibility();
+                    } catch (error) {
+                        console.error('Failed to load older messages', error);
+                    } finally {
+                        messagesLoading = false;
+                        setMessagesLoader(false);
+                    }
                 };
                 const chatInputWrapper = document.querySelector('[data-chat-panel=\"chat\"] .chat-input');
                 const chatInput = document.getElementById('chatInput');
@@ -1167,7 +1505,8 @@
                     renderReactions(container, reactions || [], myReactions || []);
                     return container;
                 };
-                const updateMessageElementFromPayload = (element, payload) => {
+                const updateMessageElementFromPayload = (element, payload, options = {}) => {
+                    const { refreshIcons = true } = options;
                     if (!element || !payload) return element;
                     const fresh = buildMessageElement(payload, { pending: false });
                     element.className = fresh.className;
@@ -1180,7 +1519,7 @@
                     element.classList.remove('message--pending');
                     element.removeAttribute('data-temp-id');
                     element.removeAttribute('data-temp-key');
-                    if (window.refreshLucideIcons) {
+                    if (refreshIcons && window.refreshLucideIcons) {
                         window.refreshLucideIcons();
                     }
                     return element;
@@ -2319,11 +2658,18 @@
                 setupRepliesPane();
                 setupInitialReactions();
                 renderReactionMenuOptions();
+                updateMessagesStateAttributes();
+                updateMessagesLoadMoreVisibility();
                 autosizeComposer();
                 updateSendButtonState();
                 scrollChatToBottom();
                 if (chatContainer) {
                     chatContainer.addEventListener('click', handleReplyJump);
+                    chatContainer.addEventListener('scroll', () => {
+                        if (chatContainer.scrollTop <= 80) {
+                            loadOlderMessages();
+                        }
+                    });
                 }
                 if (replyDetailBody) {
                     replyDetailBody.addEventListener('click', (event) => {
@@ -2549,7 +2895,13 @@
                         if (!form) return;
                         event.preventDefault();
                         submitRemoteForm(form, () => {
-                            reloadQuestionsPanel();
+                            const item = form.closest('.queue-item');
+                            const qId = normalizeId(item?.dataset.questionId);
+                            if (qId) {
+                                upsertQueueItem(qId);
+                            } else {
+                                scheduleReloadQuestionsPanel();
+                            }
                             renderQueuePipContent();
                         });
                         const item = form.closest('.queue-item');
@@ -2676,6 +3028,14 @@
                 }
                 if (questionsPanel) {
                     bindQueueInteractions();
+                    syncQueueStateFromDom();
+                    const body = getQueueBody();
+                    if (body) {
+                        body.addEventListener('scroll', () => {
+                            maybeAutoloadQueue();
+                        });
+                    }
+                    maybeAutoloadQueue();
                 }
 
                 attachQueuePipButton();
@@ -2787,8 +3147,32 @@
                     replyPreviewCancel.addEventListener('click', clearReplyContext);
                 }
 
+                const scheduleReloadQuestionsPanel = () => {
+                    if (questionsReloadInFlight) {
+                        questionsReloadPending = true;
+                        return;
+                    }
+                    const now = Date.now();
+                    const elapsed = now - lastQuestionsReloadAt;
+                    if (elapsed < MIN_QUESTIONS_RELOAD_MS) {
+                        clearTimeout(questionsReloadTimeout);
+                        questionsReloadTimeout = setTimeout(() => {
+                            questionsReloadTimeout = null;
+                            reloadQuestionsPanel();
+                        }, MIN_QUESTIONS_RELOAD_MS - elapsed);
+                        return;
+                    }
+                    reloadQuestionsPanel();
+                };
+
                 async function reloadQuestionsPanel() {
                     if (!questionsPanel || !questionsPanelUrl) return;
+                    if (questionsReloadInFlight) {
+                        questionsReloadPending = true;
+                        return;
+                    }
+
+                    questionsReloadInFlight = true;
 
                     try {
                         const response = await fetch(questionsPanelUrl, {
@@ -2805,6 +3189,8 @@
                         const html = await response.text();
                         questionsPanel.innerHTML = html;
                         bindQueueInteractions(questionsPanel);
+                        syncQueueStateFromDom();
+                        maybeAutoloadQueue();
                         renderQueuePipContent();
                         const hasNewItems = questionsPanel.querySelector('.queue-item.queue-item-new');
                         bindBanForms(questionsPanel);
@@ -2814,12 +3200,19 @@
                         }
                     } catch (e) {
                         console.error('Refresh questions panel error', e);
+                    } finally {
+                        questionsReloadInFlight = false;
+                        lastQuestionsReloadAt = Date.now();
+                        if (questionsReloadPending) {
+                            questionsReloadPending = false;
+                            scheduleReloadQuestionsPanel();
+                        }
                     }
                 }
 
                 function startQuestionsPolling() {
                     if (!questionsPanel || questionsPollTimer) return;
-                    questionsPollTimer = setInterval(reloadQuestionsPanel, 6000);
+                    questionsPollTimer = setInterval(scheduleReloadQuestionsPanel, 6000);
                 }
 
                 if (questionsPanel) {
@@ -2854,7 +3247,12 @@
                         }
 
                         submitRemoteForm(target, () => {
-                            reloadQuestionsPanel();
+                            const qId = normalizeId(item?.dataset.questionId);
+                            if (qId) {
+                                upsertQueueItem(qId);
+                            } else {
+                                scheduleReloadQuestionsPanel();
+                            }
                             renderQueuePipContent();
                         }).then((ok) => {
                             if (ok) return;
@@ -2981,52 +3379,120 @@
                     requestAnimationFrame(repositionReactionMenu);
                 });
 
+                const MAX_RENDERED_MESSAGES = Math.max(messagePageLimit * 6, 200);
+                const incomingMessagesBuffer = [];
+                let incomingMessagesFlushTimer = null;
+
+                const isChatNearBottom = () => {
+                    if (!chatContainer) return false;
+                    return chatContainer.scrollTop + chatContainer.clientHeight >= chatContainer.scrollHeight - 28;
+                };
+
+                const trimRenderedMessages = (maxCount = MAX_RENDERED_MESSAGES) => {
+                    if (!chatContainer || !Number.isFinite(maxCount) || maxCount <= 0) return;
+                    const messages = Array.from(chatContainer.querySelectorAll('.message:not([data-messages-loader])'));
+                    const excess = messages.length - maxCount;
+                    if (excess > 0) {
+                        const toRemove = messages.slice(0, excess);
+                        toRemove.forEach((msg) => msg.remove());
+                        const newOldest = messages[excess];
+                        const newOldestId = normalizeId(newOldest?.dataset?.messageId);
+                        if (newOldestId) {
+                            messagesOldestKnownId = newOldestId;
+                            updateMessagesStateAttributes();
+                        }
+                    }
+                };
+
+                const applyIncomingMessagePayload = (payload, newNodes) => {
+                    if (!chatContainer || !payload) return { needsIcons: false, added: false };
+                    const existing = chatContainer.querySelector(`.message[data-message-id="${payload.id}"]`);
+                    if (existing) {
+                        existing.classList.remove('message--pending');
+                        existing.removeAttribute('data-temp-id');
+                        existing.removeAttribute('data-temp-key');
+                        updateMessageElementFromPayload(existing, payload, { refreshIcons: false });
+                        bindBanForms(existing);
+                        bindDeleteForms(existing);
+                        bindDeleteTriggers(existing);
+                        handleIncomingReplyThread(payload);
+                        return { needsIcons: true, added: false };
+                    }
+
+                    const authorUserId = normalizeId(payload.author?.user_id);
+                    const authorParticipantId = normalizeId(payload.author?.participant_id);
+                    const tempKey = makeMessageKey(payload.content, authorUserId, authorParticipantId, payload.reply_to?.id, payload.as_question);
+                    const pendingMatch = chatContainer.querySelector(`.message--pending[data-temp-key="${tempKey}"]`);
+                    if (pendingMatch) {
+                        updateMessageElementFromPayload(pendingMatch, payload, { refreshIcons: false });
+                        bindBanForms(pendingMatch);
+                        bindDeleteForms(pendingMatch);
+                        bindDeleteTriggers(pendingMatch);
+                        handleIncomingReplyThread(payload);
+                        return { needsIcons: true, added: false };
+                    }
+
+                    const wrapper = createMessageElement(payload, { pending: false });
+                    bindBanForms(wrapper);
+                    bindDeleteForms(wrapper);
+                    bindDeleteTriggers(wrapper);
+                    newNodes.push(wrapper);
+                    handleIncomingReplyThread(payload);
+                    return { needsIcons: true, added: true };
+                };
+
+                const flushIncomingMessages = () => {
+                    incomingMessagesFlushTimer = null;
+                    if (!incomingMessagesBuffer.length) return;
+                    if (!chatContainer) {
+                        incomingMessagesBuffer.length = 0;
+                        return;
+                    }
+                    const payloads = incomingMessagesBuffer.splice(0, incomingMessagesBuffer.length);
+                    const shouldAutoscroll = isChatNearBottom();
+                    const newNodes = [];
+                    let needsIcons = false;
+                    let added = false;
+
+                    payloads.forEach((payload) => {
+                        const result = applyIncomingMessagePayload(payload, newNodes);
+                        needsIcons = needsIcons || result.needsIcons;
+                        added = added || result.added;
+                    });
+
+                    if (newNodes.length) {
+                        const fragment = document.createDocumentFragment();
+                        newNodes.forEach((node) => fragment.appendChild(node));
+                        chatContainer.appendChild(fragment);
+                    }
+
+                    if (added) {
+                        removeEmptyMessageState();
+                    }
+
+                    trimRenderedMessages();
+
+                    if (needsIcons && window.refreshLucideIcons) {
+                        window.refreshLucideIcons(chatContainer);
+                    }
+
+                    if (shouldAutoscroll) {
+                        scrollChatToBottom();
+                    }
+                };
+
+                const enqueueIncomingMessage = (payload) => {
+                    incomingMessagesBuffer.push(payload);
+                    if (!incomingMessagesFlushTimer) {
+                        incomingMessagesFlushTimer = window.requestAnimationFrame(flushIncomingMessages);
+                    }
+                };
+
                 if (window.Echo) {
                     const channelName = 'room.' + roomId;
                     window.Echo.channel(channelName)
                         .listen('MessageSent', (e) => {
-                            const container = document.querySelector('.messages-container');
-                            if (!container) return;
-                            const existing = container.querySelector(`.message[data-message-id="${e.id}"]`);
-                            if (existing) {
-                                existing.classList.remove('message--pending');
-                                existing.removeAttribute('data-temp-id');
-                                existing.removeAttribute('data-temp-key');
-                                bindBanForms(existing);
-                                bindDeleteForms(existing);
-                                bindDeleteTriggers(existing);
-                                handleIncomingReplyThread(e);
-                                return;
-                            }
-
-                            const authorUserId = normalizeId(e.author?.user_id);
-                            const authorParticipantId = normalizeId(e.author?.participant_id);
-                            const tempKey = makeMessageKey(e.content, authorUserId, authorParticipantId, e.reply_to?.id, e.as_question);
-                            const pendingMatch = container.querySelector(`.message--pending[data-temp-key="${tempKey}"]`);
-                            if (pendingMatch) {
-                                updateMessageElementFromPayload(pendingMatch, e);
-                                bindBanForms(pendingMatch);
-                                bindDeleteForms(pendingMatch);
-                                bindDeleteTriggers(pendingMatch);
-                                scrollChatToBottom();
-                                if (window.refreshLucideIcons) {
-                                    window.refreshLucideIcons();
-                                }
-                                handleIncomingReplyThread(e);
-                                return;
-                            }
-
-                            removeEmptyMessageState();
-                            const wrapper = createMessageElement(e, { pending: false });
-                            container.appendChild(wrapper);
-                            bindBanForms(wrapper);
-                            bindDeleteForms(wrapper);
-                            bindDeleteTriggers(wrapper);
-                            scrollChatToBottom();
-                            if (window.refreshLucideIcons) {
-                                window.refreshLucideIcons();
-                            }
-                            handleIncomingReplyThread(e);
+                            enqueueIncomingMessage(e);
                         })
                         .listen('ReactionUpdated', (payload) => {
                             updateReactionsFromEvent(payload.message_id, payload.reactions, payload);
@@ -3034,21 +3500,23 @@
                         .listen('MessageDeleted', (payload) => {
                             handleMessageDeleted(payload.id);
                         })
-                        .listen('QuestionCreated', () => {
-                            if (questionsPanel) {
-                                queueNeedsNew = true;
-                                reloadQuestionsPanel();
+                        .listen('QuestionCreated', (payload) => {
+                            if (questionsPanel && payload?.id) {
+                                upsertQueueItem(payload.id);
                             }
                             if (isOwnerUser && typeof window.playQueueSound === 'function') {
+                                if (typeof window.initQueueSoundPlayer === 'function') {
+                                    window.initQueueSoundPlayer(queueSoundUrl);
+                                }
                                 window.playQueueSound(queueSoundUrl);
                             }
                             if (myQuestionsPanel) {
                                 reloadMyQuestionsPanel();
                             }
                         })
-                        .listen('QuestionUpdated', () => {
-                            if (questionsPanel) {
-                                reloadQuestionsPanel();
+                        .listen('QuestionUpdated', (payload) => {
+                            if (questionsPanel && payload?.id) {
+                                upsertQueueItem(payload.id);
                             }
                             if (myQuestionsPanel) {
                                 reloadMyQuestionsPanel();
