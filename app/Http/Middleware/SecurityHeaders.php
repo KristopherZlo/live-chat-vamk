@@ -76,6 +76,12 @@ class SecurityHeaders
             $connectSrc[] = $origin;
         }
 
+        // Accept both 127.0.0.1 and localhost for Reverb/Pusher by default.
+        $connectSrc[] = 'http://localhost:8080';
+        $connectSrc[] = 'ws://localhost:8080';
+        $connectSrc[] = 'http://127.0.0.1:8080';
+        $connectSrc[] = 'ws://127.0.0.1:8080';
+
         $directives = [
             'default-src' => $defaultSrc,
             'img-src' => $imgSrc,

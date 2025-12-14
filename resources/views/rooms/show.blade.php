@@ -2700,13 +2700,46 @@
                             credentials: 'same-origin', // include session cookie for CSRF validation
                             body: formData,
                         });
-                        if (!response.ok) {
+                        const ok = response.status >= 200 && response.status < 400;
+                        if (!ok) {
                             console.error('Remote form failed', response.status);
-                        } else if (typeof onDone === 'function') {
+                            return false;
+                        }
+                        if (typeof onDone === 'function') {
                             onDone();
                         }
+                        return true;
                     } catch (err) {
                         console.error('Remote form error', err);
+                        return false;
+                    }
+                };
+
+                const applyQuestionStatus = (item, status) => {
+                    if (!item) return;
+                    const normalized = (status || '').toLowerCase();
+                    const pill = item.querySelector('.status-pill');
+                    item.dataset.status = normalized;
+                    if (normalized === 'new') {
+                        item.classList.add('queue-item-new');
+                        if (pill) pill.remove();
+                        return;
+                    }
+                    item.classList.remove('queue-item-new');
+                    const text = normalized.charAt(0).toUpperCase() + normalized.slice(1);
+                    if (pill) {
+                        pill.textContent = text;
+                        pill.className = `status-pill status-${normalized}`;
+                    } else {
+                        const badge = document.createElement('span');
+                        badge.className = `status-pill status-${normalized}`;
+                        badge.textContent = text;
+                        const header = item.querySelector('.question-header');
+                        if (header) {
+                            header.appendChild(badge);
+                        } else {
+                            item.appendChild(badge);
+                        }
                     }
                 };
 
@@ -2788,7 +2821,59 @@
                         if (!(target instanceof HTMLFormElement)) return;
                         if (target.dataset.remote !== 'questions-panel') return;
                         event.preventDefault();
-                        submitRemoteForm(target, reloadQuestionsPanel);
+                        const statusInput = target.querySelector('input[name="status"]');
+                        const desiredStatus = (statusInput?.value || '').toLowerCase();
+                        const item = target.closest('.queue-item');
+                        const pill = item?.querySelector('.status-pill') || null;
+                        const prev = item
+                            ? {
+                                status: item.dataset.status || 'new',
+                                pillClass: pill?.className || '',
+                                pillText: pill?.textContent || '',
+                                hadPill: !!pill,
+                                wasNew: item.classList.contains('queue-item-new'),
+                            }
+                            : null;
+
+                        if (item && desiredStatus) {
+                            applyQuestionStatus(item, desiredStatus);
+                            if (desiredStatus === 'answered') {
+                                const id = normalizeId(item.dataset.questionId);
+                                if (id) {
+                                    markMainQueueItemSeen(id);
+                                }
+                            }
+                            window.setupQueueFilter?.(item.closest('#queuePanel') || document);
+                        }
+
+                        submitRemoteForm(target, () => {
+                            reloadQuestionsPanel();
+                            renderQueuePipContent();
+                        }).then((ok) => {
+                            if (ok) return;
+                            if (prev && item) {
+                                applyQuestionStatus(item, prev.status);
+                                const updatedPill = item.querySelector('.status-pill');
+                                if (!prev.hadPill && updatedPill) {
+                                    updatedPill.remove();
+                                } else if (updatedPill) {
+                                    updatedPill.className = prev.pillClass;
+                                    updatedPill.textContent = prev.pillText;
+                                }
+                                if (prev.wasNew) {
+                                    item.classList.add('queue-item-new');
+                                }
+                                window.setupQueueFilter?.(item.closest('#queuePanel') || document);
+                            }
+                            if (typeof window.showFlashNotification === 'function') {
+                                window.showFlashNotification('Unexpected error while updating the question.', {
+                                    type: 'danger',
+                                    source: 'queue-update',
+                                });
+                            } else {
+                                alert('Unexpected error while updating the question.');
+                            }
+                        });
                     });
                 }
 
