@@ -752,6 +752,10 @@
                 const reactionMenuCurrentEmoji = reactionMenu?.querySelector('[data-reaction-current-emoji]');
                 let reactionEmojiPicker = null;
                 const isMobileViewport = () => window.matchMedia('(max-width: 640px)').matches;
+                const setEmojiToggleState = (isActive) => {
+                    if (!chatEmojiToggle) return;
+                    chatEmojiToggle.classList.toggle('is-active', Boolean(isActive));
+                };
                 const syncEmojiPickerTheme = () => {
                     const isDark = document.body?.dataset?.theme === 'dark';
                     if (chatEmojiPicker) {
@@ -1498,6 +1502,7 @@
                     chatEmojiPanel.classList.remove('open');
                     emojiPickerMode = 'input';
                     reactionPickerTarget = null;
+                    setEmojiToggleState(false);
                 };
                 const showEmojiPanel = (mode = 'input', targetMessage = null) => {
                     if (!chatEmojiPanel) return;
@@ -1505,6 +1510,7 @@
                     reactionPickerTarget = targetMessage;
                     chatEmojiPanel.hidden = false;
                     chatEmojiPanel.classList.add('open');
+                    setEmojiToggleState(mode === 'input');
                     if (window.refreshLucideIcons) {
                         window.refreshLucideIcons();
                     }
@@ -2369,10 +2375,11 @@
                         if (emojiPickerMode === 'reaction' && reactionPickerTarget) {
                             toggleReaction(reactionPickerTarget, emoji);
                             closeReactionMenus();
+                            hideEmojiPanel();
                         } else {
                             insertEmojiIntoInput(emoji);
+                            chatInput?.focus();
                         }
-                        hideEmojiPanel();
                     });
                 }
 
