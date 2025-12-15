@@ -66,6 +66,10 @@ class QuestionController extends Controller
 
         event(new QuestionUpdated($question));
 
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json(['deleted' => true]);
+        }
+
         return back();
     }
 
@@ -85,6 +89,10 @@ class QuestionController extends Controller
         $question->save();
 
         event(new QuestionUpdated($question));
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json(['deleted' => true]);
+        }
 
         return back();
     }

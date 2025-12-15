@@ -78,12 +78,13 @@ Route::delete('/rooms/{room}/messages/{message}', [MessageController::class, 'de
     // Изменить статус вопроса (только владелец комнаты)
     Route::post('/questions/{question}/status', [QuestionController::class, 'updateStatus'])
         ->name('questions.updateStatus');
-    Route::get('/rooms/{room}/questions/{question}', [RoomController::class, 'questionItem'])
-        ->name('rooms.questions.item');
     Route::get('/rooms/{room}/questions/chunk', [RoomController::class, 'questionsChunk'])
         ->name('rooms.questions.chunk');
     Route::get('/rooms/{room}/questions/batch', [RoomController::class, 'questionItemsBatch'])
         ->name('rooms.questions.batch');
+    Route::get('/rooms/{room}/questions/{question}', [RoomController::class, 'questionItem'])
+        ->whereNumber('question')
+        ->name('rooms.questions.item');
 
     // Удалить вопрос со стороны владельца (soft delete)
     Route::delete('/questions/{question}/owner-delete', [QuestionController::class, 'ownerDelete'])

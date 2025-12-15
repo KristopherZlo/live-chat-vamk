@@ -206,20 +206,48 @@ function ensureQueueSoundPlayer(url) {
       queueSoundPlayer = new Audio(src);
       queueSoundPlayer.preload = 'auto';
       queueSoundPlayerSrc = src;
+      queueSoundPlayer.addEventListener('error', () => {
+        // eslint-disable-next-line no-console
+        console.debug('[queue-sound] audio error', queueSoundPlayer?.error);
+      });
+      queueSoundPlayer.addEventListener('canplaythrough', () => {
+        // eslint-disable-next-line no-console
+        console.debug('[queue-sound] audio canplaythrough');
+      });
+      queueSoundPlayer.addEventListener('play', () => {
+        // eslint-disable-next-line no-console
+        console.debug('[queue-sound] audio play event');
+      });
     } catch (e) {
       queueSoundPlayer = null;
+      // eslint-disable-next-line no-console
+      console.debug('[queue-sound] create audio failed', e);
     }
   }
   return queueSoundPlayer;
 }
 
 function playQueueSound(url) {
-  if (!isQueueSoundEnabled()) return;
+  if (!isQueueSoundEnabled()) {
+    // eslint-disable-next-line no-console
+    console.debug('[queue-sound] disabled by user setting');
+    return;
+  }
   const player = ensureQueueSoundPlayer(url);
   if (!player) return;
   try {
+    // eslint-disable-next-line no-console
+    console.debug('[queue-sound] playQueueSound', {
+      src: player.src,
+      readyState: player.readyState,
+      muted: player.muted,
+      volume: player.volume,
+    });
     player.currentTime = 0;
-    player.play().catch(() => {});
+    player.play().catch((err) => {
+      // eslint-disable-next-line no-console
+      console.debug('[queue-sound] play() promise rejected', err);
+    });
   } catch (e) {
     /* ignore */
   }
@@ -244,8 +272,13 @@ function primeQueueSound(url) {
           queueSoundPrimed = true;
           player.pause();
           player.currentTime = 0;
+          // eslint-disable-next-line no-console
+          console.debug('[queue-sound] prime succeeded');
         })
-        .catch(() => {})
+        .catch((err) => {
+          // eslint-disable-next-line no-console
+          console.debug('[queue-sound] prime failed', err);
+        })
         .finally(restore);
     } else {
       restore();
@@ -568,11 +601,20 @@ function setupQueueFilter(root = document) {
   const queuePanel = getQueuePanel(root);
   if (!queuePanel) return;
   const filter = queuePanel.querySelector('[data-queue-filter]');
+  if (!filter) return;
   const list = queuePanel.querySelector('.queue-list');
-  if (!filter || !list) return;
+  const isRemoteQueue = queuePanel.dataset.queueRemote === '1';
+  if (!isRemoteQueue && !list) return;
 
   const emptyState = queuePanel.querySelector('[data-queue-filter-empty]');
   const storageKey = getQueueFilterStorageKey(queuePanel);
+  const dispatchFilterChange = (value, meta = {}) => {
+    const event = new CustomEvent('queue:filter-change', {
+      detail: { value, ...meta },
+      bubbles: true,
+    });
+    queuePanel.dispatchEvent(event);
+  };
 
   const loadStoredFilter = () => {
     if (!storageKey) return null;
@@ -593,8 +635,13 @@ function setupQueueFilter(root = document) {
     }
   };
 
-  const applyFilter = () => {
+  const applyFilter = (meta = {}) => {
     const value = (filter.value || 'new').toLowerCase();
+    if (isRemoteQueue) {
+      dispatchFilterChange(value, meta);
+      return;
+    }
+
     const items = Array.from(list.querySelectorAll('.queue-item'));
     let visible = 0;
 
@@ -609,6 +656,10 @@ function setupQueueFilter(root = document) {
       emptyState.hidden = visible > 0;
     }
     list.classList.toggle('queue-list-filter-empty', visible === 0);
+    if (typeof window.maybeAutoloadQueue === 'function') {
+      window.maybeAutoloadQueue(true);
+    }
+    dispatchFilterChange(value, meta);
   };
 
   const stored = loadStoredFilter();
@@ -618,18 +669,19 @@ function setupQueueFilter(root = document) {
       filter.value = option.value;
     }
   }
-
   if (filter.dataset.queueFilterBound === '1') {
-    applyFilter();
+    if (!isRemoteQueue) {
+      applyFilter({ initial: false });
+    }
     return;
   }
 
   filter.dataset.queueFilterBound = '1';
   filter.addEventListener('change', () => {
     persistFilter(filter.value || 'new');
-    applyFilter();
+    applyFilter({ initial: false });
   });
-  applyFilter();
+  applyFilter({ initial: true });
 }
 
 function setupQueueNewHandlers(root = document) {

@@ -10,6 +10,7 @@
   id="queuePanel"
   data-room-id="{{ $room->id }}"
   data-viewer-id="{{ auth()->id() ?? 'guest' }}"
+  data-queue-remote="1"
   data-onboarding-target="queue-panel"
 >
   <div class="panel-header">
@@ -24,11 +25,11 @@
       <div class="queue-filter">
         <label class="queue-filter-label" for="queueFilter">Filter</label>
         <select id="queueFilter" class="queue-filter-select" data-queue-filter>
-          <option value="new" selected>New ({{ $queueStatusCounts['new'] ?? 0 }})</option>
-          <option value="all">All ({{ $queueStatusCounts['all'] ?? 0 }})</option>
-          <option value="answered">Answered ({{ $queueStatusCounts['answered'] ?? 0 }})</option>
-          <option value="ignored">Ignored ({{ $queueStatusCounts['ignored'] ?? 0 }})</option>
-          <option value="later">Later ({{ $queueStatusCounts['later'] ?? 0 }})</option>
+          <option value="new" data-count="{{ $queueStatusCounts['new'] ?? 0 }}">New ({{ $queueStatusCounts['new'] ?? 0 }})</option>
+          <option value="all" data-count="{{ $queueStatusCounts['all'] ?? 0 }}" selected>All ({{ $queueStatusCounts['all'] ?? 0 }})</option>
+          <option value="answered" data-count="{{ $queueStatusCounts['answered'] ?? 0 }}">Answered ({{ $queueStatusCounts['answered'] ?? 0 }})</option>
+          <option value="ignored" data-count="{{ $queueStatusCounts['ignored'] ?? 0 }}">Ignored ({{ $queueStatusCounts['ignored'] ?? 0 }})</option>
+          <option value="later" data-count="{{ $queueStatusCounts['later'] ?? 0 }}">Later ({{ $queueStatusCounts['later'] ?? 0 }})</option>
         </select>
       </div>
       @auth

@@ -8,6 +8,8 @@ use App\Models\Participant;
 use App\Models\RoomBan;
 use App\Models\Question;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
@@ -353,7 +355,10 @@ class RoomController extends Controller
         $offset = max(0, (int) $request->integer('offset', 0));
         $limit = max(1, min(self::QUEUE_PAGE_SIZE, (int) $request->integer('limit', self::QUEUE_PAGE_SIZE)));
 
-        $queueCollection = $this->baseQueueQuery($room)
+        $status = strtolower((string) $request->get('status', ''));
+        $queueQuery = $this->applyQueueStatusFilter($this->baseQueueQuery($room), $status);
+
+        $queueCollection = $queueQuery
             ->offset($offset)
             ->limit($limit + 1)
             ->get();
@@ -391,7 +396,10 @@ class RoomController extends Controller
         $offset = max(0, (int) $request->integer('offset', 0));
         $limit = max(1, min(self::QUEUE_PAGE_SIZE, (int) $request->integer('limit', self::QUEUE_PAGE_SIZE)));
 
-        $queueCollection = $this->baseQueueQuery($room)
+        $status = strtolower((string) $request->get('status', ''));
+        $queueQuery = $this->applyQueueStatusFilter($this->baseQueueQuery($room), $status);
+
+        $queueCollection = $queueQuery
             ->offset($offset)
             ->limit($limit + 1)
             ->get();
@@ -588,6 +596,18 @@ class RoomController extends Controller
             ->whereNull('deleted_by_participant_at')
             ->orderByRaw("CASE status WHEN 'new' THEN 0 WHEN 'later' THEN 1 WHEN 'answered' THEN 2 WHEN 'ignored' THEN 3 ELSE 4 END")
             ->orderBy('created_at');
+    }
+
+    protected function applyQueueStatusFilter(Builder|Relation $query, ?string $status): Builder|Relation
+    {
+        $status = strtolower((string) $status);
+        $allowed = ['new', 'later', 'answered', 'ignored'];
+
+        if (!in_array($status, $allowed, true)) {
+            return $query;
+        }
+
+        return $query->where('status', $status);
     }
 
     protected function formatMessagePayload(Message $message, ?Participant $participant = null, ?User $user = null): array

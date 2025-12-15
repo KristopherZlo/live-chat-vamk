@@ -711,6 +711,52 @@
                 const myQuestionsPanelUrl = @json(route('rooms.myQuestionsPanel', $room));
                 const banStoreUrl = @json(route('rooms.bans.store', $room));
                 const rootWindow = window;
+                const queueRenderedIds = new Set();
+                const seedQueueRenderedIds = () => {
+                    queueRenderedIds.clear();
+                    const list = document.querySelector('#queuePanel .queue-list');
+                    if (!list) return;
+                    list.querySelectorAll('.queue-item[data-question-id]').forEach((item) => {
+                        const parsed = normalizeId(item.dataset.questionId);
+                        if (parsed) queueRenderedIds.add(parsed);
+                    });
+                };
+                const playQueueSoundSafe = () => {
+                    if (!queueSoundUrl) return;
+                    console.debug('[queue-sound] playQueueSoundSafe start', {
+                        url: queueSoundUrl,
+                        hasApi: typeof window.playQueueSound === 'function',
+                        enabled: typeof window.isQueueSoundEnabled === 'function' ? window.isQueueSoundEnabled() : true,
+                    });
+                    if (typeof window.isQueueSoundEnabled === 'function' && !window.isQueueSoundEnabled()) {
+                        console.debug('[queue-sound] blocked by user setting');
+                        return;
+                    }
+                    if (typeof window.initQueueSoundPlayer === 'function') {
+                        try {
+                            window.initQueueSoundPlayer(queueSoundUrl);
+                        } catch (err) {
+                            console.debug('[queue-sound] initQueueSoundPlayer error', err);
+                        }
+                    }
+                    if (typeof window.playQueueSound === 'function') {
+                        try {
+                            window.playQueueSound(queueSoundUrl);
+                        } catch (err) {
+                            console.debug('[queue-sound] playQueueSound error', err);
+                        }
+                        return;
+                    }
+                    try {
+                        const audio = new Audio(queueSoundUrl);
+                        audio.currentTime = 0;
+                        audio.play()
+                            .then(() => console.debug('[queue-sound] fallback audio played'))
+                            .catch((err) => console.debug('[queue-sound] fallback audio error', err));
+                    } catch (err) {
+                        console.debug('[queue-sound] playQueueSoundSafe fallback error', err);
+                    }
+                };
                 let queuePipButton;
                 const supportsDocumentPip = Boolean(window.documentPictureInPicture && window.documentPictureInPicture.requestWindow);
                 let queuePipWindow = null;
@@ -764,10 +810,22 @@
                 let questionsPollTimer = null;
                 let myQuestionsPollTimer = null;
                 let queueHasMore = false;
+                let queueFullyLoaded = false;
                 let queueOffset = 0;
                 let queueLoading = false;
+                let queueActiveFilter = null;
+                let queueInitialFilterHandled = false;
+                const queueActionInflight = new Set();
                 const getQueueBody = () => document.querySelector('#queuePanel .panel-body');
                 const getQueueList = () => document.querySelector('#queuePanel .queue-list');
+                const getQueueFilterSelect = () => document.querySelector('#queuePanel [data-queue-filter]');
+                const getQueueFilterCount = (value) => {
+                    const select = getQueueFilterSelect();
+                    const target = (select && value) ? select.querySelector(`option[value="${value}"]`) : null;
+                    const raw = target?.dataset?.count ?? target?.dataset?.statusCount;
+                    const parsed = Number(raw);
+                    return Number.isFinite(parsed) ? parsed : null;
+                };
                 const ensureQueueList = () => {
                     let list = getQueueList();
                     if (list) return list;
@@ -822,6 +880,7 @@
                     if (!url) return null;
                     const response = await fetch(url, {
                         headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        credentials: 'same-origin',
                     });
                     if (!response.ok) return null;
                     return response.text();
@@ -832,6 +891,7 @@
                     url.searchParams.set('ids', ids.join(','));
                     const response = await fetch(url.toString(), {
                         headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        credentials: 'same-origin',
                     });
                     if (!response.ok) {
                         throw new Error(`HTTP ${response.status}`);
@@ -839,15 +899,62 @@
                     const payload = await response.json();
                     return Array.isArray(payload.items) ? payload.items : [];
                 };
+                const updateQueueEmptyState = () => {
+                    const list = getQueueList();
+                    const body = getQueueBody();
+                    const emptyState = body?.querySelector('[data-queue-filter-empty]');
+                    if (!emptyState) return;
+                    const hasItems = Boolean(list?.querySelector('.queue-item:not([hidden])'));
+                    emptyState.hidden = hasItems || queueLoading || queueHasMore;
+                };
+                const setQueueHasMore = (hasMore) => {
+                    queueHasMore = Boolean(hasMore);
+                    const list = getQueueList();
+                    if (list) {
+                        list.dataset.queueHasMore = queueHasMore ? '1' : '0';
+                    }
+                    updateQueueEmptyState();
+                };
                 const updateQueueOffsets = () => {
                     const list = getQueueList();
-                    if (!list) return;
+                    if (!list) {
+                        queueOffset = 0;
+                        return;
+                    }
                     const count = list.querySelectorAll('.queue-item').length;
                     queueOffset = count;
                     list.dataset.queueOffset = String(count);
-                    if (list.dataset.queueHasMore) {
-                        queueHasMore = list.dataset.queueHasMore === '1';
+                };
+                const pruneQueueListToFilter = (filter) => {
+                    const list = getQueueList();
+                    if (!list || !filter || filter === 'all') return;
+                    const items = Array.from(list.querySelectorAll('.queue-item'));
+                    items.forEach((item) => {
+                        const status = (item.dataset.status || '').toLowerCase();
+                        item.hidden = status !== filter;
+                    });
+                    updateQueueOffsets();
+                    updateQueueEmptyState();
+                };
+                const syncQueueStateFromDom = (filter = getQueueFilterValue()) => {
+                    queueActiveFilter = filter || queueActiveFilter || 'all';
+                    updateQueueOffsets();
+                    updateQueueFilterCounts();
+                    applyFilterToQueue(queueActiveFilter);
+                    setQueueHasMore(false);
+                    updateQueueEmptyState();
+                };
+                const resetQueueForFilter = (filter) => {
+                    queueActiveFilter = filter || 'all';
+                    const list = ensureQueueList();
+                    if (list) {
+                        list.dataset.queueHasMore = '0';
+                        list.dataset.queueOffset = String(list.querySelectorAll('.queue-item').length);
                     }
+                    queueLoading = false;
+                    setQueueHasMore(false);
+                    updateQueueOffsets();
+                    updateQueueEmptyState();
                 };
                 const upsertQueueItemFromHtml = (questionId, html) => {
                     const list = ensureQueueList();
@@ -857,15 +964,48 @@
                     const item = wrapper.querySelector('.queue-item');
                     if (!item) return;
                     const id = normalizeId(questionId) || normalizeId(item.dataset.questionId);
+                    const status = (item.dataset.status || '').toLowerCase();
                     const existing = id ? list.querySelector(`.queue-item[data-question-id="${id}"]`) : null;
+                    const isNewId = id && !queueRenderedIds.has(id);
                     if (existing) {
                         existing.replaceWith(item);
                     } else {
                         list.appendChild(item);
                     }
+                    if (id) {
+                        queueRenderedIds.add(id);
+                    }
+                    if (isNewId && isOwnerUser) {
+                        console.debug('[queue-sound] new queue item, triggering sound', {
+                            id,
+                            fromPayload: questionId,
+                            status,
+                        });
+                        playQueueSoundSafe();
+                    }
                     bindQueueInteractions(list);
                     updateQueueOffsets();
-                    maybeAutoloadQueue();
+                    if (queueActiveFilter && queueActiveFilter !== 'all' && queueActiveFilter !== status && status === 'new') {
+                        queueNeedsNew = true;
+                        if (typeof window.markQueueHasNew === 'function') {
+                            window.markQueueHasNew();
+                        }
+                    }
+                    updateQueueFilterCounts();
+                    applyFilterToQueue(queueActiveFilter || getQueueFilterValue());
+                };
+                const removeQueueItem = (questionId) => {
+                    const id = normalizeId(questionId);
+                    if (!id) return false;
+                    const list = getQueueList();
+                    const item = list?.querySelector(`.queue-item[data-question-id="${id}"]`);
+                    if (!item) return false;
+                    item.remove();
+                    updateQueueOffsets();
+                    updateQueueFilterCounts();
+                    applyFilterToQueue(queueActiveFilter || getQueueFilterValue());
+                    updateQueueEmptyState();
+                    return true;
                 };
                 const pendingQueueUpserts = new Set();
                 let queueUpsertTimer = null;
@@ -885,10 +1025,21 @@
                                 return html ? { id, html } : null;
                             }));
                         }
+                        const receivedIds = new Set();
                         (items || [])
                             .filter(Boolean)
                             .forEach((item) => {
+                                const normalizedId = normalizeId(item.id);
+                                if (normalizedId) {
+                                    receivedIds.add(normalizedId);
+                                }
                                 upsertQueueItemFromHtml(item.id, item.html);
+                            });
+                        ids
+                            .map((value) => normalizeId(value))
+                            .filter((value) => value && !receivedIds.has(value))
+                            .forEach((missingId) => {
+                                removeQueueItem(missingId);
                             });
                     } catch (err) {
                         console.warn('Queue upsert failed, falling back to reload', err);
@@ -906,34 +1057,80 @@
                 const upsertQueueItem = (questionId) => requestQueueItemRefresh(questionId);
                 const setQueueLoader = (isLoading) => {
                     const loader = document.querySelector('#queuePanel [data-queue-loader]');
-                    if (loader) {
-                        loader.hidden = !isLoading;
-                    }
+                    if (!loader) return;
+                    loader.hidden = !isLoading;
                 };
-                const syncQueueStateFromDom = () => {
+                const updateQueueFilterCounts = () => {
+                    const select = getQueueFilterSelect();
                     const list = getQueueList();
-                    if (!list) {
-                        queueHasMore = false;
-                        queueOffset = 0;
-                        return;
+                    if (!select || !list) return;
+                    const counts = {
+                        all: 0,
+                        new: 0,
+                        answered: 0,
+                        ignored: 0,
+                        later: 0,
+                    };
+                    list.querySelectorAll('.queue-item').forEach((item) => {
+                        const status = (item.dataset.status || '').toLowerCase();
+                        if (counts[status] !== undefined) {
+                            counts[status] += 1;
+                        }
+                        counts.all += 1;
+                    });
+                    select.querySelectorAll('option').forEach((option) => {
+                        const value = option.value.toLowerCase();
+                        const label = option.textContent.replace(/\s+\(\d+\)\s*$/, '').trim();
+                        if (value === 'all') {
+                            option.dataset.count = String(counts.all);
+                            option.textContent = `${label} (${counts.all})`;
+                        } else if (counts[value] !== undefined) {
+                            option.dataset.count = String(counts[value]);
+                            option.textContent = `${label} (${counts[value]})`;
+                        }
+                    });
+                    const badge = document.querySelector('.queue-count-badge');
+                    if (badge) {
+                        badge.textContent = `${counts.all} questions`;
                     }
-                    queueHasMore = list.dataset.queueHasMore === '1';
-                    queueOffset = Number(list.dataset.queueOffset || list.children.length || 0);
                 };
+
+                const applyFilterToQueue = (filter) => {
+                    const list = getQueueList();
+                    if (!list) return;
+                    const target = (filter || 'all').toLowerCase();
+                    list.querySelectorAll('.queue-item').forEach((item) => {
+                        const status = (item.dataset.status || '').toLowerCase();
+                        const shouldShow = target === 'all' || status === target;
+                        item.hidden = !shouldShow;
+                    });
+                    updateQueueEmptyState();
+                };
+
                 const appendQueueHtml = (html) => {
                     const list = ensureQueueList();
                     if (!list || !html) return 0;
                     const wrapper = document.createElement('div');
                     wrapper.innerHTML = html;
-                    const items = Array.from(wrapper.children);
+                    const items = Array.from(wrapper.querySelectorAll('.queue-item'));
+                    if (!items.length) return 0;
                     const fragment = document.createDocumentFragment();
-                    items.forEach((item) => fragment.appendChild(item));
+                    items.forEach((item) => {
+                        const parsed = normalizeId(item.dataset.questionId);
+                        if (parsed) {
+                            queueRenderedIds.add(parsed);
+                        }
+                        fragment.appendChild(item);
+                    });
                     list.appendChild(fragment);
-                    const added = items.filter((node) => node.classList?.contains('queue-item')).length;
-                    if (added) {
-                        updateQueueOffsets({ delta: added });
-                    }
-                    return added;
+                    updateQueueOffsets();
+                    updateQueueFilterCounts();
+                    applyFilterToQueue(queueActiveFilter || getQueueFilterValue());
+                    return items.length;
+                };
+                const getQueueFilterValue = () => {
+                    const select = document.querySelector('#queuePanel [data-queue-filter]');
+                    return (select?.value || 'all').toLowerCase();
                 };
                 const isQueueNearBottom = () => {
                     const body = getQueueBody();
@@ -943,49 +1140,74 @@
                     return nearBottom || notScrollable;
                 };
                 const maybeAutoloadQueue = () => {
-                    if (!queueHasMore || queueLoading) return;
-                    if (isQueueNearBottom()) {
-                        loadMoreQueueItems();
-                    }
-                };
-                const loadMoreQueueItems = async () => {
-                    if (queueLoading) return;
-                    const list = ensureQueueList();
-                    if (!queueChunkUrl || !list) return;
-                    if (!queueHasMore) {
-                        setQueueLoader(false);
+                    if (queueFullyLoaded || queueLoading) {
+                        updateQueueEmptyState();
                         return;
                     }
+                    loadAllQueueItems();
+                };
+                const loadMoreQueueItems = async (offset) => {
+                    const list = ensureQueueList();
+                    if (!queueChunkUrl || !list) return { added: 0, hasMore: false, nextOffset: offset };
+                    const url = new URL(queueChunkUrl, window.location.origin);
+                    url.searchParams.set('offset', offset);
+                    url.searchParams.set('limit', String(queuePageSize));
+                    const response = await fetch(url.toString(), {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        credentials: 'same-origin',
+                    });
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    const payload = await response.json();
+                    const added = appendQueueHtml(payload.html);
+                    const nextOffset = payload.next_offset ?? (offset + added);
+                    return { added, hasMore: Boolean(payload.has_more), nextOffset };
+                };
+
+                const loadAllQueueItems = async () => {
+                    if (queueLoading || queueFullyLoaded) return;
+                    const list = ensureQueueList();
+                    if (!list) return;
                     queueLoading = true;
                     setQueueLoader(true);
-                    const currentOffset = Number(list.dataset.queueOffset || queueOffset || list.children.length || 0);
                     try {
-                        const url = new URL(queueChunkUrl, window.location.origin);
-                        url.searchParams.set('offset', currentOffset);
-                        url.searchParams.set('limit', String(queuePageSize));
-                        const response = await fetch(url.toString(), {
-                            headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                        });
-                        if (!response.ok) {
-                            throw new Error(`HTTP ${response.status}`);
+                        let offset = Number(list.dataset.queueOffset || queueOffset || list.children.length || 0);
+                        let hasMore = true;
+                        while (hasMore) {
+                            const result = await loadMoreQueueItems(offset);
+                            offset = result.nextOffset ?? offset;
+                            hasMore = result.hasMore && result.added > 0;
+                            queueOffset = offset;
+                            list.dataset.queueOffset = String(offset);
                         }
-                        const payload = await response.json();
-                        const added = appendQueueHtml(payload.html);
-                        queueHasMore = Boolean(payload.has_more);
-                        queueOffset = payload.next_offset ?? (currentOffset + added);
-                        list.dataset.queueHasMore = queueHasMore ? '1' : '0';
-                        list.dataset.queueOffset = String(queueOffset);
-                        bindQueueInteractions(list);
-                        window.setupQueueFilter?.(list.closest('#queuePanel') || document);
-                        maybeAutoloadQueue();
-                        renderQueuePipContent();
+                        setQueueHasMore(false);
+                        queueFullyLoaded = true;
+                        applyFilterToQueue(queueActiveFilter || getQueueFilterValue());
+                        updateQueueFilterCounts();
                     } catch (error) {
-                        console.error('Failed to load more queue items', error);
+                        console.error('Failed to load all queue items', error);
+                        setQueueHasMore(false);
                     } finally {
                         queueLoading = false;
                         setQueueLoader(false);
+                        updateQueueEmptyState();
                     }
                 };
+                const handleQueueFilterChange = (value, meta = {}) => {
+                    const filter = (value || 'all').toLowerCase();
+                    const isInitial = Boolean(meta.initial);
+                    if (isInitial && queueInitialFilterHandled && filter === queueActiveFilter) {
+                        return;
+                    }
+                    if (isInitial) {
+                        queueInitialFilterHandled = true;
+                    }
+                    queueActiveFilter = filter;
+                    applyFilterToQueue(filter);
+                    updateQueueEmptyState();
+                };
+                window.maybeAutoloadQueue = maybeAutoloadQueue;
                   const qrButton = document.getElementById('qrButton');
                   const qrOverlay = document.getElementById('qrOverlay');
                   const qrClose = document.getElementById('qrClose');
@@ -1023,7 +1245,19 @@
                 const updateMessagesLoadMoreVisibility = () => {};
                 const loadOlderMessages = async () => {
                     if (!chatContainer || !messagesHistoryEndpoint || messagesLoading || !messagesHasMore) return;
-                    if (!messagesOldestKnownId) return;
+                    if (!messagesOldestKnownId) {
+                        const first = chatContainer.querySelector('.message[data-message-id]');
+                        const fallbackId = normalizeId(first?.dataset?.messageId);
+                        if (fallbackId) {
+                            messagesOldestKnownId = fallbackId;
+                            updateMessagesStateAttributes();
+                        } else {
+                            messagesHasMore = false;
+                            updateMessagesStateAttributes();
+                            setMessagesLoader(false);
+                            return;
+                        }
+                    }
                     messagesLoading = true;
                     setMessagesLoader(true);
                     const prevHeight = chatContainer.scrollHeight;
@@ -1075,6 +1309,16 @@
                     } finally {
                         messagesLoading = false;
                         setMessagesLoader(false);
+                        requestAnimationFrame(() => maybeLoadOlderMessages());
+                    }
+                };
+                const isChatNearTop = () => chatContainer && chatContainer.scrollTop <= 80;
+                const isChatNotScrollable = () => chatContainer
+                    && chatContainer.scrollHeight <= chatContainer.clientHeight + 32;
+                const maybeLoadOlderMessages = (force = false) => {
+                    if (!chatContainer || messagesLoading || !messagesHasMore) return;
+                    if (force || isChatNearTop() || isChatNotScrollable()) {
+                        loadOlderMessages();
                     }
                 };
                 const chatInputWrapper = document.querySelector('[data-chat-panel=\"chat\"] .chat-input');
@@ -2663,12 +2907,11 @@
                 autosizeComposer();
                 updateSendButtonState();
                 scrollChatToBottom();
+                maybeLoadOlderMessages(true);
                 if (chatContainer) {
                     chatContainer.addEventListener('click', handleReplyJump);
                     chatContainer.addEventListener('scroll', () => {
-                        if (chatContainer.scrollTop <= 80) {
-                            loadOlderMessages();
-                        }
+                        maybeLoadOlderMessages();
                     });
                 }
                 if (replyDetailBody) {
@@ -3026,15 +3269,23 @@
                     }
                     attachQueuePipButton();
                 }
+                seedQueueRenderedIds();
                 if (questionsPanel) {
+                    questionsPanel.addEventListener('queue:filter-change', (event) => {
+                        const value = event.detail?.value || getQueueFilterValue();
+                        handleQueueFilterChange(value, {
+                            initial: Boolean(event.detail?.initial),
+                            preserveExisting: Boolean(event.detail?.initial),
+                        });
+                    });
                     bindQueueInteractions();
-                    syncQueueStateFromDom();
                     const body = getQueueBody();
                     if (body) {
                         body.addEventListener('scroll', () => {
                             maybeAutoloadQueue();
                         });
                     }
+                    handleQueueFilterChange(getQueueFilterValue(), { initial: true, preserveExisting: true });
                     maybeAutoloadQueue();
                 }
 
@@ -3056,9 +3307,19 @@
                         method = override.toString().toUpperCase();
                     }
                     const token = formData.get('_token') || csrfMeta?.getAttribute('content') || '';
+                    const actionAttr = (form.getAttribute('action') || '').trim();
+                    const actionUrl = actionAttr ? new URL(actionAttr, window.location.href) : null;
+                    if (!actionUrl) {
+                        console.warn('Remote form skipped: missing action');
+                        return false;
+                    }
+                    if (actionUrl.pathname === window.location.pathname || /\/r\/[^/]+/.test(actionUrl.pathname)) {
+                        console.warn('Remote form skipped: action points to room page', actionUrl.pathname);
+                        return false;
+                    }
 
                     try {
-                        const response = await fetch(form.action, {
+                        const response = await fetch(actionUrl.toString(), {
                             method,
                             headers: {
                                 'X-Requested-With': 'XMLHttpRequest',
@@ -3108,6 +3369,17 @@
                             item.appendChild(badge);
                         }
                     }
+                };
+
+                const setQueueItemBusy = (item, busy = true) => {
+                    if (!item) return;
+                    item.querySelectorAll('button').forEach((btn) => {
+                        btn.disabled = busy;
+                        btn.setAttribute('aria-busy', busy ? 'true' : 'false');
+                        if (!busy) {
+                            btn.removeAttribute('aria-busy');
+                        }
+                    });
                 };
 
                 const avatarColorFromName = (name = 'Guest') => {
@@ -3166,7 +3438,7 @@
                 };
 
                 async function reloadQuestionsPanel() {
-                    if (!questionsPanel || !questionsPanelUrl) return;
+                    if (!questionsPanel) return;
                     if (questionsReloadInFlight) {
                         questionsReloadPending = true;
                         return;
@@ -3175,26 +3447,12 @@
                     questionsReloadInFlight = true;
 
                     try {
-                        const response = await fetch(questionsPanelUrl, {
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest',
-                            },
-                        });
-
-                        if (!response.ok) {
-                            console.error('Failed to refresh questions panel', response.status);
-                            return;
-                        }
-
-                        const html = await response.text();
-                        questionsPanel.innerHTML = html;
+                        await loadAllQueueItems();
                         bindQueueInteractions(questionsPanel);
-                        syncQueueStateFromDom();
-                        maybeAutoloadQueue();
+                        updateQueueFilterCounts();
+                        applyFilterToQueue(queueActiveFilter || getQueueFilterValue());
                         renderQueuePipContent();
-                        const hasNewItems = questionsPanel.querySelector('.queue-item.queue-item-new');
-                        bindBanForms(questionsPanel);
-                        if ((queueNeedsNew || hasNewItems) && typeof window.markQueueHasNew === 'function') {
+                        if (queueNeedsNew && typeof window.markQueueHasNew === 'function') {
                             window.markQueueHasNew();
                             queueNeedsNew = false;
                         }
@@ -3220,10 +3478,25 @@
                         const target = event.target;
                         if (!(target instanceof HTMLFormElement)) return;
                         if (target.dataset.remote !== 'questions-panel') return;
+                        const rawAction = (target.getAttribute('action') || '').trim();
+                        const actionUrl = rawAction ? new URL(rawAction, window.location.href) : null;
+                        if (!actionUrl || actionUrl.pathname === window.location.pathname || /\/r\/[^/]+/.test(actionUrl.pathname)) {
+                            // Let the browser submit normally if action is missing or points to the room page.
+                            return;
+                        }
                         event.preventDefault();
                         const statusInput = target.querySelector('input[name="status"]');
                         const desiredStatus = (statusInput?.value || '').toLowerCase();
+                        const methodAttr = (target.getAttribute('method') || 'POST').toUpperCase();
+                        const methodOverride = (target.querySelector('input[name="_method"]')?.value || '').toUpperCase();
+                        const effectiveMethod = methodOverride || methodAttr;
+                        const isDeleteAction = effectiveMethod === 'DELETE';
                         const item = target.closest('.queue-item');
+                        const qId = normalizeId(item?.dataset.questionId);
+                        const shouldBlockActions = Boolean(qId && (desiredStatus || isDeleteAction));
+                        if (shouldBlockActions && queueActionInflight.has(qId)) {
+                            return;
+                        }
                         const pill = item?.querySelector('.status-pill') || null;
                         const prev = item
                             ? {
@@ -3235,21 +3508,29 @@
                             }
                             : null;
 
-                        if (item && desiredStatus) {
-                            applyQuestionStatus(item, desiredStatus);
-                            if (desiredStatus === 'answered') {
-                                const id = normalizeId(item.dataset.questionId);
-                                if (id) {
-                                    markMainQueueItemSeen(id);
+                        if (item && (desiredStatus || isDeleteAction)) {
+                            if (shouldBlockActions && qId) {
+                                queueActionInflight.add(qId);
+                            }
+                            setQueueItemBusy(item, true);
+                            if (desiredStatus) {
+                                applyQuestionStatus(item, desiredStatus);
+                                if (desiredStatus === 'answered') {
+                                    if (qId) {
+                                        markMainQueueItemSeen(qId);
+                                    }
                                 }
                             }
                             window.setupQueueFilter?.(item.closest('#queuePanel') || document);
                         }
 
                         submitRemoteForm(target, () => {
-                            const qId = normalizeId(item?.dataset.questionId);
                             if (qId) {
-                                upsertQueueItem(qId);
+                                if (isDeleteAction) {
+                                    removeQueueItem(qId);
+                                } else {
+                                    upsertQueueItem(qId);
+                                }
                             } else {
                                 scheduleReloadQuestionsPanel();
                             }
@@ -3278,6 +3559,11 @@
                             } else {
                                 alert('Unexpected error while updating the question.');
                             }
+                        }).finally(() => {
+                            if (qId) {
+                                queueActionInflight.delete(qId);
+                            }
+                            setQueueItemBusy(item, false);
                         });
                     });
                 }
@@ -3290,6 +3576,7 @@
                             headers: {
                                 'X-Requested-With': 'XMLHttpRequest',
                             },
+                            credentials: 'same-origin',
                         });
 
                         if (!response.ok) {
@@ -3503,12 +3790,6 @@
                         .listen('QuestionCreated', (payload) => {
                             if (questionsPanel && payload?.id) {
                                 upsertQueueItem(payload.id);
-                            }
-                            if (isOwnerUser && typeof window.playQueueSound === 'function') {
-                                if (typeof window.initQueueSoundPlayer === 'function') {
-                                    window.initQueueSoundPlayer(queueSoundUrl);
-                                }
-                                window.playQueueSound(queueSoundUrl);
                             }
                             if (myQuestionsPanel) {
                                 reloadMyQuestionsPanel();
