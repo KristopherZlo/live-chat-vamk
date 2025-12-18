@@ -387,9 +387,10 @@ class SeedDemoChat extends Command
                         'message_id' => $message->id,
                         'user_id' => $actorIsHost ? $actor->id : null,
                         'participant_id' => $actorIsHost ? null : $actor->id,
-                        'emoji' => $emoji,
                     ],
-                    []
+                    [
+                        'emoji' => $emoji,
+                    ]
                 );
             }
 
