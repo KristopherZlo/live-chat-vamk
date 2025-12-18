@@ -77,4 +77,9 @@ class Room extends Model
             })
             ->exists();
     }
+
+    public function getRouteKeyName(): string
+    {
+        return 'slug';
+    }
 }

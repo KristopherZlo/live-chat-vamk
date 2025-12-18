@@ -17,12 +17,15 @@ class QuestionUpdated implements ShouldBroadcastNow
 
     public function __construct(Question $question)
     {
-        $this->question = $question->load(['participant', 'ratings']);
+        $this->question = $question->load(['participant', 'ratings', 'room']);
     }
 
     public function broadcastOn(): Channel
     {
-        return new Channel('room.' . $this->question->room_id);
+        $slug = $this->question->room?->slug;
+        $channelId = $slug ?: (string) $this->question->room_id;
+
+        return new Channel('room.' . $channelId);
     }
 
     public function broadcastWith(): array

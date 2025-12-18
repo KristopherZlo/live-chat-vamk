@@ -110,6 +110,7 @@ class MessageReactionController extends Controller
         try {
             event(new ReactionUpdated(
                 $room->id,
+                $room->slug,
                 $message->id,
                 $summary,
                 $yourReactions,

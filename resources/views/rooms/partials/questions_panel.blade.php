@@ -8,7 +8,7 @@
   class="panel queue-panel mobile-panel mobile-active"
   data-mobile-panel="queue"
   id="queuePanel"
-  data-room-id="{{ $room->id }}"
+  data-room-slug="{{ $room->slug }}"
   data-viewer-id="{{ auth()->id() ?? 'guest' }}"
   data-queue-remote="1"
   data-onboarding-target="queue-panel"

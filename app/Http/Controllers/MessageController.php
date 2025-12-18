@@ -206,6 +206,7 @@ class MessageController extends Controller
         event(new MessageDeleted(
             $message->id,
             $room->id,
+            $room->slug,
             $deletedByUserId,
             $deletedByParticipantId
         ));

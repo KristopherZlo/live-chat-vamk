@@ -18,12 +18,15 @@ class QuestionCreated implements ShouldBroadcastNow
     public function __construct(Question $question)
     {
         // подгружаем участника, если нужен на фронте
-        $this->question = $question->load('participant');
+        $this->question = $question->load(['participant', 'room']);
     }
 
     public function broadcastOn(): Channel
     {
-        return new Channel('room.' . $this->question->room_id);
+        $slug = $this->question->room?->slug;
+        $channelId = $slug ?: (string) $this->question->room_id;
+
+        return new Channel('room.' . $channelId);
     }
 
     public function broadcastWith(): array

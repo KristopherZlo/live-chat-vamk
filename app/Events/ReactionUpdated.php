@@ -13,6 +13,7 @@ class ReactionUpdated implements ShouldBroadcastNow
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public int $roomId;
+    public string $roomSlug;
     public int $messageId;
     public array $reactions;
     public array $yourReactions;
@@ -21,6 +22,7 @@ class ReactionUpdated implements ShouldBroadcastNow
 
     public function __construct(
         int $roomId,
+        string $roomSlug,
         int $messageId,
         array $reactions = [],
         array $yourReactions = [],
@@ -28,6 +30,7 @@ class ReactionUpdated implements ShouldBroadcastNow
         ?int $actorParticipantId = null
     ) {
         $this->roomId = $roomId;
+        $this->roomSlug = $roomSlug;
         $this->messageId = $messageId;
         $this->reactions = $reactions;
         $this->yourReactions = $yourReactions;
@@ -37,7 +40,9 @@ class ReactionUpdated implements ShouldBroadcastNow
 
     public function broadcastOn(): Channel
     {
-        return new Channel('room.' . $this->roomId);
+        $channelId = $this->roomSlug ?: (string) $this->roomId;
+
+        return new Channel('room.' . $channelId);
     }
 
     public function broadcastWith(): array

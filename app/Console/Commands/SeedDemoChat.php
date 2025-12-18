@@ -282,6 +282,7 @@ class SeedDemoChat extends Command
                 event(new MessageDeleted(
                     $target->id,
                     $room->id,
+                    $room->slug,
                     $target->deleted_by_user_id,
                     $target->deleted_by_participant_id
                 ));
@@ -397,6 +398,7 @@ class SeedDemoChat extends Command
 
             event(new ReactionUpdated(
                 $room->id,
+                $room->slug,
                 $message->id,
                 $summary,
                 $yourReactions,

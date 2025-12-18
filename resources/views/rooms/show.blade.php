@@ -88,7 +88,6 @@
     <div
         class="{{ $isOwner ? 'role-teacher' : 'role-student' }} room-page"
         data-room-role="{{ $isOwner ? 'owner' : 'participant' }}"
-        data-room-id="{{ $room->id }}"
         data-last-visited-room
         data-room-slug="{{ $room->slug }}"
         data-room-title="{{ $room->title ?? 'Untitled room' }}"
@@ -688,7 +687,7 @@
             document.addEventListener('DOMContentLoaded', () => {
                 if (window.__chatPageBound) return;
                 window.__chatPageBound = true;
-                const roomId = {{ $room->id }};
+                const roomSlug = @json($room->slug);
                 const isOwnerUser = @json($isOwner);
                 const currentUserId = @json(auth()->id());
                 const currentParticipantId = @json($participant?->id);
@@ -3776,7 +3775,7 @@
                 };
 
                 if (window.Echo) {
-                    const channelName = 'room.' + roomId;
+                    const channelName = 'room.' + roomSlug;
                     window.Echo.channel(channelName)
                         .listen('MessageSent', (e) => {
                             enqueueIncomingMessage(e);

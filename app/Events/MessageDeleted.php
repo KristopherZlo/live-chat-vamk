@@ -15,6 +15,7 @@ class MessageDeleted implements ShouldBroadcastNow
     public function __construct(
         public int $messageId,
         public int $roomId,
+        public string $roomSlug,
         public ?int $deletedByUserId = null,
         public ?int $deletedByParticipantId = null,
     ) {
@@ -22,7 +23,9 @@ class MessageDeleted implements ShouldBroadcastNow
 
     public function broadcastOn(): Channel
     {
-        return new Channel('room.' . $this->roomId);
+        $channelId = $this->roomSlug ?: (string) $this->roomId;
+
+        return new Channel('room.' . $channelId);
     }
 
     public function broadcastWith(): array

@@ -90,16 +90,16 @@ function getQueuePanel(root = document) {
 
 function getQueueStorageKey(queuePanel = getQueuePanel()) {
   if (!queuePanel) return null;
-  const roomId = queuePanel.dataset.roomId;
+  const roomKey = queuePanel.dataset.roomSlug || queuePanel.dataset.roomId;
   const viewerId = queuePanel.dataset.viewerId || 'viewer';
-  if (!roomId) return null;
-  return `${QUEUE_SEEN_KEY_PREFIX}:${roomId}:${viewerId}`;
+  if (!roomKey) return null;
+  return `${QUEUE_SEEN_KEY_PREFIX}:${roomKey}:${viewerId}`;
 }
 
 function getQueueFilterStorageKey(queuePanel = getQueuePanel()) {
   if (!queuePanel) return null;
-  const roomId = queuePanel.dataset.roomId;
-  return roomId ? `${QUEUE_FILTER_KEY_PREFIX}:${roomId}` : null;
+  const roomKey = queuePanel.dataset.roomSlug || queuePanel.dataset.roomId;
+  return roomKey ? `${QUEUE_FILTER_KEY_PREFIX}:${roomKey}` : null;
 }
 
 function loadQueueSeenState(queuePanel = getQueuePanel()) {

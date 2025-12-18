@@ -31,7 +31,10 @@ class MessageSent implements ShouldBroadcastNow
 
     public function broadcastOn(): Channel
     {
-        return new Channel('room.' . $this->message->room_id);
+        $slug = $this->message->room?->slug;
+        $channelId = $slug ?: (string) $this->message->room_id;
+
+        return new Channel('room.' . $channelId);
     }
 
     public function broadcastWith(): array
