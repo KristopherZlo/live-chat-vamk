@@ -763,6 +763,16 @@ function ensureFlashContainer() {
   return container;
 }
 
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+  }[char] ?? char));
+}
+
 function setupFlashMessages(root = document) {
   const toaster = ensureFlashContainer();
   const flashes = [];
@@ -821,12 +831,14 @@ function setupFlashMessages(root = document) {
 function showFlashNotification(message, options = {}) {
   const { type = 'success', source, duration = 4500 } = options;
   const container = ensureFlashContainer();
+  const normalizedMessage = String(message ?? '');
+  const safeMessage = escapeHtml(normalizedMessage);
   if (source) {
     const existing = container.querySelector(`[data-flash-source="${source}"]`);
     if (existing) {
       const span = existing.querySelector('.flash-text');
       if (span) {
-        span.textContent = message;
+        span.textContent = normalizedMessage;
       }
       existing.className = `flash flash-${type} flash-toast`;
       existing.dataset.flashDuration = String(duration);
@@ -851,7 +863,7 @@ function showFlashNotification(message, options = {}) {
   flash.innerHTML = `
     <div class="flash-body">
       <div class="flash-kicker">System notification</div>
-      <div class="flash-text">${message}</div>
+      <div class="flash-text">${safeMessage}</div>
     </div>
     <button class="icon-btn flash-close" type="button" aria-label="Close" data-flash-close>
       <i data-lucide="x"></i>
