@@ -31,6 +31,7 @@ export default defineConfig({
         laravel({
             input: [
                 'resources/css/app.css',
+                'resources/css/admin.css',
                 'resources/css/design.css',
                 'resources/css/login.css',
                 'resources/js/app.ts',
