@@ -33,7 +33,7 @@
     </script>
     <script src="https://unpkg.com/lucide@latest" defer></script>
 
-    @vite(['resources/css/app.css', 'resources/css/design.css', 'resources/js/app.ts', 'resources/js/design.js'])
+    @vite(['resources/css/app.css', 'resources/css/design.css', 'resources/js/app.ts', 'resources/js/design.ts'])
 </head>
 <body class="app error-page-shell">
 <div class="app-shell">

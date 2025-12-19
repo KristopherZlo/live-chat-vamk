@@ -135,7 +135,7 @@
         'resources/css/app.css',
         'resources/css/design.css',
         'resources/js/app.ts',
-        'resources/js/design.js'
+        'resources/js/design.ts'
     ])
     @stack('styles')
 </head>

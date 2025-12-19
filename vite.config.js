@@ -47,7 +47,7 @@ export default defineConfig(({ mode }) => {
                     'resources/css/design.css',
                     'resources/css/login.css',
                     'resources/js/app.ts',
-                    'resources/js/design.js',
+                    'resources/js/design.ts',
                     'resources/js/login.js',
                     'resources/js/lucide.js',
                 ],
