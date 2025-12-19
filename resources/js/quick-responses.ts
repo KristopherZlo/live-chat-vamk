@@ -6,7 +6,7 @@ const FALLBACK_RESPONSES = [
     'Any questions at this point?',
 ];
 
-const parseJson = (value) => {
+const parseJson = (value: unknown): unknown | null => {
     if (typeof value !== 'string') {
         return null;
     }
@@ -18,8 +18,8 @@ const parseJson = (value) => {
     }
 };
 
-const normalizeResponses = (items = []) => {
-    const normalized = [];
+const normalizeResponses = (items: unknown = []): string[] => {
+    const normalized: string[] = [];
     if (!Array.isArray(items)) {
         return normalized;
     }
@@ -32,7 +32,7 @@ const normalizeResponses = (items = []) => {
     return normalized;
 };
 
-const readStoredResponses = () => {
+const readStoredResponses = (): string[] | null => {
     if (typeof window.localStorage === 'undefined') {
         return null;
     }
@@ -52,7 +52,7 @@ const readStoredResponses = () => {
     }
 };
 
-const saveResponses = (responses) => {
+const saveResponses = (responses: string[]): void => {
     if (typeof window.localStorage === 'undefined') {
         return;
     }
@@ -63,7 +63,7 @@ const saveResponses = (responses) => {
     }
 };
 
-const setModalVisibility = (modal, visible) => {
+const setModalVisibility = (modal: HTMLElement | null, visible: boolean): void => {
     if (!modal) {
         return;
     }
@@ -78,7 +78,11 @@ const setModalVisibility = (modal, visible) => {
     }
 };
 
-const sendQuickResponse = (message, input, form) => {
+const sendQuickResponse = (
+    message: string,
+    input: HTMLInputElement | HTMLTextAreaElement | null,
+    form: HTMLFormElement | null,
+): void => {
     if (!input || !form) {
         return;
     }
@@ -96,7 +100,7 @@ const sendQuickResponse = (message, input, form) => {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-    const container = document.querySelector('[data-quick-responses]');
+    const container = document.querySelector<HTMLElement>('[data-quick-responses]');
     if (!container) {
         return;
     }
@@ -106,20 +110,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const stored = readStoredResponses();
     let responses = stored ?? defaultResponses;
 
-    const buttonsHost = container.querySelector('[data-quick-responses-buttons]');
-    const settingsButton = container.querySelector('[data-quick-responses-settings]');
-    const modal = document.querySelector('[data-quick-responses-modal]');
-    const form = modal?.querySelector('[data-quick-responses-form]');
-    const list = form?.querySelector('[data-quick-responses-list]');
-    const addButton = form?.querySelector('[data-quick-response-add]');
-    const chatInput = document.getElementById('chatInput');
-    const chatForm = document.getElementById('chat-form');
+    const buttonsHost = container.querySelector<HTMLElement>('[data-quick-responses-buttons]');
+    const settingsButton = container.querySelector<HTMLElement>('[data-quick-responses-settings]');
+    const modal = document.querySelector<HTMLElement>('[data-quick-responses-modal]');
+    const form = modal?.querySelector<HTMLFormElement>('[data-quick-responses-form]');
+    const list = form?.querySelector<HTMLElement>('[data-quick-responses-list]');
+    const addButton = form?.querySelector<HTMLButtonElement>('[data-quick-response-add]');
+    const chatInput = document.getElementById('chatInput') as HTMLTextAreaElement | null;
+    const chatForm = document.getElementById('chat-form') as HTMLFormElement | null;
 
     if (!buttonsHost) {
         return;
     }
 
-    const renderButtons = () => {
+    const renderButtons = (): void => {
         if (!buttonsHost) return;
         buttonsHost.innerHTML = '';
         responses.forEach((message, index) => {
@@ -138,21 +142,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     renderButtons();
 
-    const updateAddButtonState = () => {
+    const updateAddButtonState = (): void => {
         if (!addButton || !list) return;
         const atLimit = list.children.length >= MAX_RESPONSES;
         addButton.disabled = atLimit;
         addButton.hidden = atLimit;
     };
 
-    const renumberRows = () => {
+    const renumberRows = (): void => {
         if (!list) return;
-        Array.from(list.querySelectorAll('.input-label')).forEach((label, idx) => {
+        Array.from(list.querySelectorAll<HTMLElement>('.input-label')).forEach((label, idx) => {
             label.textContent = `Message ${idx + 1}`;
         });
     };
 
-    const addRow = (value = '') => {
+    const addRow = (value = ''): HTMLInputElement | null => {
         if (!list || list.children.length >= MAX_RESPONSES) return null;
         const row = document.createElement('div');
         row.className = 'quick-response-row';
@@ -203,7 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return input;
     };
 
-    const openModal = () => {
+    const openModal = (): void => {
         if (!modal || !list) {
             return;
         }
@@ -214,12 +218,12 @@ document.addEventListener('DOMContentLoaded', () => {
         renumberRows();
         setModalVisibility(modal, true);
         setTimeout(() => {
-            const firstInput = list.querySelector('input');
+            const firstInput = list.querySelector<HTMLInputElement>('input');
             firstInput?.focus();
         }, 0);
     };
 
-    const closeModal = () => {
+    const closeModal = (): void => {
         setModalVisibility(modal, false);
         if (chatInput) {
             chatInput.focus();
@@ -237,7 +241,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     settingsButton?.addEventListener('click', openModal);
 
-    const closeButtons = modal ? Array.from(modal.querySelectorAll('[data-quick-responses-modal-close]')) : [];
+    const closeButtons = modal
+        ? Array.from(modal.querySelectorAll<HTMLElement>('[data-quick-responses-modal-close]'))
+        : [];
     closeButtons.forEach((button) => button.addEventListener('click', closeModal));
 
     modal?.addEventListener('click', (event) => {
@@ -255,7 +261,8 @@ document.addEventListener('DOMContentLoaded', () => {
     form?.addEventListener('submit', (event) => {
         event.preventDefault();
         const updated = list
-            ? Array.from(list.querySelectorAll('[data-quick-response-input]')).map((input) => String(input.value || '').trim())
+            ? Array.from(list.querySelectorAll<HTMLInputElement>('[data-quick-response-input]'))
+                .map((input) => String(input.value || '').trim())
             : [];
         responses = normalizeResponses(updated);
         saveResponses(responses);

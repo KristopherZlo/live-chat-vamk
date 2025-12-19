@@ -3954,6 +3954,6 @@
             });
         </script>
     @endpush
-    @vite('resources/js/quick-responses.js')
+    @vite('resources/js/quick-responses.ts')
     @vite('resources/js/track-last-visited-room.ts')
 </x-app-layout>
