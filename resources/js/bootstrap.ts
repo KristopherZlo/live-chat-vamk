@@ -50,11 +50,3 @@ window.Echo = new Echo({
     forceTLS,
     enabledTransports: ['ws', 'wss'],
 });
-
-console.log('Echo options:', {
-    key: reverbKey,
-    host: reverbHost,
-    port: reverbPort,
-    scheme: reverbScheme,
-    source: providedReverbConfig.key ? 'server' : 'env',
-});

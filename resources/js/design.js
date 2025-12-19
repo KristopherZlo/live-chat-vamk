@@ -3,6 +3,7 @@ import * as QRCode from 'qrcode';
 const THEME_KEY = 'lc-theme';
 const QUEUE_SEEN_KEY_PREFIX = 'lc-queue-seen';
 const QUEUE_SOUND_KEY = 'lc-queue-sound';
+const QUEUE_SOUND_DEBUG_KEY = 'lc-queue-sound-debug';
 const QUEUE_FILTER_KEY_PREFIX = 'lc-queue-filter';
 const HOUR_MS = 60 * 60 * 1000;
 const WHATS_NEW_STORAGE_KEY = 'lc-whats-new-version';
@@ -12,6 +13,24 @@ let queueSoundPlayerSrc = null;
 let queueSoundPreference = true;
 let queueSoundPrimed = false;
 let queueSoundPrimeHandlerBound = false;
+
+const IS_DEV = import.meta?.env?.DEV;
+
+function isQueueSoundDebugEnabled() {
+  if (!IS_DEV || typeof window === 'undefined') return false;
+  if (window.__queueSoundDebug === true) return true;
+  try {
+    return localStorage.getItem(QUEUE_SOUND_DEBUG_KEY) === '1';
+  } catch (e) {
+    return false;
+  }
+}
+
+function logQueueSound(...args) {
+  if (!isQueueSoundDebugEnabled()) return;
+  // eslint-disable-next-line no-console
+  console.debug(...args);
+}
 
 function createQrModules(link, canvasSize, options = {}) {
   const text = typeof link === 'string' ? link.trim() : '';
@@ -207,21 +226,17 @@ function ensureQueueSoundPlayer(url) {
       queueSoundPlayer.preload = 'auto';
       queueSoundPlayerSrc = src;
       queueSoundPlayer.addEventListener('error', () => {
-        // eslint-disable-next-line no-console
-        console.debug('[queue-sound] audio error', queueSoundPlayer?.error);
+        logQueueSound('[queue-sound] audio error', queueSoundPlayer?.error);
       });
       queueSoundPlayer.addEventListener('canplaythrough', () => {
-        // eslint-disable-next-line no-console
-        console.debug('[queue-sound] audio canplaythrough');
+        logQueueSound('[queue-sound] audio canplaythrough');
       });
       queueSoundPlayer.addEventListener('play', () => {
-        // eslint-disable-next-line no-console
-        console.debug('[queue-sound] audio play event');
+        logQueueSound('[queue-sound] audio play event');
       });
     } catch (e) {
       queueSoundPlayer = null;
-      // eslint-disable-next-line no-console
-      console.debug('[queue-sound] create audio failed', e);
+      logQueueSound('[queue-sound] create audio failed', e);
     }
   }
   return queueSoundPlayer;
@@ -229,15 +244,13 @@ function ensureQueueSoundPlayer(url) {
 
 function playQueueSound(url) {
   if (!isQueueSoundEnabled()) {
-    // eslint-disable-next-line no-console
-    console.debug('[queue-sound] disabled by user setting');
+    logQueueSound('[queue-sound] disabled by user setting');
     return;
   }
   const player = ensureQueueSoundPlayer(url);
   if (!player) return;
   try {
-    // eslint-disable-next-line no-console
-    console.debug('[queue-sound] playQueueSound', {
+    logQueueSound('[queue-sound] playQueueSound', {
       src: player.src,
       readyState: player.readyState,
       muted: player.muted,
@@ -245,8 +258,7 @@ function playQueueSound(url) {
     });
     player.currentTime = 0;
     player.play().catch((err) => {
-      // eslint-disable-next-line no-console
-      console.debug('[queue-sound] play() promise rejected', err);
+      logQueueSound('[queue-sound] play() promise rejected', err);
     });
   } catch (e) {
     /* ignore */
@@ -272,12 +284,10 @@ function primeQueueSound(url) {
           queueSoundPrimed = true;
           player.pause();
           player.currentTime = 0;
-          // eslint-disable-next-line no-console
-          console.debug('[queue-sound] prime succeeded');
+          logQueueSound('[queue-sound] prime succeeded');
         })
         .catch((err) => {
-          // eslint-disable-next-line no-console
-          console.debug('[queue-sound] prime failed', err);
+          logQueueSound('[queue-sound] prime failed', err);
         })
         .finally(restore);
     } else {

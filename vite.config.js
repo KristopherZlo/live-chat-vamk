@@ -14,33 +14,46 @@ const devProtocol = process.env.VITE_DEV_PROTOCOL ?? 'http';
 const hmrHost = process.env.VITE_DEV_HMR_HOST ?? outboundIPv4 ?? 'localhost';
 const devOrigin = process.env.VITE_DEV_ORIGIN ?? `${devProtocol}://${hmrHost}:${devPort}`;
 
-export default defineConfig({
-    server: {
-        host: devHost,
-        port: devPort,
-        strictPort: true,
-        origin: devOrigin,
-        cors: true,
-        hmr: {
-            host: hmrHost,
+export default defineConfig(({ mode }) => {
+    const isProd = mode === 'production';
+
+    return {
+        server: {
+            host: devHost,
             port: devPort,
-            protocol: devProtocol === 'https' ? 'wss' : 'ws',
+            strictPort: true,
+            origin: devOrigin,
+            cors: true,
+            hmr: {
+                host: hmrHost,
+                port: devPort,
+                protocol: devProtocol === 'https' ? 'wss' : 'ws',
+            },
         },
-    },
-    plugins: [
-        laravel({
-            input: [
-                'resources/css/app.css',
-                'resources/css/admin.css',
-                'resources/css/design.css',
-                'resources/css/login.css',
-                'resources/js/app.ts',
-                'resources/js/design.js',
-                'resources/js/login.js',
-                'resources/js/lucide.js',
-            ],
-            refresh: true,
-        }),
-        tailwindcss(),
-    ],
+        build: {
+            minify: 'esbuild',
+            cssMinify: 'esbuild',
+            sourcemap: false,
+        },
+        esbuild: {
+            legalComments: 'none',
+            ...(isProd ? { drop: ['console', 'debugger'] } : {}),
+        },
+        plugins: [
+            laravel({
+                input: [
+                    'resources/css/app.css',
+                    'resources/css/admin.css',
+                    'resources/css/design.css',
+                    'resources/css/login.css',
+                    'resources/js/app.ts',
+                    'resources/js/design.js',
+                    'resources/js/login.js',
+                    'resources/js/lucide.js',
+                ],
+                refresh: true,
+            }),
+            tailwindcss(),
+        ],
+    };
 });
