@@ -3,19 +3,22 @@
         return;
     }
 
-    const svg = document.querySelector('.login-illustration');
+    const svg = document.querySelector<SVGSVGElement>('.login-illustration');
     if (!svg) {
         return;
     }
 
-    const shapes = [];
+    type ShapeType = 'circle' | 'rect' | 'polygon';
+    type ShapeLink = { el: SVGLineElement; from: FloatingShape; to: FloatingShape };
+
+    const shapes: FloatingShape[] = [];
     let sceneWidth = 400;
     let sceneHeight = 500;
-    let links = [];
+    let links: ShapeLink[] = [];
     let mouseX = -1000;
     let mouseY = -1000;
 
-    function measureScene() {
+    function measureScene(): void {
         const rect = svg.getBoundingClientRect();
         const width = Math.max(rect.width, 1);
         const height = Math.max(rect.height, 1);
@@ -25,7 +28,18 @@
     }
 
     class FloatingShape {
-        constructor(x, y, size, type, fill) {
+        x: number;
+        y: number;
+        size: number;
+        type: ShapeType;
+        fill: string;
+        vx: number;
+        vy: number;
+        baseSpeed: number;
+        maxSpeed: number;
+        el: SVGElement | null;
+
+        constructor(x: number, y: number, size: number, type: ShapeType, fill: string) {
             this.x = x;
             this.y = y;
             this.size = size;
@@ -38,11 +52,11 @@
             this.el = null;
         }
 
-        setElement(el) {
+        setElement(el: SVGElement): void {
             this.el = el;
         }
 
-        update(mousePosX, mousePosY) {
+        update(mousePosX: number, mousePosY: number): void {
             const currentSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy) || 0.001;
             if (currentSpeed < this.baseSpeed) {
                 const scale = this.baseSpeed / currentSpeed;
@@ -113,13 +127,13 @@
             if (!this.el) return;
 
             if (this.type === 'circle') {
-                this.el.setAttribute('cx', this.x);
-                this.el.setAttribute('cy', this.y);
+                this.el.setAttribute('cx', String(this.x));
+                this.el.setAttribute('cy', String(this.y));
             } else if (this.type === 'rect') {
-                this.el.setAttribute('x', this.x - this.size);
-                this.el.setAttribute('y', this.y - this.size);
+                this.el.setAttribute('x', String(this.x - this.size));
+                this.el.setAttribute('y', String(this.y - this.size));
             } else {
-                const points = [];
+                const points: string[] = [];
                 for (let i = 0; i < 6; i++) {
                     const angle = (i * Math.PI) / 3;
                     const px = this.x + this.size * Math.cos(angle);
@@ -131,26 +145,29 @@
         }
     }
 
-    function createShape(x, y, size, fill) {
-        const types = ['circle', 'rect', 'polygon'];
+    function createShape(x: number, y: number, size: number, fill: string): SVGElement {
+        const types: ShapeType[] = ['circle', 'rect', 'polygon'];
         const type = types[Math.floor(Math.random() * types.length)];
         const shape = new FloatingShape(x, y, size, type, fill);
 
-        const el = document.createElementNS('http://www.w3.org/2000/svg', type === 'polygon' ? 'polygon' : type);
+        const el = document.createElementNS(
+            'http://www.w3.org/2000/svg',
+            type === 'polygon' ? 'polygon' : type,
+        ) as SVGElement;
 
         if (type === 'circle') {
-            el.setAttribute('cx', x);
-            el.setAttribute('cy', y);
-            el.setAttribute('r', size);
+            el.setAttribute('cx', String(x));
+            el.setAttribute('cy', String(y));
+            el.setAttribute('r', String(size));
         } else if (type === 'rect') {
-            el.setAttribute('x', x - size);
-            el.setAttribute('y', y - size);
-            el.setAttribute('width', size * 2);
-            el.setAttribute('height', size * 2);
-            el.setAttribute('rx', size * 0.3);
-            el.setAttribute('ry', size * 0.3);
+            el.setAttribute('x', String(x - size));
+            el.setAttribute('y', String(y - size));
+            el.setAttribute('width', String(size * 2));
+            el.setAttribute('height', String(size * 2));
+            el.setAttribute('rx', String(size * 0.3));
+            el.setAttribute('ry', String(size * 0.3));
         } else {
-            const points = [];
+            const points: string[] = [];
             for (let i = 0; i < 6; i++) {
                 const angle = (i * Math.PI) / 3;
                 const px = x + size * Math.cos(angle);
@@ -169,15 +186,15 @@
         return el;
     }
 
-    function createLinks() {
-        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    function createLinks(): SVGGElement {
+        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g') as SVGGElement;
         links = [];
 
         if (shapes.length < 2) return group;
 
         for (let i = 0; i < shapes.length - 1; i++) {
             for (let j = i + 1; j < shapes.length; j++) {
-                const lineElement = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                const lineElement = document.createElementNS('http://www.w3.org/2000/svg', 'line') as SVGLineElement;
                 lineElement.setAttribute('stroke', 'url(#characterGrad)');
                 lineElement.setAttribute('opacity', '0');
 
@@ -194,7 +211,7 @@
         return group;
     }
 
-    function updateLinks() {
+    function updateLinks(): void {
         links.forEach((link) => {
             const dx = link.to.x - link.from.x;
             const dy = link.to.y - link.from.y;
@@ -202,25 +219,25 @@
             const maxDist = Math.min(sceneWidth, sceneHeight) * 0.5;
 
             if (dist < maxDist) {
-                link.el.setAttribute('x1', link.from.x);
-                link.el.setAttribute('y1', link.from.y);
-                link.el.setAttribute('x2', link.to.x);
-                link.el.setAttribute('y2', link.to.y);
+                link.el.setAttribute('x1', String(link.from.x));
+                link.el.setAttribute('y1', String(link.from.y));
+                link.el.setAttribute('x2', String(link.to.x));
+                link.el.setAttribute('y2', String(link.to.y));
 
                 const baseWidth = 2.3;
                 const minWidth = 1;
                 const strokeWidth = baseWidth - (dist / maxDist) * (baseWidth - minWidth);
-                link.el.setAttribute('stroke-width', strokeWidth);
+                link.el.setAttribute('stroke-width', String(strokeWidth));
 
                 const opacity = (1 - dist / maxDist) * 0.55;
-                link.el.setAttribute('opacity', opacity);
+                link.el.setAttribute('opacity', String(opacity));
             } else {
                 link.el.setAttribute('opacity', '0');
             }
         });
     }
 
-    function buildIllustration() {
+    function buildIllustration(): void {
         measureScene();
         shapes.length = 0;
         links = [];
@@ -252,8 +269,8 @@
         const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         bg.setAttribute('x', '0');
         bg.setAttribute('y', '0');
-        bg.setAttribute('width', sceneWidth);
-        bg.setAttribute('height', sceneHeight);
+        bg.setAttribute('width', String(sceneWidth));
+        bg.setAttribute('height', String(sceneHeight));
         bg.setAttribute('fill', 'url(#bgGrad)');
         svg.appendChild(bg);
 
@@ -280,9 +297,9 @@
             const initX = 20 + Math.random() * Math.max(sceneWidth - 40, 40);
             const initY = 20 + Math.random() * Math.max(sceneHeight - 40, 40);
 
-            dot.setAttribute('cx', initX);
-            dot.setAttribute('cy', initY);
-            dot.setAttribute('r', 1 + Math.random() * 2);
+            dot.setAttribute('cx', String(initX));
+            dot.setAttribute('cy', String(initY));
+            dot.setAttribute('r', String(1 + Math.random() * 2));
             dot.setAttribute('fill', 'white');
             dot.setAttribute('opacity', '0.4');
 
@@ -312,20 +329,20 @@
 
     }
 
-    function tick() {
+    function tick(): void {
         shapes.forEach((shape) => shape.update(mouseX, mouseY));
         updateLinks();
         requestAnimationFrame(tick);
     }
 
-    const handleMouseMove = (event) => {
+    const handleMouseMove = (event: MouseEvent): void => {
         const rect = svg.getBoundingClientRect();
         if (!rect.width || !rect.height) return;
         mouseX = ((event.clientX - rect.left) * sceneWidth) / rect.width;
         mouseY = ((event.clientY - rect.top) * sceneHeight) / rect.height;
     };
 
-    const handleMouseLeave = () => {
+    const handleMouseLeave = (): void => {
         mouseX = -1000;
         mouseY = -1000;
     };
@@ -333,9 +350,11 @@
     svg.addEventListener('mousemove', handleMouseMove);
     svg.addEventListener('mouseleave', handleMouseLeave);
 
-    let resizeTimer = null;
+    let resizeTimer: number | undefined;
     window.addEventListener('resize', () => {
-        window.clearTimeout(resizeTimer);
+        if (resizeTimer !== undefined) {
+            window.clearTimeout(resizeTimer);
+        }
         resizeTimer = window.setTimeout(buildIllustration, 150);
     });
 

@@ -36,7 +36,7 @@
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
     @if($isAuthPage)
-        @vite(['resources/css/login.css', 'resources/js/login.js'])
+        @vite(['resources/css/login.css', 'resources/js/login.ts'])
     @else
         @vite(['resources/css/app.css', 'resources/js/app.ts'])
     @endif
