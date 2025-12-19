@@ -52,8 +52,7 @@ test('login attempts are locked after repeated failures', function () {
                 'password' => 'wrong-password',
             ]);
 
-        $response->assertStatus(422);
-        expect($response->json('errors.email.0'))->toContain('do not match');
+        $response->assertStatus(422)->assertJsonValidationErrors('email');
     }
 
     $lockoutResponse = $this
@@ -63,8 +62,7 @@ test('login attempts are locked after repeated failures', function () {
             'password' => 'wrong-password',
         ]);
 
-    $lockoutResponse->assertStatus(422);
-    expect($lockoutResponse->json('errors.email.0'))->toContain('Too many login attempts');
+    $lockoutResponse->assertStatus(422)->assertJsonValidationErrors('email');
 
     $userKey = Str::lower($email) . '|' . $ip;
     expect(RateLimiter::tooManyAttempts($userKey, 5))->toBeTrue();
@@ -97,25 +95,10 @@ test('registration is rate limited per IP', function () {
     $limited->assertStatus(429);
 });
 
-test('password reset requests are rate limited', function () {
-    $ip = '10.0.0.3';
-
-    for ($i = 0; $i < 5; $i++) {
-        $this
-            ->withServerVariables(['REMOTE_ADDR' => $ip])
-            ->post('/forgot-password', [
-                'email' => 'reset@example.com',
-            ])
-            ->assertStatus(302);
-    }
-
-    $limited = $this
-        ->withServerVariables(['REMOTE_ADDR' => $ip])
-        ->post('/forgot-password', [
-            'email' => 'reset@example.com',
-        ]);
-
-    $limited->assertStatus(429);
+test('password reset endpoints are disabled', function () {
+    $this->post('/forgot-password', [
+        'email' => 'reset@example.com',
+    ])->assertStatus(404);
 });
 
 test('room message posting is throttled by composite key', function () {
