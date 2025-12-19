@@ -1,0 +1,46 @@
+{
+  "resources/css/admin.css": {
+    "file": "assets/admin.css",
+    "src": "resources/css/admin.css"
+  },
+  "resources/css/app.css": {
+    "file": "assets/app.css",
+    "src": "resources/css/app.css"
+  },
+  "resources/css/design.css": {
+    "file": "assets/design.css",
+    "src": "resources/css/design.css"
+  },
+  "resources/css/login.css": {
+    "file": "assets/login.css",
+    "src": "resources/css/login.css"
+  },
+  "resources/js/app.ts": {
+    "file": "assets/app.js",
+    "src": "resources/js/app.ts"
+  },
+  "resources/js/design.js": {
+    "file": "assets/design.js",
+    "src": "resources/js/design.js"
+  },
+  "resources/js/join-last-visited.ts": {
+    "file": "assets/join-last-visited.js",
+    "src": "resources/js/join-last-visited.ts"
+  },
+  "resources/js/login.js": {
+    "file": "assets/login.js",
+    "src": "resources/js/login.js"
+  },
+  "resources/js/lucide.js": {
+    "file": "assets/lucide.js",
+    "src": "resources/js/lucide.js"
+  },
+  "resources/js/quick-responses.js": {
+    "file": "assets/quick-responses.js",
+    "src": "resources/js/quick-responses.js"
+  },
+  "resources/js/track-last-visited-room.ts": {
+    "file": "assets/track-last-visited-room.js",
+    "src": "resources/js/track-last-visited-room.ts"
+  }
+}
