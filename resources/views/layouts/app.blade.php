@@ -131,7 +131,7 @@
         }
     @endphp
     @vite([
-        'resources/js/lucide.js',
+        'resources/js/lucide.ts',
         'resources/css/app.css',
         'resources/css/design.css',
         'resources/js/app.ts',
