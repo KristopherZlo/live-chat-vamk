@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\User;
+
 test('registration screen can be rendered', function () {
     $response = $this->get('/register');
 
@@ -21,4 +23,10 @@ test('new users can register', function () {
 
     $this->assertAuthenticated();
     $response->assertRedirect(route('dashboard', absolute: false));
+
+    $user = User::where('email', 'test@example.com')->first();
+    expect($user)->not->toBeNull();
+    $invite->refresh();
+    expect($invite->used_by)->toBe($user->id);
+    expect($invite->used_at)->not->toBeNull();
 });
