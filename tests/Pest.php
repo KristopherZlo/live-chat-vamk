@@ -12,7 +12,7 @@
 */
 
 pest()->extend(Tests\TestCase::class)
-    ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
+    ->use(Tests\Concerns\SafeRefreshDatabase::class)
     ->in('Feature');
 
 /*
