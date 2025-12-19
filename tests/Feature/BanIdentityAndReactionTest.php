@@ -55,6 +55,55 @@ test('participants with banned fingerprint or ip cannot post messages', function
     $this->assertDatabaseMissing('messages', ['content' => 'Should be blocked']);
 });
 
+test('banned participant cannot react to messages', function () {
+    $owner = User::factory()->create();
+    $room = Room::create([
+        'user_id' => $owner->id,
+        'title' => 'Reaction ban room',
+        'slug' => Str::random(8),
+    ]);
+
+    $participant = Participant::create([
+        'room_id' => $room->id,
+        'session_token' => (string) Str::uuid(),
+        'display_name' => 'Guest',
+        'ip_address' => '203.0.113.10',
+        'fingerprint' => 'fp-blocked',
+    ]);
+
+    RoomBan::create([
+        'room_id' => $room->id,
+        'participant_id' => $participant->id,
+        'session_token' => $participant->session_token,
+        'display_name' => $participant->display_name,
+        'ip_address' => $participant->ip_address,
+        'fingerprint' => $participant->fingerprint,
+    ]);
+
+    $message = Message::create([
+        'room_id' => $room->id,
+        'participant_id' => null,
+        'user_id' => $owner->id,
+        'is_system' => false,
+        'content' => 'React here',
+    ]);
+
+    $sessionKey = 'room_participant_' . $room->id;
+    $route = route('rooms.messages.reactions.toggle', [$room, $message]);
+
+    $response = $this
+        ->withServerVariables(['REMOTE_ADDR' => '203.0.113.10'])
+        ->withCookie('lc_fp', 'fp-blocked')
+        ->withSession([$sessionKey => $participant->id])
+        ->postJson($route, ['emoji' => "\u{1F44D}"]);
+
+    $response->assertStatus(403);
+    $this->assertDatabaseMissing('message_reactions', [
+        'message_id' => $message->id,
+        'participant_id' => $participant->id,
+    ]);
+});
+
 test('reactions toggle and update for the same actor', function () {
     $owner = User::factory()->create();
     $room = Room::create([
@@ -101,4 +150,3 @@ test('reactions toggle and update for the same actor', function () {
     ]);
     expect(MessageReaction::where('message_id', $message->id)->where('user_id', $owner->id)->count())->toBe(1);
 });
-
