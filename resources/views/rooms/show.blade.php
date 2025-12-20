@@ -904,7 +904,11 @@
                     const emptyState = body?.querySelector('[data-queue-filter-empty]');
                     if (!emptyState) return;
                     const hasItems = Boolean(list?.querySelector('.queue-item:not([hidden])'));
-                    emptyState.hidden = hasItems || queueLoading || queueHasMore;
+                    const shouldShowEmpty = !hasItems && !queueLoading && !queueHasMore;
+                    emptyState.hidden = !shouldShowEmpty;
+                    if (list) {
+                        list.classList.toggle('queue-list-filter-empty', shouldShowEmpty);
+                    }
                 };
                 const setQueueHasMore = (hasMore) => {
                     queueHasMore = Boolean(hasMore);
