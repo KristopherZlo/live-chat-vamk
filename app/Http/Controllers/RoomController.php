@@ -193,7 +193,11 @@ class RoomController extends Controller
 
         $participant = $this->getOrCreateParticipant($request, $room, $fingerprint, $ipAddress);
 
-        $messagesQuery = $this->baseMessagesQuery($room);
+        $messagesQuery = $this->applyBannedMessageFilter(
+            $this->baseMessagesQuery($room),
+            $room,
+            $participant
+        );
         $messagesCollection = $messagesQuery
             ->limit(self::MESSAGE_PAGE_SIZE + 1)
             ->get();
@@ -561,7 +565,14 @@ class RoomController extends Controller
         $limit = max(1, min(self::MESSAGE_PAGE_SIZE, (int) $request->integer('limit', self::MESSAGE_PAGE_SIZE)));
         $beforeId = $request->integer('before_id');
 
-        $query = $this->baseMessagesQuery($room);
+        $viewer = $request->user();
+        $participant = $this->getOrCreateParticipant($request, $room, $this->resolveFingerprint($request), $request->ip());
+
+        $query = $this->applyBannedMessageFilter(
+            $this->baseMessagesQuery($room),
+            $room,
+            $participant
+        );
 
         if ($beforeId) {
             $query->where('id', '<', $beforeId);
@@ -577,8 +588,6 @@ class RoomController extends Controller
             ->reverse()
             ->values();
 
-        $viewer = $request->user();
-        $participant = $this->getOrCreateParticipant($request, $room, $this->resolveFingerprint($request), $request->ip());
         $reactionPayload = $this->summarizeMessageReactions($messages, $viewer, $participant);
         $payload = $messages->map(fn (Message $message) => $this->formatMessagePayload(
             $message,
@@ -609,6 +618,30 @@ class RoomController extends Controller
             ->withExists(['question as has_question'])
             ->orderByDesc('created_at')
             ->orderByDesc('id');
+    }
+
+    protected function applyBannedMessageFilter(Builder|Relation $query, Room $room, ?Participant $participant = null): Builder|Relation
+    {
+        $bannedIds = $room->bans()
+            ->pluck('participant_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->values();
+
+        if ($bannedIds->isEmpty()) {
+            return $query;
+        }
+
+        if ($participant && $participant->id) {
+            $viewerId = (int) $participant->id;
+            $bannedIds = $bannedIds->reject(fn ($id) => $id === $viewerId)->values();
+        }
+
+        if ($bannedIds->isEmpty()) {
+            return $query;
+        }
+
+        return $query->whereNotIn('participant_id', $bannedIds);
     }
 
     protected function baseQueueQuery(Room $room)
