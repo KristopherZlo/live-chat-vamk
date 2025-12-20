@@ -501,7 +501,6 @@
                         </div>
                     @elseif(!$isClosed)
                         <div class="chat-input">
-                            <span class="panel-subtitle chat-hint">Press Enter to send, Shift+Enter for a new line</span>
                             @if($isOwner)
                                 <div class="quick-responses" data-quick-responses data-default-responses='@json($defaultQuickResponses)'>
                                     <div
@@ -634,6 +633,7 @@
                                         <i data-lucide="send"></i>
                                     </button>
                                 </div>
+                                <span class="panel-subtitle chat-hint">Press Enter to send, Shift+Enter for a new line</span>
                                 <div class="emoji-picker-panel" id="chatEmojiPanel" hidden>
                                     <emoji-picker id="chatEmojiPicker" class="emoji-picker-element light"></emoji-picker>
                                 </div>
