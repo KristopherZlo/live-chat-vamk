@@ -15,7 +15,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
@@ -765,18 +764,29 @@ class RoomController extends Controller
         }
 
         $summaryRows = MessageReaction::query()
-            ->select('message_id', 'emoji', DB::raw('count(*) as count'))
+            ->select('message_id', 'emoji')
             ->whereIn('message_id', $messageIds)
-            ->groupBy('message_id', 'emoji')
-            ->orderBy('emoji')
             ->get();
 
         $reactionsByMessage = $summaryRows
             ->groupBy('message_id')
-            ->map(fn ($items) => $items->map(fn ($row) => [
-                'emoji' => $row->emoji,
-                'count' => (int) $row->count,
-            ])->values()->toArray())
+            ->map(function ($items) {
+                return $items
+                    ->groupBy('emoji')
+                    ->map(fn ($group, $emoji) => [
+                        'emoji' => $emoji,
+                        'count' => $group->count(),
+                    ])
+                    ->sort(function ($a, $b) {
+                        $countDiff = $b['count'] <=> $a['count'];
+                        if ($countDiff !== 0) {
+                            return $countDiff;
+                        }
+                        return strcasecmp($a['emoji'], $b['emoji']);
+                    })
+                    ->values()
+                    ->toArray();
+            })
             ->toArray();
 
         $myReactionsByMessage = [];
