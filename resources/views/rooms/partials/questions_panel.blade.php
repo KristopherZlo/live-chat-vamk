@@ -54,7 +54,9 @@
       </ul>
       <p class="empty-state queue-filter-empty" data-queue-filter-empty hidden>No questions in this filter.</p>
       <div class="queue-pagination">
-        <div class="queue-loading" data-queue-loader hidden>Loading more questions...</div>
+        <div class="queue-loading" data-queue-loader hidden role="status" aria-label="Loading">
+          <div class="loader-5" aria-hidden="true"><span></span></div>
+        </div>
       </div>
     @endif
   </div>

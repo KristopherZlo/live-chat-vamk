@@ -1692,6 +1692,146 @@ main,.layout {
   border-radius: 999px;
 }
 
+.queue-pagination {
+  display: flex;
+  justify-content: center;
+  padding: 0.4rem 0.75rem 0.7rem;
+}
+
+.queue-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  width: 100%;
+}
+
+.queue-loading[hidden] {
+  display: none;
+}
+
+.loader-5 {
+  position: relative;
+  height: 32px;
+  width: 32px;
+  animation: loader-5-1 2s cubic-bezier(0.77, 0, 0.175, 1) infinite;
+}
+
+@keyframes loader-5-1 {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.loader-5::before,
+.loader-5::after,
+.loader-5 span::before,
+.loader-5 span::after {
+  content: "";
+  display: block;
+  position: absolute;
+  margin: auto;
+  width: 8px;
+  height: 8px;
+  background: var(--accent, #2563eb);
+  border-radius: 50%;
+}
+
+.loader-5::before {
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: auto;
+  animation: loader-5-2 2s cubic-bezier(0.77, 0, 0.175, 1) infinite;
+}
+
+.loader-5::after {
+  top: 0;
+  left: auto;
+  bottom: 0;
+  right: 0;
+  animation: loader-5-3 2s cubic-bezier(0.77, 0, 0.175, 1) infinite;
+}
+
+.loader-5 span {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  margin: auto;
+  height: 32px;
+  width: 32px;
+}
+
+.loader-5 span::before {
+  top: 0;
+  left: 0;
+  bottom: auto;
+  right: 0;
+  animation: loader-5-4 2s cubic-bezier(0.77, 0, 0.175, 1) infinite;
+}
+
+.loader-5 span::after {
+  top: auto;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  animation: loader-5-5 2s cubic-bezier(0.77, 0, 0.175, 1) infinite;
+}
+
+@keyframes loader-5-2 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(24px, 0, 0) scale(0.5);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes loader-5-3 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-24px, 0, 0) scale(0.5);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes loader-5-4 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(0, 24px, 0) scale(0.5);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes loader-5-5 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(0, -24px, 0) scale(0.5);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
 .question-item,
     .queue-item {
   border-radius: var(--radius-md);

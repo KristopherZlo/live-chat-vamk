@@ -855,7 +855,9 @@
                         loader.className = 'queue-loading';
                         loader.dataset.queueLoader = '1';
                         loader.hidden = true;
-                        loader.textContent = 'Loading more questions...';
+                        loader.setAttribute('role', 'status');
+                        loader.setAttribute('aria-label', 'Loading');
+                        loader.innerHTML = '<div class="loader-5" aria-hidden="true"><span></span></div>';
                         pagination.append(loader);
                         body.appendChild(pagination);
                     } else if (!pagination.querySelector('[data-queue-loader]')) {
@@ -863,7 +865,9 @@
                         loader.className = 'queue-loading';
                         loader.dataset.queueLoader = '1';
                         loader.hidden = true;
-                        loader.textContent = 'Loading more questions...';
+                        loader.setAttribute('role', 'status');
+                        loader.setAttribute('aria-label', 'Loading');
+                        loader.innerHTML = '<div class="loader-5" aria-hidden="true"><span></span></div>';
                         pagination.append(loader);
                     }
 
