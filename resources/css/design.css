@@ -1367,11 +1367,13 @@ main,.layout {
 
   .poll-composer {
     padding: 0.5rem;
+    position: relative;
   }
 
   .poll-composer-header {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
+    padding-right: 2.6rem;
   }
 
   .poll-composer-actions {
@@ -1379,12 +1381,25 @@ main,.layout {
   }
 
   .poll-option-input {
-    flex-direction: column;
-    align-items: stretch;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
   }
 
   .poll-option-remove {
-    align-self: flex-end;
+    align-self: center;
+    margin-top: 0;
+    width: 2.2rem;
+    min-width: 2.2rem;
+    flex: 0 0 2.2rem;
+  }
+
+  .poll-composer-close {
+    position: absolute;
+    top: 0.45rem;
+    right: 0.45rem;
+    width: 2.2rem;
+    height: 2.2rem;
   }
 
   .emoji-picker-element {
@@ -6509,6 +6524,11 @@ body.modal-open {
   .btn,
         .icon-btn {
     width: 100%;
+  }
+
+  .poll-composer .icon-btn {
+    width: 2.2rem;
+    min-width: 2.2rem;
   }
   
   .mobile-tabs {
