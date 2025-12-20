@@ -1107,6 +1107,7 @@ main,.layout {
   padding: 0.55rem 0.7rem;
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
   gap: 0.45rem;
   background: var(--bg-elevated);
   border-radius: 0 0 1rem 1rem;
@@ -1384,6 +1385,10 @@ main,.layout {
 
   .poll-option-remove {
     align-self: flex-end;
+  }
+
+  .emoji-picker-element {
+    max-height: 210px;
   }
 }
 
@@ -6334,8 +6339,8 @@ body.modal-open {
     max-height: none;
   }
   
-.room-page,.room-page .layout {
-  padding-bottom: 0;
+.room-page {
+  padding-bottom: calc(var(--mobile-tab-bar-height, 104px) + var(--mobile-safe-bottom, 0px));
   min-height: var(--app-viewport-height, 100vh);
   height: auto;
 }
@@ -6472,9 +6477,8 @@ body.modal-open {
     padding-bottom: 0 !important;
   }
   
-  .room-page,
-        .room-page .layout {
-    padding-bottom: 0 !important;
+  .room-page {
+    padding-bottom: calc(var(--mobile-tab-bar-height, 104px) + var(--mobile-safe-bottom, 0px)) !important;
     min-height: var(--app-viewport-height, 100vh);
     height: auto;
   }
@@ -6507,18 +6511,12 @@ body.modal-open {
     width: 100%;
   }
   
-  .layout,
-        .layout.teacher,
-        #layoutRoot {
-    padding-bottom: 0 !important;
-  }
-  
   .mobile-tabs {
     grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   }
   
   .chat-panel {
-    padding: 0.6rem 0.7rem 0;
+    padding: 0.6rem 0.7rem calc(var(--mobile-tab-bar-height, 104px));
   }
 }
 
@@ -6533,6 +6531,10 @@ body.modal-open {
   .layout,.layout.teacher {
     grid-template-columns: 1.7fr 1.3fr;
     padding-bottom: calc(var(--mobile-tab-bar-height, 104px) + var(--mobile-safe-bottom, 0px));
+  }
+
+  .room-page .layout {
+    padding-bottom: 0;
   }
   
   .layout.teacher {
@@ -6686,6 +6688,10 @@ body.modal-open {
     max-height: none;
   padding-bottom: calc(var(--mobile-tab-bar-height, 104px) + var(--mobile-safe-bottom, 0px));
   gap: 0.75rem;
+  }
+
+  .room-page .layout {
+    padding-bottom: 0;
   }
 }
 

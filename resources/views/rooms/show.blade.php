@@ -2433,8 +2433,17 @@
                 const autosizeComposer = () => {
                     if (!chatInput) return;
                     chatInput.style.height = 'auto';
-                    const maxHeight = 220;
-                    chatInput.style.height = Math.min(chatInput.scrollHeight, maxHeight) + 'px';
+                    const computed = window.getComputedStyle(chatInput);
+                    const maxHeightValue = parseFloat(computed.maxHeight);
+                    const minHeightValue = parseFloat(computed.minHeight);
+                    const maxHeight = Number.isFinite(maxHeightValue) ? maxHeightValue : 220;
+                    const minHeight = Number.isFinite(minHeightValue) ? minHeightValue : 0;
+                    const nextHeight = Math.min(chatInput.scrollHeight, maxHeight);
+                    if (minHeight > 0 && nextHeight <= minHeight + 1) {
+                        chatInput.style.height = '';
+                        return;
+                    }
+                    chatInput.style.height = `${nextHeight}px`;
                 };
                 const hideEmojiPanel = () => {
                     if (!chatEmojiPanel) return;
