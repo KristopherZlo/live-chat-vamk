@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\ParticipantBanned;
+use App\Events\ParticipantUnbanned;
 use App\Models\Participant;
 use App\Models\Room;
 use Illuminate\Http\Request;
@@ -39,13 +41,45 @@ class RoomBanController extends Controller
             $banData['fingerprint'] = $participant->fingerprint ?? $request->cookie('lc_fp');
         }
 
-        $room->bans()->firstOrCreate(
+        $ban = $room->bans()->firstOrCreate(
             [
                 'session_token' => $participant->session_token,
                 'room_id' => $room->id,
             ],
             $banData
         );
+
+        $banCount = $room->bans()->count();
+
+        try {
+            event(new ParticipantBanned(
+                $room->id,
+                $room->slug,
+                $ban->id,
+                $participant->id,
+                $ban->display_name ?? $participant->display_name ?? 'Guest',
+                $ban->created_at?->toIso8601String(),
+                $banCount,
+                Auth::id(),
+                null
+            ));
+        } catch (\Throwable $e) {
+            // Broadcast failures should not block the ban action.
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'status' => 'banned',
+                'ban' => [
+                    'id' => $ban->id,
+                    'participant_id' => $participant->id,
+                    'display_name' => $ban->display_name ?? $participant->display_name ?? 'Guest',
+                    'banned_at' => $ban->created_at?->toIso8601String(),
+                    'banned_at_human' => $ban->created_at?->diffForHumans(null, true) ?? 'just now',
+                ],
+                'ban_count' => $banCount,
+            ]);
+        }
 
         return back()->with('status', 'Participant banned from this room.');
     }
@@ -55,7 +89,35 @@ class RoomBanController extends Controller
         $this->ensureOwner($room);
 
         $ban = $room->bans()->findOrFail($banId);
+        $participantId = $ban->participant_id ?? 0;
         $ban->delete();
+
+        $banCount = $room->bans()->count();
+
+        try {
+            event(new ParticipantUnbanned(
+                $room->id,
+                $room->slug,
+                $banId,
+                $participantId,
+                $banCount,
+                Auth::id(),
+                null
+            ));
+        } catch (\Throwable $e) {
+            // Broadcast failures should not block the unban action.
+        }
+
+        if (request()->expectsJson()) {
+            return response()->json([
+                'status' => 'unbanned',
+                'ban' => [
+                    'id' => $banId,
+                    'participant_id' => $participantId,
+                ],
+                'ban_count' => $banCount,
+            ]);
+        }
 
         return back()->with('status', 'Participant unbanned.');
     }
