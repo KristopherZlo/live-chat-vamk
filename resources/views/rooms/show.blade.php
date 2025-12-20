@@ -1876,7 +1876,10 @@
                     });
                 };
                 const makeMessageKey = (content, authorUserId, authorParticipantId, replyId = null, asQuestion = false) => {
-                    const normalized = String(content || '').trim();
+                    const normalized = String(content || '')
+                        .replace(/\r\n/g, '\n')
+                        .replace(/\r/g, '\n')
+                        .trim();
                     return [
                         encodeURIComponent(normalized),
                         String(authorUserId ?? ''),
@@ -4670,6 +4673,9 @@
                             scrollChatToBottom();
                             if (window.refreshLucideIcons) {
                                 window.refreshLucideIcons();
+                            }
+                            if (pollModeActive) {
+                                setPollMode(false);
                             }
                         }
 

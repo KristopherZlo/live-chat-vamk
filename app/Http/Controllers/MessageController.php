@@ -210,10 +210,34 @@ class MessageController extends Controller
         event(new MessageSent($message));
 
         if ($request->expectsJson()) {
+            $pollPayload = null;
+            if ($poll) {
+                $poll->loadMissing('options');
+                $options = $poll->options
+                    ->sortBy('position')
+                    ->map(fn ($option) => [
+                        'id' => $option->id,
+                        'label' => $option->label,
+                        'votes' => 0,
+                        'percent' => 0,
+                    ])
+                    ->values()
+                    ->toArray();
+                $pollPayload = [
+                    'id' => $poll->id,
+                    'question' => $poll->question,
+                    'options' => $options,
+                    'total_votes' => 0,
+                    'my_vote_id' => null,
+                    'is_closed' => (bool) $poll->is_closed,
+                ];
+            }
+
             return response()->json([
                 'message_id' => $message->id,
                 'question_id' => $question?->id,
                 'as_question' => (bool) $question,
+                'poll' => $pollPayload,
             ], 201);
         }
 
