@@ -1104,7 +1104,7 @@ main,.layout {
 
 .chat-input {
   border-top: 1px solid var(--border-subtle);
-  padding: 0.55rem 0.7rem;
+  padding: 0.55rem;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -1115,7 +1115,6 @@ main,.layout {
   max-height: 50vh;
   overflow-y: auto;
   overflow-x: hidden;
-  scrollbar-gutter: stable;
 }
 
 .chat-send-options {
@@ -3195,6 +3194,13 @@ body[data-theme="dark"] {
 [data-theme="dark"] .reaction-chip,[data-theme="dark"] .reply-preview {
   background: var(--bg-elevated);
   border-color: var(--border-strong);
+}
+
+[data-theme="dark"] .reaction-chip.is-active {
+  background: color-mix(in srgb, var(--accent) 28%, rgba(255, 255, 255, 0.12));
+  border-color: var(--accent);
+  color: #e2e8f0;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 [data-theme="dark"] .reply-preview {
