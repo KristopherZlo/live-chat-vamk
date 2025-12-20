@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\MessageReactionController;
+use App\Http\Controllers\MessagePollController;
 use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\RoomBanController;
 use App\Http\Controllers\AdminController;
@@ -71,6 +72,9 @@ Route::delete('/rooms/{room}/messages/{message}', [MessageController::class, 'de
     Route::post('/rooms/{room}/messages/{message}/reactions', [MessageReactionController::class, 'toggle'])
         ->middleware('throttle:room-messages')
         ->name('rooms.messages.reactions.toggle');
+    Route::post('/rooms/{room}/polls/{poll}/vote', [MessagePollController::class, 'vote'])
+        ->middleware('throttle:room-messages')
+        ->name('rooms.polls.vote');
 
     Route::middleware(['auth'])->group(function () {
     // ... тут уже есть dashboard / rooms.create / rooms.store

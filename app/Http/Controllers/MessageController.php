@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Message;
+use App\Models\MessagePoll;
 use App\Models\Participant;
 use App\Models\Question;
 use App\Models\Room;
@@ -41,6 +42,9 @@ class MessageController extends Controller
             'content' => ['required', 'string', 'max:2000'],
             'as_question' => ['nullable', 'boolean'],
             'reply_to_id' => ['nullable', 'integer', 'exists:messages,id'],
+            'poll_mode' => ['nullable', 'boolean'],
+            'poll_options' => ['nullable', 'array'],
+            'poll_options.*' => ['nullable', 'string', 'max:120'],
         ]);
 
         // Identify participant (if not the owner)
@@ -78,6 +82,37 @@ class MessageController extends Controller
             return back()->withErrors($message);
         }
 
+        $pollOptions = collect($data['poll_options'] ?? [])
+            ->map(fn ($option) => trim((string) $option))
+            ->filter(fn ($option) => $option !== '')
+            ->values();
+        $isPoll = !empty($data['poll_mode']) || $pollOptions->isNotEmpty();
+
+        if ($isPoll && (!$isOwner && !$isDevUser)) {
+            $message = 'You cannot create polls in this room.';
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 403);
+            }
+            return back()->withErrors($message);
+        }
+
+        if ($isPoll) {
+            if ($pollOptions->count() < 2) {
+                $message = 'Add at least two poll options.';
+                if ($request->expectsJson()) {
+                    return response()->json(['message' => $message], 422);
+                }
+                return back()->withErrors($message);
+            }
+            if ($pollOptions->count() > 6) {
+                $message = 'Polls can have up to 6 options.';
+                if ($request->expectsJson()) {
+                    return response()->json(['message' => $message], 422);
+                }
+                return back()->withErrors($message);
+            }
+        }
+
         $replyMessage = null;
         if (!empty($data['reply_to_id'])) {
             $replyMessage = Message::where('room_id', $room->id)->find($data['reply_to_id']);
@@ -88,18 +123,56 @@ class MessageController extends Controller
 
         $messageUserId = $isOwner || $isDevUser ? $user->id : null;
 
-        $message = Message::create([
-            'room_id' => $room->id,
-            'participant_id' => $participant?->id,
-            'reply_to_id' => $replyMessage?->id,
-            'user_id' => $messageUserId,
-            'is_system' => false,
-            'content' => $data['content'],
-        ]);
+        $message = null;
+        $poll = null;
+
+        if ($isPoll) {
+            DB::transaction(function () use (
+                $room,
+                $participant,
+                $replyMessage,
+                $messageUserId,
+                $data,
+                $pollOptions,
+                &$message,
+                &$poll
+            ) {
+                $message = Message::create([
+                    'room_id' => $room->id,
+                    'participant_id' => $participant?->id,
+                    'reply_to_id' => $replyMessage?->id,
+                    'user_id' => $messageUserId,
+                    'is_system' => false,
+                    'content' => $data['content'],
+                ]);
+
+                $poll = MessagePoll::create([
+                    'message_id' => $message->id,
+                    'question' => $data['content'],
+                    'is_closed' => false,
+                ]);
+
+                $poll->options()->createMany(
+                    $pollOptions->values()->map(fn ($option, $index) => [
+                        'label' => $option,
+                        'position' => $index,
+                    ])->all()
+                );
+            });
+        } else {
+            $message = Message::create([
+                'room_id' => $room->id,
+                'participant_id' => $participant?->id,
+                'reply_to_id' => $replyMessage?->id,
+                'user_id' => $messageUserId,
+                'is_system' => false,
+                'content' => $data['content'],
+            ]);
+        }
 
         $question = null;
 
-        if (!empty($data['as_question'])) {
+        if (!$isPoll && !empty($data['as_question'])) {
             $question = Question::create([
                 'room_id' => $room->id,
                 'message_id' => $message->id,
@@ -120,6 +193,10 @@ class MessageController extends Controller
 
         if ($replyMessage && !$message->relationLoaded('replyTo')) {
             $message->setRelation('replyTo', $replyMessage);
+        }
+
+        if ($poll && !$message->relationLoaded('poll')) {
+            $message->setRelation('poll', $poll->loadMissing('options'));
         }
 
         event(new MessageSent($message));
