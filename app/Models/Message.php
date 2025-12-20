@@ -56,6 +56,11 @@ class Message extends Model
         return $this->hasMany(MessageReaction::class);
     }
 
+    public function poll()
+    {
+        return $this->hasOne(MessagePoll::class);
+    }
+
     public function deletedByUser()
     {
         return $this->belongsTo(User::class, 'deleted_by_user_id');
