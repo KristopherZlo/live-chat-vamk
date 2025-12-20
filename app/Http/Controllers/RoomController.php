@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Room;
 use App\Models\Message;
 use App\Models\MessageReaction;
+use App\Models\MessagePoll;
+use App\Models\MessagePollVote;
 use App\Models\Participant;
 use App\Models\RoomBan;
 use App\Models\Question;
@@ -254,6 +256,7 @@ class RoomController extends Controller
         }
 
         $reactionPayload = $this->summarizeMessageReactions($messages, $viewer, $participant);
+        $pollPayloads = $this->summarizeMessagePolls($messages, $viewer, $participant);
 
         return view('rooms.show', [
             'room' => $room,
@@ -277,6 +280,7 @@ class RoomController extends Controller
             'queueItemUrlTemplate' => route('rooms.questions.item', [$room, '__QUESTION__']),
             'reactionsByMessage' => $reactionPayload['reactions'],
             'myReactionsByMessage' => $reactionPayload['mine'],
+            'pollsByMessage' => $pollPayloads,
         ]);
     }
 
@@ -588,12 +592,14 @@ class RoomController extends Controller
             ->values();
 
         $reactionPayload = $this->summarizeMessageReactions($messages, $viewer, $participant);
+        $pollPayloads = $this->summarizeMessagePolls($messages, $viewer, $participant);
         $payload = $messages->map(fn (Message $message) => $this->formatMessagePayload(
             $message,
             $participant,
             $viewer,
             $reactionPayload['reactions'],
             $reactionPayload['mine'],
+            $pollPayloads,
             $room,
         ));
 
@@ -671,6 +677,7 @@ class RoomController extends Controller
         ?User $user = null,
         array $reactionsByMessage = [],
         array $myReactionsByMessage = [],
+        array $pollPayloads = [],
         ?Room $room = null
     ): array
     {
@@ -716,6 +723,7 @@ class RoomController extends Controller
 
         $reactions = $reactions ?? [];
         $myReactions = $myReactions ?? [];
+        $poll = $pollPayloads[$messageId] ?? null;
 
         $replyTo = null;
         if ($message->replyTo) {
@@ -750,6 +758,7 @@ class RoomController extends Controller
             'reply_to' => $replyTo,
             'reactions' => $reactions,
             'myReactions' => $myReactions,
+            'poll' => $poll,
         ];
     }
 
@@ -816,6 +825,96 @@ class RoomController extends Controller
         return [
             'reactions' => $reactionsByMessage,
             'mine' => $myReactionsByMessage,
+        ];
+    }
+
+    protected function summarizeMessagePolls(Collection $messages, ?User $user = null, ?Participant $participant = null): array
+    {
+        $messageIds = $messages->pluck('id')->filter()->values();
+        if ($messageIds->isEmpty()) {
+            return [];
+        }
+
+        $polls = MessagePoll::query()
+            ->with('options')
+            ->whereIn('message_id', $messageIds)
+            ->get();
+
+        if ($polls->isEmpty()) {
+            return [];
+        }
+
+        $pollIds = $polls->pluck('id')->values();
+        $voteRows = MessagePollVote::query()
+            ->select('poll_id', 'option_id')
+            ->whereIn('poll_id', $pollIds)
+            ->get();
+
+        $voteCounts = $voteRows
+            ->groupBy('poll_id')
+            ->map(fn ($items) => $items->groupBy('option_id')->map->count());
+
+        $myVotes = collect();
+        $userId = $user?->id;
+        $participantId = $participant?->id;
+
+        if ($userId || $participantId) {
+            $myVotes = MessagePollVote::query()
+                ->select('poll_id', 'option_id')
+                ->whereIn('poll_id', $pollIds)
+                ->where(function ($query) use ($userId, $participantId) {
+                    if ($userId) {
+                        $query->orWhere('user_id', $userId);
+                    }
+                    if ($participantId) {
+                        $query->orWhere('participant_id', $participantId);
+                    }
+                })
+                ->get()
+                ->keyBy('poll_id');
+        }
+
+        $payloads = [];
+        foreach ($polls as $poll) {
+            $counts = $voteCounts->get($poll->id, collect());
+            $myVote = $myVotes->get($poll->id);
+            $payloads[$poll->message_id] = $this->buildPollPayload(
+                $poll,
+                $counts,
+                $myVote?->option_id
+            );
+        }
+
+        return $payloads;
+    }
+
+    protected function buildPollPayload(MessagePoll $poll, $counts, ?int $myVoteOptionId = null): array
+    {
+        $countMap = collect($counts)->map(fn ($count) => (int) $count);
+        $totalVotes = $countMap->sum();
+
+        $options = $poll->options
+            ->sortBy('position')
+            ->map(function ($option) use ($countMap, $totalVotes) {
+                $votes = (int) ($countMap->get($option->id, 0));
+                $percent = $totalVotes > 0 ? (int) round(($votes / $totalVotes) * 100) : 0;
+                return [
+                    'id' => $option->id,
+                    'label' => $option->label,
+                    'votes' => $votes,
+                    'percent' => $percent,
+                ];
+            })
+            ->values()
+            ->toArray();
+
+        return [
+            'id' => $poll->id,
+            'question' => $poll->question,
+            'options' => $options,
+            'total_votes' => $totalVotes,
+            'my_vote_id' => $myVoteOptionId,
+            'is_closed' => (bool) $poll->is_closed,
         ];
     }
 

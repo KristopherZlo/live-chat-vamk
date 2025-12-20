@@ -26,6 +26,7 @@ class MessageSent implements ShouldBroadcastNow
             'replyTo.user',
             'replyTo.participant',
             'reactions',
+            'poll.options',
         ]);
     }
 
@@ -73,6 +74,7 @@ class MessageSent implements ShouldBroadcastNow
                 'is_deleted' => $this->message->replyTo->trashed(),
             ] : null,
             'reactions' => $this->formatReactions(),
+            'poll' => $this->formatPollPayload(),
         ];
     }
 
@@ -87,5 +89,35 @@ class MessageSent implements ShouldBroadcastNow
             ])
             ->values()
             ->toArray();
+    }
+
+    protected function formatPollPayload(): ?array
+    {
+        $poll = $this->message->poll;
+        if (!$poll) {
+            return null;
+        }
+
+        $poll->loadMissing('options');
+
+        $options = $poll->options
+            ->sortBy('position')
+            ->map(fn ($option) => [
+                'id' => $option->id,
+                'label' => $option->label,
+                'votes' => 0,
+                'percent' => 0,
+            ])
+            ->values()
+            ->toArray();
+
+        return [
+            'id' => $poll->id,
+            'question' => $poll->question,
+            'options' => $options,
+            'total_votes' => 0,
+            'my_vote_id' => null,
+            'is_closed' => (bool) $poll->is_closed,
+        ];
     }
 }
