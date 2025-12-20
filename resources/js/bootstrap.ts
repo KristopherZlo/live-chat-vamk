@@ -1,8 +1,5 @@
 import axios from 'axios';
 import Alpine from 'alpinejs';
-import Echo from 'laravel-echo';
-import Pusher from 'pusher-js';
-
 window.axios = axios;
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
@@ -18,8 +15,6 @@ Alpine.start();
 // ОТКЛЮЧАЕМ стандартный echo.js, чтобы не было второй конфигурации
 // import './echo';
 
-window.Pusher = Pusher;
-
 type Pickable = string | number | undefined | null;
 const providedReverbConfig = window.__reverbConfig ?? {};
 const env = typeof import.meta !== 'undefined' && import.meta?.env ? import.meta.env : {};
@@ -33,20 +28,43 @@ const pickFirst = (...values: Pickable[]): Pickable => {
     return '';
 };
 
-const reverbKey = String(pickFirst(providedReverbConfig.key, env?.VITE_REVERB_APP_KEY, '') ?? '');
-const reverbHost = String(
-    pickFirst(providedReverbConfig.host, env?.VITE_REVERB_HOST, window.location.hostname) ?? window.location.hostname,
-);
-const reverbPort = Number(pickFirst(providedReverbConfig.port, env?.VITE_REVERB_PORT, 8080) ?? 8080);
-const reverbScheme = String(pickFirst(providedReverbConfig.scheme, env?.VITE_REVERB_SCHEME, 'http') ?? 'http');
-const forceTLS = reverbScheme === 'https';
+const shouldInitEcho = () => {
+    const routeName = document.body?.dataset?.routeName || '';
+    if (routeName === 'rooms.public') {
+        return true;
+    }
+    return Boolean(document.querySelector('[data-room-slug]') || document.querySelector('.messages-container'));
+};
 
-window.Echo = new Echo({
-    broadcaster: 'reverb',
-    key: reverbKey,
-    wsHost: reverbHost,
-    wsPort: reverbPort,
-    wssPort: reverbPort,
-    forceTLS,
-    enabledTransports: ['ws', 'wss'],
-});
+const initEcho = async () => {
+    const [{ default: Echo }, { default: Pusher }] = await Promise.all([
+        import('laravel-echo'),
+        import('pusher-js'),
+    ]);
+
+    window.Pusher = Pusher;
+
+    const reverbKey = String(pickFirst(providedReverbConfig.key, env?.VITE_REVERB_APP_KEY, '') ?? '');
+    const reverbHost = String(
+        pickFirst(providedReverbConfig.host, env?.VITE_REVERB_HOST, window.location.hostname) ?? window.location.hostname,
+    );
+    const reverbPort = Number(pickFirst(providedReverbConfig.port, env?.VITE_REVERB_PORT, 8080) ?? 8080);
+    const reverbScheme = String(pickFirst(providedReverbConfig.scheme, env?.VITE_REVERB_SCHEME, 'http') ?? 'http');
+    const forceTLS = reverbScheme === 'https';
+
+    window.Echo = new Echo({
+        broadcaster: 'reverb',
+        key: reverbKey,
+        wsHost: reverbHost,
+        wsPort: reverbPort,
+        wssPort: reverbPort,
+        forceTLS,
+        enabledTransports: ['ws', 'wss'],
+    });
+};
+
+if (shouldInitEcho()) {
+    window.__echoReady = initEcho().catch((error) => {
+        console.warn('Echo init failed', error);
+    });
+}

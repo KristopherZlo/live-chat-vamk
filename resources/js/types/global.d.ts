@@ -28,12 +28,13 @@ type FlashNotificationOptions = {
 declare global {
     interface Window {
         __reverbConfig?: ReverbConfig;
+        __echoReady?: Promise<void>;
         __queueSoundDebug?: boolean;
         __networkStatusNotificationBound?: boolean;
         axios: typeof axios;
         Alpine: typeof Alpine;
-        Pusher: typeof Pusher;
-        Echo: Echo;
+        Pusher?: typeof Pusher;
+        Echo?: Echo;
         lucide?: LucideGlobal;
         queueSoundUrl?: string;
         queueSeenQuestionIds?: Set<number>;

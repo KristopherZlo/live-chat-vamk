@@ -277,17 +277,34 @@
                                 $canDeleteOwn = ($currentUserId && $message->user_id === $currentUserId)
                                     || ($participant && $message->participant && $participant->id === $message->participant->id);
                                 $avatarBg = $avatarColor($authorName);
-                                $reactionsGrouped = $message->reactions->groupBy('emoji')->map(function ($items, $emoji) use ($currentUserId, $currentParticipantId) {
-                                    return [
-                                        'emoji' => $emoji,
-                                        'count' => $items->count(),
-                                        'reacted' => $items->contains(function ($reaction) use ($currentUserId, $currentParticipantId) {
-                                            return ($currentUserId && $reaction->user_id === $currentUserId)
-                                                || ($currentParticipantId && $reaction->participant_id === $currentParticipantId);
-                                        }),
-                                    ];
-                                })->values();
-                                $myReactions = $reactionsGrouped->where('reacted', true)->pluck('emoji')->values();
+                                $usePrecomputedReactions = isset($reactionsByMessage) && is_array($reactionsByMessage);
+                                $usePrecomputedMine = isset($myReactionsByMessage) && is_array($myReactionsByMessage);
+
+                                if ($usePrecomputedReactions || $usePrecomputedMine) {
+                                    $rawReactions = $usePrecomputedReactions ? ($reactionsByMessage[$message->id] ?? []) : [];
+                                    $myReactions = $usePrecomputedMine ? ($myReactionsByMessage[$message->id] ?? []) : [];
+                                    $myReactionSet = array_fill_keys($myReactions, true);
+                                    $reactionsGrouped = collect($rawReactions)->map(function ($reaction) use ($myReactionSet) {
+                                        $emoji = $reaction['emoji'] ?? '';
+                                        return [
+                                            'emoji' => $emoji,
+                                            'count' => (int) ($reaction['count'] ?? 0),
+                                            'reacted' => $emoji !== '' && isset($myReactionSet[$emoji]),
+                                        ];
+                                    })->values();
+                                } else {
+                                    $reactionsGrouped = $message->reactions->groupBy('emoji')->map(function ($items, $emoji) use ($currentUserId, $currentParticipantId) {
+                                        return [
+                                            'emoji' => $emoji,
+                                            'count' => $items->count(),
+                                            'reacted' => $items->contains(function ($reaction) use ($currentUserId, $currentParticipantId) {
+                                                return ($currentUserId && $reaction->user_id === $currentUserId)
+                                                    || ($currentParticipantId && $reaction->participant_id === $currentParticipantId);
+                                            }),
+                                        ];
+                                    })->values();
+                                    $myReactions = $reactionsGrouped->where('reacted', true)->pluck('emoji')->values();
+                                }
                             @endphp
                             <li
                                 class="message {{ $isOutgoing ? 'message--outgoing' : '' }} {{ $isQuestionMessage ? 'message--question' : '' }}"
@@ -678,6 +695,7 @@
     </div>
 
     @push('styles')
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/emoji-picker-element@1.27.0/themes/light.css">
     @endpush
 
@@ -2914,7 +2932,7 @@
                 autosizeComposer();
                 updateSendButtonState();
                 scrollChatToBottom();
-                maybeLoadOlderMessages(true);
+                maybeLoadOlderMessages();
                 if (chatContainer) {
                     chatContainer.addEventListener('click', handleReplyJump);
                     chatContainer.addEventListener('scroll', () => {
@@ -3782,41 +3800,50 @@
                     }
                 };
 
-                if (window.Echo) {
-                    const channelName = 'room.' + roomSlug;
-                    window.Echo.channel(channelName)
-                        .listen('MessageSent', (e) => {
-                            enqueueIncomingMessage(e);
-                        })
-                        .listen('ReactionUpdated', (payload) => {
-                            updateReactionsFromEvent(payload.message_id, payload.reactions, payload);
-                        })
-                        .listen('MessageDeleted', (payload) => {
-                            handleMessageDeleted(payload.id);
-                        })
-                        .listen('QuestionCreated', (payload) => {
-                            if (questionsPanel && payload?.id) {
-                                upsertQueueItem(payload.id);
-                            }
-                            if (myQuestionsPanel) {
-                                reloadMyQuestionsPanel();
-                            }
-                        })
-                        .listen('QuestionUpdated', (payload) => {
-                            if (questionsPanel && payload?.id) {
-                                upsertQueueItem(payload.id);
-                            }
-                            if (myQuestionsPanel) {
-                                reloadMyQuestionsPanel();
-                            }
-                        })
-                        .error(() => {
-                            startQuestionsPolling();
-                            startMyQuestionsPolling();
-                        });
-                } else {
+                const initRealtime = () => {
+                    if (window.Echo) {
+                        const channelName = 'room.' + roomSlug;
+                        window.Echo.channel(channelName)
+                            .listen('MessageSent', (e) => {
+                                enqueueIncomingMessage(e);
+                            })
+                            .listen('ReactionUpdated', (payload) => {
+                                updateReactionsFromEvent(payload.message_id, payload.reactions, payload);
+                            })
+                            .listen('MessageDeleted', (payload) => {
+                                handleMessageDeleted(payload.id);
+                            })
+                            .listen('QuestionCreated', (payload) => {
+                                if (questionsPanel && payload?.id) {
+                                    upsertQueueItem(payload.id);
+                                }
+                                if (myQuestionsPanel) {
+                                    reloadMyQuestionsPanel();
+                                }
+                            })
+                            .listen('QuestionUpdated', (payload) => {
+                                if (questionsPanel && payload?.id) {
+                                    upsertQueueItem(payload.id);
+                                }
+                                if (myQuestionsPanel) {
+                                    reloadMyQuestionsPanel();
+                                }
+                            })
+                            .error(() => {
+                                startQuestionsPolling();
+                                startMyQuestionsPolling();
+                            });
+                        return;
+                    }
                     startQuestionsPolling();
                     startMyQuestionsPolling();
+                };
+
+                const echoReady = window.__echoReady;
+                if (echoReady && typeof echoReady.then === 'function') {
+                    echoReady.then(initRealtime).catch(initRealtime);
+                } else {
+                    initRealtime();
                 }
 
                 const chatForm = document.getElementById('chat-form');

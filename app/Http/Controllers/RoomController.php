@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Room;
 use App\Models\Message;
+use App\Models\MessageReaction;
 use App\Models\Participant;
 use App\Models\RoomBan;
 use App\Models\Question;
@@ -12,7 +13,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
@@ -202,6 +205,7 @@ class RoomController extends Controller
             ->values();
         $oldestMessageId = $messages->first()?->id;
 
+        $viewer = $request->user();
         $isOwner = $this->isOwner($room);
         $isBanned = false;
 
@@ -246,6 +250,8 @@ class RoomController extends Controller
                 ->get();
         }
 
+        $reactionPayload = $this->summarizeMessageReactions($messages, $viewer, $participant);
+
         return view('rooms.show', [
             'room' => $room,
             'messages' => $messages,
@@ -266,6 +272,8 @@ class RoomController extends Controller
             'queueTotal' => $queueStatusCounts['all'] ?? $queueQuestions->count(),
             'queueInitialCount' => $queueQuestions->count(),
             'queueItemUrlTemplate' => route('rooms.questions.item', [$room, '__QUESTION__']),
+            'reactionsByMessage' => $reactionPayload['reactions'],
+            'myReactionsByMessage' => $reactionPayload['mine'],
         ]);
     }
 
@@ -571,7 +579,15 @@ class RoomController extends Controller
 
         $viewer = $request->user();
         $participant = $this->getOrCreateParticipant($request, $room, $this->resolveFingerprint($request), $request->ip());
-        $payload = $messages->map(fn (Message $message) => $this->formatMessagePayload($message, $participant, $viewer));
+        $reactionPayload = $this->summarizeMessageReactions($messages, $viewer, $participant);
+        $payload = $messages->map(fn (Message $message) => $this->formatMessagePayload(
+            $message,
+            $participant,
+            $viewer,
+            $reactionPayload['reactions'],
+            $reactionPayload['mine'],
+            $room,
+        ));
 
         return response()->json([
             'data' => $payload,
@@ -583,7 +599,14 @@ class RoomController extends Controller
     protected function baseMessagesQuery(Room $room)
     {
         return $room->messages()
-            ->with(['participant', 'user', 'question', 'replyTo.user', 'replyTo.participant', 'reactions'])
+            ->with([
+                'participant:id,display_name',
+                'user:id,name,is_dev',
+                'replyTo' => fn ($query) => $query->select('id', 'user_id', 'participant_id', 'content', 'deleted_at'),
+                'replyTo.user:id,name',
+                'replyTo.participant:id,display_name',
+            ])
+            ->withExists(['question as has_question'])
             ->orderByDesc('created_at')
             ->orderByDesc('id');
     }
@@ -610,25 +633,57 @@ class RoomController extends Controller
         return $query->where('status', $status);
     }
 
-    protected function formatMessagePayload(Message $message, ?Participant $participant = null, ?User $user = null): array
+    protected function formatMessagePayload(
+        Message $message,
+        ?Participant $participant = null,
+        ?User $user = null,
+        array $reactionsByMessage = [],
+        array $myReactionsByMessage = [],
+        ?Room $room = null
+    ): array
     {
-        $message->loadMissing(['user', 'participant', 'question', 'replyTo.user', 'replyTo.participant', 'reactions', 'room']);
+        $message->loadMissing(['user', 'participant', 'replyTo.user', 'replyTo.participant']);
+        $roomModel = $room;
+        if (!$roomModel) {
+            $message->loadMissing('room');
+            $roomModel = $message->room;
+        }
 
-        $room = $message->room;
-        $isOwner = $message->user_id && $room && $room->user_id === $message->user_id;
+        $isOwner = $message->user_id && $roomModel && $roomModel->user_id === $message->user_id;
+        $messageId = $message->id;
 
-        $myReactions = $message->reactions
-            ->filter(function ($reaction) use ($participant, $user) {
-                if ($user && $reaction->user_id === $user->id) {
-                    return true;
-                }
-                if ($participant && $reaction->participant_id === $participant->id) {
-                    return true;
-                }
-                return false;
-            })
-            ->pluck('emoji')
-            ->values();
+        $reactions = $reactionsByMessage[$messageId] ?? null;
+        $myReactions = $myReactionsByMessage[$messageId] ?? null;
+
+        if ($reactions === null && $message->relationLoaded('reactions')) {
+            $reactions = $message->reactions
+                ->groupBy('emoji')
+                ->map(fn ($items, $emoji) => [
+                    'emoji' => $emoji,
+                    'count' => $items->count(),
+                ])
+                ->values()
+                ->toArray();
+        }
+
+        if ($myReactions === null && $message->relationLoaded('reactions')) {
+            $myReactions = $message->reactions
+                ->filter(function ($reaction) use ($participant, $user) {
+                    if ($user && $reaction->user_id === $user->id) {
+                        return true;
+                    }
+                    if ($participant && $reaction->participant_id === $participant->id) {
+                        return true;
+                    }
+                    return false;
+                })
+                ->pluck('emoji')
+                ->values()
+                ->toArray();
+        }
+
+        $reactions = $reactions ?? [];
+        $myReactions = $myReactions ?? [];
 
         $replyTo = null;
         if ($message->replyTo) {
@@ -643,15 +698,6 @@ class RoomController extends Controller
                 'is_deleted' => $message->replyTo->trashed(),
             ];
         }
-
-        $reactions = $message->reactions
-            ->groupBy('emoji')
-            ->map(fn ($items, $emoji) => [
-                'emoji' => $emoji,
-                'count' => $items->count(),
-            ])
-            ->values()
-            ->toArray();
 
         return [
             'id' => $message->id,
@@ -668,10 +714,65 @@ class RoomController extends Controller
                 'is_dev' => (bool) $message->user?->is_dev,
                 'is_owner' => $isOwner,
             ],
-            'as_question' => (bool) ($message->relationLoaded('question') ? $message->question : $message->question()->exists()),
+            'as_question' => (bool) ($message->has_question ?? ($message->relationLoaded('question') ? $message->question : $message->question()->exists())),
             'reply_to' => $replyTo,
             'reactions' => $reactions,
-            'myReactions' => $myReactions->toArray(),
+            'myReactions' => $myReactions,
+        ];
+    }
+
+    protected function summarizeMessageReactions(Collection $messages, ?User $user = null, ?Participant $participant = null): array
+    {
+        $messageIds = $messages->pluck('id')->filter()->values();
+        if ($messageIds->isEmpty()) {
+            return [
+                'reactions' => [],
+                'mine' => [],
+            ];
+        }
+
+        $summaryRows = MessageReaction::query()
+            ->select('message_id', 'emoji', DB::raw('count(*) as count'))
+            ->whereIn('message_id', $messageIds)
+            ->groupBy('message_id', 'emoji')
+            ->orderBy('emoji')
+            ->get();
+
+        $reactionsByMessage = $summaryRows
+            ->groupBy('message_id')
+            ->map(fn ($items) => $items->map(fn ($row) => [
+                'emoji' => $row->emoji,
+                'count' => (int) $row->count,
+            ])->values()->toArray())
+            ->toArray();
+
+        $myReactionsByMessage = [];
+        $userId = $user?->id;
+        $participantId = $participant?->id;
+
+        if ($userId || $participantId) {
+            $mineRows = MessageReaction::query()
+                ->select('message_id', 'emoji')
+                ->whereIn('message_id', $messageIds)
+                ->where(function ($query) use ($userId, $participantId) {
+                    if ($userId) {
+                        $query->orWhere('user_id', $userId);
+                    }
+                    if ($participantId) {
+                        $query->orWhere('participant_id', $participantId);
+                    }
+                })
+                ->get();
+
+            $myReactionsByMessage = $mineRows
+                ->groupBy('message_id')
+                ->map(fn ($items) => $items->pluck('emoji')->values()->toArray())
+                ->toArray();
+        }
+
+        return [
+            'reactions' => $reactionsByMessage,
+            'mine' => $myReactionsByMessage,
         ];
     }
 

@@ -35,6 +35,8 @@
     <link rel="icon" type="image/svg+xml" href="{{ asset('icons/logo_white.svg') }}">
     <link rel="shortcut icon" href="{{ asset('icons/logo_white.svg') }}">
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
     <script>
         (() => {
@@ -81,61 +83,85 @@
     @php
         use App\Models\Setting;
         use App\Models\UpdatePost;
+        use Illuminate\Support\Facades\Cache;
         use Illuminate\Support\Str;
 
         $appVersion = Setting::getValue('app_version', config('app.version'));
-        $whatsNewEntry = null;
-        $whatsNewContentHtml = null;
-        $whatsNewSections = [];
-        $whatsNewImageUrl = null;
-        $whatsNewDate = null;
-        $whatsNewTitle = null;
-        $configRelease = null;
+        $whatsNewCacheKey = 'whats_new_release:' . ($appVersion ?: 'default') . ':' . app()->getLocale();
+        $whatsNewData = Cache::remember($whatsNewCacheKey, now()->addMinutes(10), function () use ($appVersion) {
+            $whatsNewEntry = null;
+            $whatsNewContentHtml = null;
+            $whatsNewSections = [];
+            $whatsNewImageUrl = null;
+            $whatsNewDate = null;
+            $whatsNewTitle = null;
+            $configRelease = null;
 
-        try {
-            $whatsNewEntry = UpdatePost::query()
-                ->type(UpdatePost::TYPE_WHATS_NEW)
-                ->published()
-                ->when($appVersion, fn ($query) => $query->where('version', $appVersion))
-                ->latestPublished()
-                ->first();
-
-            if (! $whatsNewEntry) {
+            try {
                 $whatsNewEntry = UpdatePost::query()
                     ->type(UpdatePost::TYPE_WHATS_NEW)
                     ->published()
+                    ->when($appVersion, fn ($query) => $query->where('version', $appVersion))
                     ->latestPublished()
                     ->first();
+
+                if (! $whatsNewEntry) {
+                    $whatsNewEntry = UpdatePost::query()
+                        ->type(UpdatePost::TYPE_WHATS_NEW)
+                        ->published()
+                        ->latestPublished()
+                        ->first();
+                }
+            } catch (\Throwable $e) {
+                $whatsNewEntry = null;
             }
-        } catch (\Throwable $e) {
-            $whatsNewEntry = null;
-        }
 
-        $whatsNewVersion = $whatsNewEntry->version ?? $appVersion ?? config('app.version');
+            $whatsNewVersion = $whatsNewEntry->version ?? $appVersion ?? config('app.version');
 
-        if (! $whatsNewEntry && $whatsNewVersion) {
-            $configRelease = config('whatsnew.releases')[$whatsNewVersion] ?? null;
-        }
+            if (! $whatsNewEntry && $whatsNewVersion) {
+                $configRelease = config('whatsnew.releases')[$whatsNewVersion] ?? null;
+            }
 
-        $whatsNewRelease = $whatsNewEntry ?: $configRelease;
-        $whatsNewImageUrl = $whatsNewEntry?->cover_url
-            ?? ($configRelease['image'] ?? false ? asset($configRelease['image']) : null);
-        $whatsNewContentHtml = $whatsNewEntry?->body
-            ? Str::markdown($whatsNewEntry->body, ['html_input' => 'strip'])
-            : null;
-        $whatsNewSections = is_array($configRelease['sections'] ?? null) ? $configRelease['sections'] : [];
-        $whatsNewDate = $whatsNewEntry?->published_at?->format('Y-m-d') ?? ($configRelease['date'] ?? null);
-        $whatsNewTitle = $whatsNewEntry?->title ?? ($configRelease['title'] ?? null);
-        if (! $whatsNewVersion) {
-            $whatsNewVersion = config('app.version', '1.0.0');
-        }
+            $whatsNewRelease = $whatsNewEntry ?: $configRelease;
+            $whatsNewImageUrl = $whatsNewEntry?->cover_url
+                ?? ($configRelease['image'] ?? false ? asset($configRelease['image']) : null);
+            $whatsNewContentHtml = $whatsNewEntry?->body
+                ? Str::markdown($whatsNewEntry->body, ['html_input' => 'strip'])
+                : null;
+            $whatsNewSections = is_array($configRelease['sections'] ?? null) ? $configRelease['sections'] : [];
+            $whatsNewDate = $whatsNewEntry?->published_at?->format('Y-m-d') ?? ($configRelease['date'] ?? null);
+            $whatsNewTitle = $whatsNewEntry?->title ?? ($configRelease['title'] ?? null);
+            if (! $whatsNewVersion) {
+                $whatsNewVersion = config('app.version', '1.0.0');
+            }
+            $whatsNewImageAlt = is_array($whatsNewRelease)
+                ? ($whatsNewRelease['image_alt'] ?? ($whatsNewTitle ?? 'Update preview'))
+                : ($whatsNewTitle ?? 'Update preview');
+
+            return [
+                'release' => (bool) $whatsNewRelease,
+                'version' => $whatsNewVersion,
+                'image_url' => $whatsNewImageUrl,
+                'image_alt' => $whatsNewImageAlt,
+                'content_html' => $whatsNewContentHtml,
+                'sections' => $whatsNewSections,
+                'date' => $whatsNewDate,
+                'title' => $whatsNewTitle,
+            ];
+        });
+
+        $whatsNewRelease = $whatsNewData['release'] ?? false;
+        $whatsNewVersion = $whatsNewData['version'] ?? ($appVersion ?? config('app.version', '1.0.0'));
+        $whatsNewImageUrl = $whatsNewData['image_url'] ?? null;
+        $whatsNewImageAlt = $whatsNewData['image_alt'] ?? 'Update preview';
+        $whatsNewContentHtml = $whatsNewData['content_html'] ?? null;
+        $whatsNewSections = $whatsNewData['sections'] ?? [];
+        $whatsNewDate = $whatsNewData['date'] ?? null;
+        $whatsNewTitle = $whatsNewData['title'] ?? null;
     @endphp
     @vite([
-        'resources/js/lucide.ts',
         'resources/css/app.css',
-        'resources/css/design.css',
-        'resources/js/app.ts',
-        'resources/js/design.ts'
+        'resources/css/design.css'
     ])
     @stack('styles')
 </head>
@@ -325,7 +351,7 @@
                     <div class="whats-new-media">
                         <img
                             src="{{ $whatsNewImageUrl }}"
-                            alt="{{ is_array($whatsNewRelease) ? ($whatsNewRelease['image_alt'] ?? ($whatsNewTitle ?? 'Update preview')) : ($whatsNewTitle ?? 'Update preview') }}"
+                            alt="{{ $whatsNewImageAlt }}"
                             loading="lazy"
                         >
                     </div>
@@ -361,6 +387,11 @@
         </div>
     </div>
 @endif
+@vite([
+    'resources/js/lucide.ts',
+    'resources/js/app.ts',
+    'resources/js/design.ts'
+])
 @stack('scripts')
 <script>
 (() => {
