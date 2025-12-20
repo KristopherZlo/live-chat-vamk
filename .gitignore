@@ -4,6 +4,16 @@
 /design-tests/*
 /backup-css
 /.cursor
+AGENTS.md
+.gitignore
+/.aider
+/.aider*
+/.cline
+/.codex
+/.continue
+/.openai
+/.roo
+/.windsurf
 
 # Temp / backups
 /temp_view.txt
