@@ -34,7 +34,17 @@ class AppServiceProvider extends ServiceProvider
         }
 
         RateLimiter::for('web', function (Request $request) {
-            return Limit::perMinute(1200)->by($request->ip());
+            $userId = $request->user()?->getAuthIdentifier();
+            $ip = $request->ip();
+
+            if ($userId) {
+                return [
+                    Limit::perMinute(3600)->by('user|'.$userId),
+                    Limit::perMinute(2400)->by($ip),
+                ];
+            }
+
+            return Limit::perMinute(1200)->by($ip);
         });
 
         RateLimiter::for('login', function (Request $request) {
@@ -62,14 +72,17 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('room-messages', function (Request $request) {
             $room = $request->route('room');
             $roomId = is_object($room) && method_exists($room, 'getKey') ? $room->getKey() : $room;
-            $userId = optional($request->user())->getAuthIdentifier();
+            $userId = $request->user()?->getAuthIdentifier();
             $sessionId = $request->session()?->getId();
             $ip = $request->ip();
             $compositeKey = implode('|', array_filter([$roomId, $userId, $sessionId, $ip]));
+            $isAuthenticated = (bool) $userId;
+            $perMinute = $isAuthenticated ? 120 : 20;
+            $perMinuteIp = $isAuthenticated ? 240 : 40;
 
             return [
-                Limit::perMinute(20)->by($compositeKey),
-                Limit::perMinute(40)->by($ip),
+                Limit::perMinute($perMinute)->by($compositeKey),
+                Limit::perMinute($perMinuteIp)->by($ip),
             ];
         });
     }
