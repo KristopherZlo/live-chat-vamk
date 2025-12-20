@@ -279,6 +279,8 @@
                                 $avatarBg = $avatarColor($authorName);
                                 $usePrecomputedReactions = isset($reactionsByMessage) && is_array($reactionsByMessage);
                                 $usePrecomputedMine = isset($myReactionsByMessage) && is_array($myReactionsByMessage);
+                                $pollPayload = $pollsByMessage[$message->id] ?? null;
+                                $isPollMessage = !empty($pollPayload);
 
                                 if ($usePrecomputedReactions || $usePrecomputedMine) {
                                     $rawReactions = $usePrecomputedReactions ? ($reactionsByMessage[$message->id] ?? []) : [];
@@ -307,11 +309,12 @@
                                 }
                             @endphp
                             <li
-                                class="message {{ $isOutgoing ? 'message--outgoing' : '' }} {{ $isQuestionMessage ? 'message--question' : '' }}"
+                                class="message {{ $isOutgoing ? 'message--outgoing' : '' }} {{ $isQuestionMessage ? 'message--question' : '' }} {{ $isPollMessage ? 'message--poll' : '' }}"
                                 data-message-id="{{ $message->id }}"
                                 data-reactions-url="{{ route('rooms.messages.reactions.toggle', [$room, $message]) }}"
                                 data-reactions='@json($reactionsGrouped)'
                                 data-my-reactions='@json($myReactions)'
+                                data-poll='@json($pollPayload)'
                                 data-user-id="{{ $message->user_id ?? '' }}"
                                 data-participant-id="{{ $message->participant_id ?? '' }}"
                                 data-author="{{ e($authorName) }}"
@@ -382,7 +385,50 @@
                                             <span class="reply-text">{{ $replyText }}</span>
                                         </div>
                                     @endif
-                                    <div class="message-text">{{ $message->content }}</div>
+                                    @if($isPollMessage)
+                                        @php
+                                            $pollTotal = (int) ($pollPayload['total_votes'] ?? 0);
+                                            $pollMyVoteId = $pollPayload['my_vote_id'] ?? null;
+                                            $pollOptions = $pollPayload['options'] ?? [];
+                                            $pollIsClosed = (bool) ($pollPayload['is_closed'] ?? false);
+                                            $pollCanVote = !$pollIsClosed && !$isClosed && !$isBanned;
+                                        @endphp
+                                        <div class="message-poll" data-poll-card data-poll-id="{{ $pollPayload['id'] ?? '' }}">
+                                            <div class="poll-question">{{ $pollPayload['question'] ?? $message->content }}</div>
+                                            <div class="poll-options" data-poll-options>
+                                                @foreach($pollOptions as $option)
+                                                    @php
+                                                        $optionVotes = (int) ($option['votes'] ?? 0);
+                                                        $optionPercent = (int) ($option['percent'] ?? 0);
+                                                        $optionId = $option['id'] ?? null;
+                                                        $isSelected = $pollMyVoteId && $optionId && (int) $pollMyVoteId === (int) $optionId;
+                                                    @endphp
+                                                    <button
+                                                        type="button"
+                                                        class="poll-option {{ $isSelected ? 'is-selected' : '' }}"
+                                                        data-poll-option-id="{{ $optionId }}"
+                                                        aria-pressed="{{ $isSelected ? 'true' : 'false' }}"
+                                                        @unless($pollCanVote) disabled @endunless
+                                                    >
+                                                        <span class="poll-option-label">{{ $option['label'] ?? '' }}</span>
+                                                        <span class="poll-option-stats">
+                                                            <span class="poll-option-count">{{ $optionVotes }}</span>
+                                                            <span class="poll-option-percent">{{ $optionPercent }}%</span>
+                                                        </span>
+                                                        <span class="poll-option-bar" style="width: {{ $optionPercent }}%;"></span>
+                                                    </button>
+                                                @endforeach
+                                            </div>
+                                            <div class="poll-footer">
+                                                <span class="poll-total">{{ $pollTotal }} votes</span>
+                                                @if($pollMyVoteId)
+                                                    <span class="poll-status">Your vote is saved</span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @else
+                                        <div class="message-text">{{ $message->content }}</div>
+                                    @endif
                                     <div class="message-reactions" data-message-reactions>
                                         <div class="reactions-list" data-reactions-list>
                                             @foreach($reactionsGrouped as $reaction)
@@ -466,6 +512,14 @@
                                     ></div>
                                     <button
                                         type="button"
+                                        class="quick-responses__poll"
+                                        data-poll-toggle
+                                        aria-label="Create poll"
+                                    >
+                                        <i data-lucide="bar-chart-3"></i>
+                                    </button>
+                                    <button
+                                        type="button"
                                         class="quick-responses__settings"
                                         data-quick-responses-settings
                                         aria-label="Open quick responses settings"
@@ -510,6 +564,7 @@
                             @endif
                             <form id="chat-form" method="POST" action="{{ route('rooms.messages.store', $room) }}">
                                 @csrf
+                                <input type="hidden" name="poll_mode" id="pollMode" value="0">
                                 <div class="chat-send-options">
                                     @unless($isOwner)
                                         <label class="switch" id="sendToTeacherSwitch">
@@ -532,6 +587,30 @@
                                         <i data-lucide="x"></i>
                                     </button>
                                 </div>
+                                @if($isOwner)
+                                    <div class="poll-composer" data-poll-composer hidden>
+                                        <div class="poll-composer-header">
+                                            <div class="poll-composer-title">Create poll</div>
+                                            <button type="button" class="icon-btn poll-composer-close" data-poll-cancel aria-label="Close poll builder">
+                                                <i data-lucide="x"></i>
+                                            </button>
+                                        </div>
+                                        <label class="poll-composer-label" for="pollQuestionInput">Question</label>
+                                        <input
+                                            type="text"
+                                            id="pollQuestionInput"
+                                            name="poll_question"
+                                            class="poll-composer-input"
+                                            placeholder="Ask the room a question..."
+                                            data-poll-question
+                                            disabled
+                                        >
+                                        <div class="poll-composer-options" data-poll-options-list></div>
+                                        <div class="poll-composer-actions">
+                                            <button type="button" class="btn btn-sm btn-ghost" data-poll-add-option disabled>Add option</button>
+                                        </div>
+                                    </div>
+                                @endif
                                 <div class="chat-composer" data-chat-composer>
                                     <button type="button" class="composer-btn composer-emoji" id="chatEmojiToggle" title="Add emoji">
                                         <i data-lucide="smile"></i>
@@ -728,6 +807,9 @@
                 const myQuestionsPanelUrl = @json(route('rooms.myQuestionsPanel', $room));
                 const banStoreUrl = @json(route('rooms.bans.store', $room));
                 const banDestroyUrlTemplate = @json(route('rooms.bans.destroy', [$room, '__BAN__']));
+                const pollVoteUrlTemplate = @json(route('rooms.polls.vote', [$room, '__POLL__']));
+                const roomIsClosed = @json($isClosed);
+                const viewerIsBanned = @json($isBanned);
                 const rootWindow = window;
                 const bansPanel = document.querySelector('[data-bans-panel]');
                 const bannedParticipantIds = new Set();
@@ -1355,6 +1437,13 @@
                 const chatEmojiToggle = document.getElementById('chatEmojiToggle');
                 const chatEmojiPanel = document.getElementById('chatEmojiPanel');
                 const chatEmojiPicker = document.getElementById('chatEmojiPicker');
+                const pollToggleButton = document.querySelector('[data-poll-toggle]');
+                const pollModeInput = document.getElementById('pollMode');
+                const pollComposer = document.querySelector('[data-poll-composer]');
+                const pollQuestionInput = pollComposer?.querySelector('[data-poll-question]');
+                const pollOptionsList = pollComposer?.querySelector('[data-poll-options-list]');
+                const pollAddOptionButton = pollComposer?.querySelector('[data-poll-add-option]');
+                const pollCancelButton = pollComposer?.querySelector('[data-poll-cancel]');
                 const reactionMenu = document.getElementById('reactionMenu');
                 const reactionMenuGrid = reactionMenu?.querySelector('[data-reaction-grid]');
                 const reactionMenuMorePanel = reactionMenu?.querySelector('[data-reaction-more-panel]');
@@ -1377,9 +1466,25 @@
                         reactionEmojiPicker.classList.add(isDark ? 'dark' : 'light');
                     }
                 };
+                const isPollModeActive = () => pollModeInput?.value === '1';
+                const getPollOptionInputs = () => pollOptionsList
+                    ? Array.from(pollOptionsList.querySelectorAll('[data-poll-option-input]'))
+                    : [];
+                const getPollOptions = () => getPollOptionInputs()
+                    .map((input) => (input.value || '').trim())
+                    .filter((value) => value.length > 0);
+                const getPollQuestion = () => (pollQuestionInput?.value || '').trim();
+                const isPollReady = () => {
+                    if (!pollComposer || !isPollModeActive()) return false;
+                    const question = getPollQuestion();
+                    const options = getPollOptions();
+                    return question.length > 0 && options.length >= 2;
+                };
                 const updateSendButtonState = () => {
                     if (!sendButton) return;
-                    const hasContent = (chatInput?.value || '').trim().length > 0;
+                    const hasContent = isPollModeActive()
+                        ? isPollReady()
+                        : (chatInput?.value || '').trim().length > 0;
                     const isSending = sendButton.classList.contains('sending');
                     const shouldDisable = isSending || !hasContent;
                     sendButton.disabled = shouldDisable;
@@ -1462,6 +1567,14 @@
                     if (window.refreshLucideIcons) {
                         window.refreshLucideIcons();
                     }
+                };
+                const showPollError = (message) => {
+                    const text = message || 'Poll action failed. Please try again.';
+                    if (typeof window.showFlashNotification === 'function') {
+                        window.showFlashNotification(text, { type: 'danger', source: 'poll-action', duration: 4800 });
+                        return;
+                    }
+                    console.error(text);
                 };
                 const removeEmptyMessageState = () => {
                     if (!chatContainer) return;
@@ -1640,6 +1753,74 @@
                         list.appendChild(chip);
                     });
                 };
+                const getPollPercent = (votes, total) => {
+                    if (!total || total <= 0) return 0;
+                    return Math.round((votes / total) * 100);
+                };
+                const buildPollOptionsHtml = (poll, myVoteId, interactive) => {
+                    const options = Array.isArray(poll?.options) ? poll.options : [];
+                    const totalVotes = Number(poll?.total_votes || 0);
+                    return options.map((option) => {
+                        const optionId = option?.id;
+                        const votes = Number(option?.votes || 0);
+                        const percent = Number.isFinite(option?.percent)
+                            ? Number(option?.percent)
+                            : getPollPercent(votes, totalVotes);
+                        const selected = myVoteId && optionId && Number(myVoteId) === Number(optionId);
+                        const disabledAttr = interactive ? '' : ' disabled';
+                        return `
+                            <button type="button" class="poll-option ${selected ? 'is-selected' : ''}" data-poll-option-id="${escapeHtml(String(optionId ?? ''))}" aria-pressed="${selected ? 'true' : 'false'}"${disabledAttr}>
+                                <span class="poll-option-label">${escapeHtml(option?.label || '')}</span>
+                                <span class="poll-option-stats">
+                                    <span class="poll-option-count">${escapeHtml(String(votes))}</span>
+                                    <span class="poll-option-percent">${escapeHtml(String(percent))}%</span>
+                                </span>
+                                <span class="poll-option-bar" style="width: ${escapeHtml(String(percent))}%;"></span>
+                            </button>
+                        `;
+                    }).join('');
+                };
+                const buildPollMarkup = (poll, myVoteId, interactive) => {
+                    if (!poll) return '';
+                    const totalVotes = Number(poll?.total_votes || 0);
+                    const question = poll?.question || '';
+                    const status = myVoteId ? '<span class="poll-status">Your vote is saved</span>' : '';
+                    const optionsHtml = buildPollOptionsHtml(poll, myVoteId, interactive);
+                    return `
+                        <div class="message-poll" data-poll-card data-poll-id="${escapeHtml(String(poll?.id ?? ''))}">
+                            <div class="poll-question">${escapeHtml(question)}</div>
+                            <div class="poll-options" data-poll-options>${optionsHtml}</div>
+                            <div class="poll-footer">
+                                <span class="poll-total">${escapeHtml(String(totalVotes))} votes</span>
+                                ${status}
+                            </div>
+                        </div>
+                    `;
+                };
+                const renderPoll = (messageEl, poll, myVoteId = null) => {
+                    if (!messageEl || !poll) return;
+                    const pollClosed = Boolean(poll?.is_closed);
+                    const interactive = !pollClosed && !roomIsClosed && !viewerIsBanned;
+                    const pollCard = messageEl.querySelector('[data-poll-card]');
+                    const markup = buildPollMarkup(poll, myVoteId, interactive);
+                    if (!markup) return;
+                    if (pollCard) {
+                        pollCard.outerHTML = markup;
+                    } else {
+                        const body = messageEl.querySelector('.message-body');
+                        const text = messageEl.querySelector('.message-text');
+                        if (text) {
+                            text.outerHTML = markup;
+                        } else if (body) {
+                            body.insertAdjacentHTML('beforeend', markup);
+                        }
+                    }
+                    messageEl.classList.add('message--poll');
+                    messageEl.dataset.poll = JSON.stringify({
+                        ...poll,
+                        my_vote_id: myVoteId,
+                    });
+                };
                 const makeMessageKey = (content, authorUserId, authorParticipantId, replyId = null, asQuestion = false) => {
                     const normalized = String(content || '').trim();
                     return [
@@ -1660,6 +1841,7 @@
                         reply_to: replyTo = null,
                         reactions = [],
                         myReactions = [],
+                        poll = null,
                     } = payload || {};
                     const {
                         pending = false,
@@ -1701,6 +1883,10 @@
                     const deleteUrl = (!isTempMessage && deleteUrlTemplate && messageId)
                         ? deleteUrlTemplate.replace('__MESSAGE__', messageId)
                         : '';
+                    const hasPoll = poll && Array.isArray(poll.options) && poll.options.length > 0;
+                    const pollVoteId = poll?.my_vote_id ?? null;
+                    const pollInteractive = hasPoll && !poll?.is_closed && !roomIsClosed && !viewerIsBanned;
+                    const pollHtml = hasPoll ? buildPollMarkup(poll, pollVoteId, pollInteractive) : '';
                     container.dataset.userId = authorUserId ?? '';
                     container.dataset.participantId = authorParticipantId ?? '';
                     container.dataset.author = authorNameRaw || 'Guest';
@@ -1710,11 +1896,15 @@
                     container.dataset.question = asQuestion ? '1' : '0';
                     container.dataset.created = createdAt || '';
                     container.dataset.time = time;
+                    container.dataset.poll = JSON.stringify(poll || null);
                     const canBan = allowBan && isOwnerUser && !isOwnerAuthor && author.participant_id;
                     const canAdminDelete = isOwnerUser && !isOwnerAuthor;
                     const canSelfDelete = (currentUserId && authorUserId && Number(currentUserId) === Number(authorUserId))
                         || (currentParticipantId && authorParticipantId && Number(currentParticipantId) === Number(authorParticipantId));
                     const canInlineDelete = (canSelfDelete || (isOwnerUser && isOwnerAuthor)) && (Boolean(deleteUrl) || pending);
+                    if (hasPoll) {
+                        container.classList.add('message--poll');
+                    }
                     const adminActionsHtml = (canBan || canAdminDelete) && deleteUrl ? `
                         <div class="message-admin-actions">
                             ${canBan ? `
@@ -1749,7 +1939,7 @@
                                 </div>
                             </div>
                             ${replyHtml}
-                            <div class="message-text">${escapeHtml(content)}</div>
+                            ${pollHtml || `<div class="message-text">${escapeHtml(content)}</div>`}
                             <div class="message-reactions" data-message-reactions>
                                 <div class="reactions-list" data-reactions-list></div>
                             </div>
@@ -1905,6 +2095,14 @@
                         const reactions = parseJsonSafe(message.dataset.reactions, []);
                         const myReactions = parseJsonSafe(message.dataset.myReactions, []);
                         renderReactions(message, reactions, myReactions);
+                    });
+                };
+                const setupInitialPolls = () => {
+                    document.querySelectorAll('.message[data-poll]').forEach((message) => {
+                        const poll = parseJsonSafe(message.dataset.poll, null);
+                        if (!poll || !poll.options || !poll.options.length) return;
+                        const myVoteId = poll.my_vote_id ?? null;
+                        renderPoll(message, poll, myVoteId);
                     });
                 };
                 const renderReactionMenuOptions = () => {
@@ -2099,6 +2297,80 @@
                     renderReactions(messageEl, reactions || [], mine);
                     if (activeReactionMessage === messageEl) {
                         setReactionMenuActive(messageEl);
+                    }
+                };
+                const getPollData = (messageEl) => parseJsonSafe(messageEl?.dataset?.poll, null);
+                const getMyPollVote = (messageEl, payload, pollPayload) => {
+                    if (isPayloadFromMe(payload) && payload?.your_vote_id) {
+                        return payload.your_vote_id;
+                    }
+                    const existing = getPollData(messageEl);
+                    return existing?.my_vote_id ?? pollPayload?.my_vote_id ?? null;
+                };
+                const requestPollVote = async (pollId, optionId) => {
+                    const result = { ok: false, status: 0, payload: {} };
+                    if (!pollVoteUrlTemplate || !pollId || !optionId) return result;
+                    const url = pollVoteUrlTemplate.replace('__POLL__', String(pollId));
+                    const formData = new FormData();
+                    formData.append('option_id', String(optionId));
+                    formData.append('_token', csrfToken);
+                    try {
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': csrfToken,
+                                'Accept': 'application/json',
+                            },
+                            body: formData,
+                        });
+                        result.status = response.status;
+                        result.ok = response.ok;
+                        result.payload = await response.json().catch(() => ({}));
+                        return result;
+                    } catch (error) {
+                        console.error('Poll vote error', error);
+                        return result;
+                    }
+                };
+                const updatePollFromEvent = (messageId, pollPayload, payload = {}) => {
+                    const messageEl = document.querySelector(`.message[data-message-id="${messageId}"]`);
+                    if (!messageEl || !pollPayload) return;
+                    const myVoteId = getMyPollVote(messageEl, payload, pollPayload);
+                    renderPoll(messageEl, { ...pollPayload, my_vote_id: myVoteId }, myVoteId);
+                };
+                const pollSubmitting = new Set();
+                const handlePollOptionClick = async (event) => {
+                    const option = event.target.closest('[data-poll-option-id]');
+                    if (!option || !chatContainer) return;
+                    const messageEl = option.closest('.message');
+                    if (!messageEl) return;
+                    const poll = getPollData(messageEl);
+                    if (!poll || !poll.id) return;
+                    if (poll.is_closed || roomIsClosed || viewerIsBanned) {
+                        showPollError('Voting is closed for this poll.');
+                        return;
+                    }
+                    const pollId = poll.id;
+                    if (pollSubmitting.has(pollId)) return;
+                    pollSubmitting.add(pollId);
+                    messageEl.classList.add('poll-loading');
+                    try {
+                        const { ok, status, payload } = await requestPollVote(pollId, option.dataset.pollOptionId);
+                        if (status === 429) {
+                            showThrottleNotice(payload?.message || 'You are voting too quickly. Please wait.');
+                            return;
+                        }
+                        if (!ok) {
+                            showPollError(payload?.message || 'Unable to submit your vote.');
+                            return;
+                        }
+                        const pollPayload = payload?.poll || poll;
+                        const myVoteId = payload?.your_vote_id ?? pollPayload?.my_vote_id ?? poll?.my_vote_id ?? null;
+                        renderPoll(messageEl, { ...pollPayload, my_vote_id: myVoteId }, myVoteId);
+                    } finally {
+                        pollSubmitting.delete(pollId);
+                        messageEl.classList.remove('poll-loading');
                     }
                 };
                 const autosizeComposer = () => {
@@ -3176,6 +3448,7 @@
                 bindDeleteTriggers();
                 setupRepliesPane();
                 setupInitialReactions();
+                setupInitialPolls();
                 renderReactionMenuOptions();
                 updateMessagesStateAttributes();
                 updateMessagesLoadMoreVisibility();
@@ -3185,6 +3458,7 @@
                 maybeLoadOlderMessages();
                 if (chatContainer) {
                     chatContainer.addEventListener('click', handleReplyJump);
+                    chatContainer.addEventListener('click', handlePollOptionClick);
                     chatContainer.addEventListener('scroll', () => {
                         maybeLoadOlderMessages();
                     });
@@ -3690,6 +3964,145 @@
 
                 const clearReplyContext = () => setReplyContext('', '', '');
 
+                const POLL_OPTION_MIN = 2;
+                const POLL_OPTION_MAX = 6;
+                function createPollOptionField(value = '') {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'poll-option-input';
+                    wrapper.innerHTML = `
+                        <input
+                            type="text"
+                            name="poll_options[]"
+                            class="poll-option-field"
+                            data-poll-option-input
+                            placeholder="Option text"
+                            value="${escapeHtml(value)}"
+                        >
+                        <button type="button" class="icon-btn poll-option-remove" data-poll-remove aria-label="Remove option">
+                            <i data-lucide="x"></i>
+                        </button>
+                    `;
+                    return wrapper;
+                }
+                function refreshPollControls() {
+                    if (!pollOptionsList) return;
+                    const inputs = getPollOptionInputs();
+                    const canRemove = inputs.length > POLL_OPTION_MIN;
+                    pollOptionsList.querySelectorAll('[data-poll-remove]').forEach((btn) => {
+                        btn.disabled = !canRemove;
+                    });
+                    if (pollAddOptionButton) {
+                        pollAddOptionButton.disabled = inputs.length >= POLL_OPTION_MAX || !isPollModeActive();
+                    }
+                    updateSendButtonState();
+                }
+                function attachPollOptionHandlers(wrapper) {
+                    const input = wrapper.querySelector('[data-poll-option-input]');
+                    const remove = wrapper.querySelector('[data-poll-remove]');
+                    if (input) {
+                        input.disabled = !isPollModeActive();
+                        input.addEventListener('input', updateSendButtonState);
+                        input.addEventListener('keydown', (event) => {
+                            if (event.key === ' ' || event.key === 'Enter') {
+                                event.stopPropagation();
+                            }
+                        });
+                    }
+                    if (remove) {
+                        remove.addEventListener('click', () => {
+                            wrapper.remove();
+                            refreshPollControls();
+                        });
+                    }
+                    if (window.refreshLucideIcons) {
+                        window.refreshLucideIcons(wrapper);
+                    }
+                }
+                function addPollOptionField(value = '') {
+                    if (!pollOptionsList) return;
+                    if (getPollOptionInputs().length >= POLL_OPTION_MAX) return;
+                    const field = createPollOptionField(value);
+                    pollOptionsList.appendChild(field);
+                    attachPollOptionHandlers(field);
+                    refreshPollControls();
+                }
+                function clearPollComposer() {
+                    if (pollQuestionInput) {
+                        pollQuestionInput.value = '';
+                    }
+                    if (pollOptionsList) {
+                        pollOptionsList.innerHTML = '';
+                    }
+                }
+                function ensurePollDefaults() {
+                    if (!pollOptionsList) return;
+                    if (getPollOptionInputs().length === 0) {
+                        addPollOptionField();
+                        addPollOptionField();
+                    }
+                }
+                function setPollMode(isActive) {
+                    if (pollModeInput) {
+                        pollModeInput.value = isActive ? '1' : '0';
+                    }
+                    if (pollComposer) {
+                        pollComposer.hidden = !isActive;
+                    }
+                    if (pollQuestionInput) {
+                        pollQuestionInput.disabled = !isActive;
+                        if (isActive) {
+                            pollQuestionInput.focus();
+                        }
+                    }
+                    if (pollAddOptionButton) {
+                        pollAddOptionButton.disabled = !isActive;
+                    }
+                    if (chatInput) {
+                        chatInput.hidden = isActive;
+                        chatInput.disabled = isActive;
+                    }
+                    if (chatEmojiToggle) {
+                        chatEmojiToggle.hidden = isActive;
+                    }
+                    const composer = document.querySelector('[data-chat-composer]');
+                    if (composer) {
+                        composer.classList.toggle('is-poll-mode', isActive);
+                    }
+                    if (pollToggleButton) {
+                        pollToggleButton.classList.toggle('is-active', isActive);
+                    }
+                    if (isActive) {
+                        ensurePollDefaults();
+                    } else {
+                        clearPollComposer();
+                    }
+                    refreshPollControls();
+                }
+                function setupPollComposer() {
+                    if (!pollComposer || !pollModeInput || !pollToggleButton) return;
+                    pollToggleButton.addEventListener('click', () => {
+                        setPollMode(!isPollModeActive());
+                    });
+                    if (pollCancelButton) {
+                        pollCancelButton.addEventListener('click', () => setPollMode(false));
+                    }
+                    if (pollAddOptionButton) {
+                        pollAddOptionButton.addEventListener('click', () => addPollOptionField());
+                    }
+                    if (pollQuestionInput) {
+                        pollQuestionInput.addEventListener('input', updateSendButtonState);
+                        pollQuestionInput.addEventListener('keydown', (event) => {
+                            if (event.key === ' ' || event.key === 'Enter') {
+                                event.stopPropagation();
+                            }
+                        });
+                    }
+                    ensurePollDefaults();
+                    setPollMode(false);
+                }
+
+                setupPollComposer();
+
                 if (replyPreviewCancel) {
                     replyPreviewCancel.addEventListener('click', clearReplyContext);
                 }
@@ -4064,6 +4477,11 @@
                             .listen('ReactionUpdated', (payload) => {
                                 updateReactionsFromEvent(payload.message_id, payload.reactions, payload);
                             })
+                            .listen('PollUpdated', (payload) => {
+                                if (payload?.message_id && payload?.poll) {
+                                    updatePollFromEvent(payload.message_id, payload.poll, payload);
+                                }
+                            })
                             .listen('ParticipantBanned', (payload) => {
                                 applyBanUpdate(payload);
                             })
@@ -4119,7 +4537,28 @@
                         event.preventDefault();
 
                         const formData = new FormData(chatForm);
-                        const content = (formData.get('content') || '').toString().trim();
+                        const pollModeActive = isPollModeActive();
+                        let content = (formData.get('content') || '').toString().trim();
+                        let pollOptions = [];
+                        let pollQuestion = '';
+                        if (pollModeActive) {
+                            pollQuestion = getPollQuestion();
+                            pollOptions = getPollOptions();
+                            if (!pollQuestion || pollOptions.length < 2) {
+                                showPollError('Add a question and at least two options.');
+                                return;
+                            }
+                            content = pollQuestion;
+                            formData.set('content', pollQuestion);
+                            formData.set('poll_mode', '1');
+                            formData.delete('poll_options[]');
+                            pollOptions.forEach((option) => {
+                                formData.append('poll_options[]', option);
+                            });
+                        } else {
+                            formData.set('poll_mode', '0');
+                            formData.delete('poll_options[]');
+                        }
                         if (!content) {
                             return;
                         }
@@ -4148,6 +4587,19 @@
                             reply_to: replyData,
                             reactions: [],
                             myReactions: [],
+                            poll: pollModeActive ? {
+                                id: null,
+                                question: pollQuestion || content,
+                                options: pollOptions.map((option, index) => ({
+                                    id: `temp-option-${index}`,
+                                    label: option,
+                                    votes: 0,
+                                    percent: 0,
+                                })),
+                                total_votes: 0,
+                                my_vote_id: null,
+                                is_closed: false,
+                            } : null,
                         };
                         const container = document.querySelector('.messages-container');
                         let optimisticEl = null;
@@ -4235,6 +4687,9 @@
                             const questionCheckbox = chatForm.querySelector('input[name="as_question"]');
                             if (questionCheckbox) {
                                 questionCheckbox.checked = false;
+                            }
+                            if (pollModeActive) {
+                                setPollMode(false);
                             }
                             clearReplyContext();
                             hideEmojiPanel();
