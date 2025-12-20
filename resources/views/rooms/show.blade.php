@@ -237,7 +237,7 @@
                     @if($isOwner)
                         <button class="chat-tab-btn" type="button" data-chat-tab="bans" data-onboarding-target="bans-tab">
                             <span>Bans</span>
-                            <span class="pill-soft">{{ $bannedParticipants->count() }}</span>
+                            <span class="pill-soft" data-ban-count>{{ $bannedParticipants->count() }}</span>
                         </button>
                     @endif
                 </div>
@@ -620,26 +620,26 @@
                 </div>
 
                 @if($isOwner)
-                    <div class="chat-pane chat-pane-bans" data-chat-panel="bans" hidden>
+                    <div class="chat-pane chat-pane-bans" data-chat-panel="bans" data-bans-panel hidden>
                         <div class="moderation-block">
                             <div class="moderation-head">
                                 <div>
                                     <div class="moderation-title">Banned participants</div>
                                     <div class="panel-subtitle">Banned users cannot post messages or questions.</div>
                                 </div>
-                                <span class="pill-soft">{{ $bannedParticipants->count() }}</span>
+                                <span class="pill-soft" data-ban-count>{{ $bannedParticipants->count() }}</span>
                             </div>
                             @if($bannedParticipants->isEmpty())
-                                <div class="empty-state">No banned participants yet.</div>
+                                <div class="empty-state" data-ban-empty>No banned participants yet.</div>
                             @else
-                                <ul class="ban-list">
+                                <ul class="ban-list" data-ban-list>
                                     @foreach($bannedParticipants as $ban)
-                                        <li class="ban-item">
+                                        <li class="ban-item" data-ban-item data-ban-id="{{ $ban->id }}" data-participant-id="{{ $ban->participant_id }}">
                                             <div>
                                                 <div class="ban-name">{{ $ban->display_name ?? $ban->participant?->display_name ?? 'Guest' }}</div>
                                                 <div class="ban-meta">Banned {{ $ban->created_at->diffForHumans(null, true) }} ago</div>
                                             </div>
-                                            <form method="POST" action="{{ route('rooms.bans.destroy', [$room, $ban->id]) }}">
+                                            <form method="POST" action="{{ route('rooms.bans.destroy', [$room, $ban->id]) }}" data-unban-form>
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" class="btn btn-sm btn-ghost">Unban</button>
@@ -727,7 +727,10 @@
                 const myQuestionsPanel = document.getElementById('myQuestionsPanel');
                 const myQuestionsPanelUrl = @json(route('rooms.myQuestionsPanel', $room));
                 const banStoreUrl = @json(route('rooms.bans.store', $room));
+                const banDestroyUrlTemplate = @json(route('rooms.bans.destroy', [$room, '__BAN__']));
                 const rootWindow = window;
+                const bansPanel = document.querySelector('[data-bans-panel]');
+                const bannedParticipantIds = new Set();
                 const queueRenderedIds = new Set();
                 const seedQueueRenderedIds = () => {
                     queueRenderedIds.clear();
@@ -2146,6 +2149,151 @@
                     `;
                 };
 
+                const getBanList = () => bansPanel?.querySelector('[data-ban-list]') || null;
+                const getBanEmpty = () => bansPanel?.querySelector('[data-ban-empty]') || null;
+                const updateBanCounts = (count) => {
+                    if (count === null || count === undefined) return;
+                    document.querySelectorAll('[data-ban-count]').forEach((el) => {
+                        el.textContent = String(count);
+                    });
+                };
+                const ensureBanList = () => {
+                    let list = getBanList();
+                    if (list || !bansPanel) return list;
+                    const empty = getBanEmpty();
+                    list = document.createElement('ul');
+                    list.className = 'ban-list';
+                    list.dataset.banList = '1';
+                    if (empty) {
+                        empty.after(list);
+                        empty.hidden = true;
+                    } else {
+                        bansPanel.querySelector('.moderation-block')?.appendChild(list);
+                    }
+                    return list;
+                };
+                const buildBanItem = (ban) => {
+                    const item = document.createElement('li');
+                    item.className = 'ban-item';
+                    item.dataset.banItem = '1';
+                    item.dataset.banId = String(ban.id);
+                    item.dataset.participantId = String(ban.participant_id);
+                    const banAge = ban.banned_at_human || 'just now';
+                    const actionUrl = banDestroyUrlTemplate
+                        ? banDestroyUrlTemplate.replace('__BAN__', String(ban.id))
+                        : '';
+                    item.innerHTML = `
+                        <div>
+                            <div class="ban-name">${escapeHtml(ban.display_name || 'Guest')}</div>
+                            <div class="ban-meta">Banned ${escapeHtml(banAge)} ago</div>
+                        </div>
+                        <form method="POST" action="${escapeHtml(actionUrl)}" data-unban-form>
+                            <input type="hidden" name="_token" value="${escapeHtml(csrfToken)}">
+                            <input type="hidden" name="_method" value="DELETE">
+                            <button type="submit" class="btn btn-sm btn-ghost">Unban</button>
+                        </form>
+                    `;
+                    return item;
+                };
+                const addBanItem = (ban, banCount = null) => {
+                    if (!ban || !ban.id) return;
+                    const list = ensureBanList();
+                    if (!list) return;
+                    if (list.querySelector(`[data-ban-id="${ban.id}"]`)) return;
+                    const item = buildBanItem(ban);
+                    list.prepend(item);
+                    bindUnbanForms(item);
+                    updateBanCounts(banCount ?? list.querySelectorAll('[data-ban-item]').length);
+                };
+                const removeBanItem = (banId, participantId, banCount = null) => {
+                    const list = getBanList();
+                    const empty = getBanEmpty();
+                    if (list) {
+                        let target = null;
+                        if (banId) {
+                            target = list.querySelector(`[data-ban-id="${banId}"]`);
+                        }
+                        if (!target && participantId) {
+                            target = list.querySelector(`[data-participant-id="${participantId}"]`);
+                        }
+                        if (target) {
+                            target.remove();
+                        }
+                        const remaining = list.querySelectorAll('[data-ban-item]').length;
+                        if (remaining === 0 && empty) {
+                            empty.hidden = false;
+                        }
+                        updateBanCounts(banCount ?? remaining);
+                        return;
+                    }
+                    if (empty) {
+                        empty.hidden = false;
+                    }
+                    if (banCount !== null && banCount !== undefined) {
+                        updateBanCounts(banCount);
+                    }
+                };
+                const seedBannedParticipants = () => {
+                    document.querySelectorAll('[data-ban-item][data-participant-id]').forEach((item) => {
+                        const id = normalizeId(item.dataset.participantId);
+                        if (id) {
+                            bannedParticipantIds.add(id);
+                        }
+                    });
+                };
+                const removeMessagesFromParticipant = (participantId) => {
+                    const normalizedId = normalizeId(participantId);
+                    if (!normalizedId || !chatContainer) return;
+                    if (currentParticipantId && Number(currentParticipantId) === normalizedId) return;
+                    const messages = Array.from(chatContainer.querySelectorAll(`.message[data-participant-id="${normalizedId}"]`));
+                    messages.forEach((message) => {
+                        handleMessageDeleted(message?.dataset?.messageId);
+                    });
+                };
+                const normalizeBanPayload = (payload) => {
+                    if (!payload) return null;
+                    const ban = payload.ban || {};
+                    const banId = payload.ban_id ?? ban.id ?? null;
+                    const participantId = payload.participant_id ?? ban.participant_id ?? null;
+                    const displayName = payload.display_name ?? ban.display_name ?? 'Guest';
+                    const bannedAt = payload.banned_at ?? ban.banned_at ?? null;
+                    const bannedAtHuman = payload.banned_at_human ?? ban.banned_at_human ?? null;
+                    const banCount = payload.ban_count ?? null;
+                    return {
+                        id: banId,
+                        participant_id: participantId,
+                        display_name: displayName,
+                        banned_at: bannedAt,
+                        banned_at_human: bannedAtHuman,
+                        ban_count: banCount,
+                    };
+                };
+                const normalizeUnbanPayload = (payload) => {
+                    if (!payload) return null;
+                    const ban = payload.ban || {};
+                    return {
+                        id: payload.ban_id ?? ban.id ?? null,
+                        participant_id: payload.participant_id ?? ban.participant_id ?? null,
+                        ban_count: payload.ban_count ?? null,
+                    };
+                };
+                const showBanError = (message) => {
+                    const text = message || 'Ban request failed. Please try again.';
+                    if (typeof window.showFlashNotification === 'function') {
+                        window.showFlashNotification(text, { type: 'danger', source: 'ban-action', duration: 4800 });
+                        return;
+                    }
+                    console.error(text);
+                };
+                const getBanErrorMessage = (payload, fallback) => {
+                    if (payload?.message) return payload.message;
+                    if (payload?.errors && typeof payload.errors === 'object') {
+                        const firstError = Object.values(payload.errors).flat()[0];
+                        if (firstError) return String(firstError);
+                    }
+                    return fallback;
+                };
+
                 const banModal = (() => {
                     let overlay = null;
                     let confirmBtn = null;
@@ -2227,6 +2375,71 @@
                     return { open };
                 })();
 
+                const requestBanAction = async (form) => {
+                    const formData = buildFormData(form);
+                    let method = (form.getAttribute('method') || 'POST').toUpperCase();
+                    const override = formData.get('_method');
+                    if (override) {
+                        method = override.toString().toUpperCase();
+                    }
+                    const token = formData.get('_token') || csrfMeta?.getAttribute('content') || '';
+                    const actionAttr = (form.getAttribute('action') || '').trim();
+                    const actionUrl = actionAttr ? new URL(actionAttr, window.location.href) : null;
+                    if (!actionUrl) {
+                        return { ok: false, status: 0, payload: {} };
+                    }
+
+                    try {
+                        const response = await fetch(actionUrl.toString(), {
+                            method,
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': token,
+                                'Accept': 'application/json',
+                            },
+                            credentials: 'same-origin',
+                            body: formData,
+                        });
+                        const payload = await response.json().catch(() => ({}));
+                        return { ok: response.ok, status: response.status, payload };
+                    } catch (error) {
+                        console.error('Ban request error', error);
+                        return { ok: false, status: 0, payload: {} };
+                    }
+                };
+
+                const applyBanUpdate = (payload) => {
+                    const normalized = normalizeBanPayload(payload);
+                    if (!normalized?.participant_id) return;
+                    const participantId = normalizeId(normalized.participant_id);
+                    if (!participantId) return;
+                    bannedParticipantIds.add(participantId);
+                    if (currentParticipantId && Number(currentParticipantId) === participantId) {
+                        showBanState('You were banned by the host. Chat is locked.');
+                    } else {
+                        removeMessagesFromParticipant(participantId);
+                    }
+                    if (isOwnerUser && normalized.id) {
+                        addBanItem(normalized, normalized.ban_count);
+                    } else if (normalized.ban_count !== null && normalized.ban_count !== undefined) {
+                        updateBanCounts(normalized.ban_count);
+                    }
+                };
+
+                const applyUnbanUpdate = (payload) => {
+                    const normalized = normalizeUnbanPayload(payload);
+                    if (!normalized?.participant_id && !normalized?.id) return;
+                    const participantId = normalizeId(normalized.participant_id);
+                    if (participantId) {
+                        bannedParticipantIds.delete(participantId);
+                    }
+                    if (isOwnerUser) {
+                        removeBanItem(normalized.id, participantId, normalized.ban_count);
+                    } else if (normalized.ban_count !== null && normalized.ban_count !== undefined) {
+                        updateBanCounts(normalized.ban_count);
+                    }
+                };
+
                 const bindBanForms = (scope = document) => {
                     const banForms = scope.querySelectorAll('form[data-ban-confirm]');
                     banForms.forEach((form) => {
@@ -2235,9 +2448,44 @@
                         form.addEventListener('submit', async (event) => {
                             event.preventDefault();
                             const confirmed = await banModal.open();
-                            if (confirmed) {
-                                form.submit();
+                            if (!confirmed) return;
+                            if (form.dataset.banSubmitting === '1') return;
+                            form.dataset.banSubmitting = '1';
+                            const { ok, status, payload } = await requestBanAction(form);
+                            form.dataset.banSubmitting = '';
+                            if (status === 429) {
+                                showThrottleNotice(payload?.message || 'You are banning participants too quickly. Please wait.');
+                                return;
                             }
+                            if (ok && payload) {
+                                applyBanUpdate(payload);
+                                return;
+                            }
+                            showBanError(getBanErrorMessage(payload, 'Unable to ban participant. Please try again.'));
+                        });
+                    });
+                };
+
+                const bindUnbanForms = (scope = document) => {
+                    const forms = scope.querySelectorAll('form[data-unban-form]');
+                    forms.forEach((form) => {
+                        if (form.dataset.unbanBound === '1') return;
+                        form.dataset.unbanBound = '1';
+                        form.addEventListener('submit', async (event) => {
+                            event.preventDefault();
+                            if (form.dataset.unbanSubmitting === '1') return;
+                            form.dataset.unbanSubmitting = '1';
+                            const { ok, status, payload } = await requestBanAction(form);
+                            form.dataset.unbanSubmitting = '';
+                            if (status === 429) {
+                                showThrottleNotice(payload?.message || 'You are unbanning too quickly. Please wait.');
+                                return;
+                            }
+                            if (ok && payload) {
+                                applyUnbanUpdate(payload);
+                                return;
+                            }
+                            showBanError(getBanErrorMessage(payload, 'Unable to unban participant. Please try again.'));
                         });
                     });
                 };
@@ -2921,7 +3169,9 @@
                 }
 
                 setupChatTabs();
+                seedBannedParticipants();
                 bindBanForms();
+                bindUnbanForms();
                 bindDeleteForms();
                 bindDeleteTriggers();
                 setupRepliesPane();
@@ -3718,6 +3968,10 @@
 
                 const applyIncomingMessagePayload = (payload, newNodes) => {
                     if (!chatContainer || !payload) return { needsIcons: false, added: false };
+                    const incomingParticipantId = normalizeId(payload.author?.participant_id);
+                    if (incomingParticipantId && bannedParticipantIds.has(incomingParticipantId) && !isMineMessageData(payload.author)) {
+                        return { needsIcons: false, added: false };
+                    }
                     const existing = chatContainer.querySelector(`.message[data-message-id="${payload.id}"]`);
                     if (existing) {
                         existing.classList.remove('message--pending');
@@ -3809,6 +4063,12 @@
                             })
                             .listen('ReactionUpdated', (payload) => {
                                 updateReactionsFromEvent(payload.message_id, payload.reactions, payload);
+                            })
+                            .listen('ParticipantBanned', (payload) => {
+                                applyBanUpdate(payload);
+                            })
+                            .listen('ParticipantUnbanned', (payload) => {
+                                applyUnbanUpdate(payload);
                             })
                             .listen('MessageDeleted', (payload) => {
                                 handleMessageDeleted(payload.id);
