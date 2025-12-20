@@ -169,7 +169,7 @@
                     </div>
                 </div>
                 <div class="room-header-aside">
-                    <span class="room-code">Room code: {{ $room->slug }}</span>
+                    <span class="room-code">Room code: <span class="room-code-value">{{ $room->slug }}</span></span>
                     <span class="status-pill status-{{ $room->status }} room-status">{{ ucfirst($room->status) }}</span>
                 </div>
             </div>

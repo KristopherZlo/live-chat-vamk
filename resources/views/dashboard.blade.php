@@ -63,7 +63,7 @@
                         @endphp
                         <article class="room-card panel">
                             <div class="room-card-meta">
-                                <span class="room-code">Code: {{ $room->slug }}</span>
+                                <span class="room-code">Code: <span class="room-code-value">{{ $room->slug }}</span></span>
                                 <span class="dot-separator">&bull;</span>
                                 <span class="message-meta">Updated {{ $room->updated_at->format('d.m H:i') }}</span>
                                 <span class="status-pill status-{{ $room->status }}">{{ ucfirst($room->status) }}</span>

@@ -297,6 +297,10 @@ body,html {
   background: var(--bg-soft);
 }
 
+.room-code-value {
+  text-transform: uppercase;
+}
+
 .room-code,.btn,
 .icon-btn {
   display: inline-flex;
