@@ -673,6 +673,13 @@ main,.layout {
   font-size: 0.8rem;
   line-height: 1.3;
   color: var(--text-primary);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.message--poll .message-body {
+  max-width: calc(100% - 2.2rem);
+  width: calc(100% - 2.2rem);
 }
 
 .message--poll .message-text {
@@ -690,6 +697,8 @@ main,.layout {
   font-weight: 600;
   font-size: 0.82rem;
   color: var(--text-primary);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .poll-options {
@@ -745,6 +754,8 @@ main,.layout {
 .poll-option-label {
   font-size: 0.78rem;
   color: var(--text-primary);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .poll-option-stats {
@@ -1289,6 +1300,8 @@ main,.layout {
     width: 100%;
     border: none;
     padding: 0.55rem 0.35rem;
+    padding-right: 2.4rem;
+    padding-bottom: 1.2rem;
     font-size: clamp(16px, 1rem, 18px);
     resize: none;
     min-height: 2.8rem;
@@ -1315,6 +1328,8 @@ main,.layout {
     font-size: 15px;
     line-height: 1.4;
     padding: 0.45rem 0.35rem;
+    padding-right: 2.2rem;
+    padding-bottom: 1.1rem;
   }
 }
 
@@ -1531,6 +1546,39 @@ main,.layout {
     color: var(--text-primary);
   }
 
+  .input-counter {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    text-align: right;
+    margin-top: 0.2rem;
+  }
+
+  .input-counter.is-hidden {
+    display: none;
+  }
+
+  .input-counter.is-limit {
+    color: var(--danger);
+    font-weight: 600;
+  }
+
+  .chat-input-wrap {
+    position: relative;
+    flex: 1;
+    display: flex;
+    align-items: stretch;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .chat-input-wrap .input-counter--chat {
+    position: absolute;
+    right: 0.6rem;
+    bottom: 0.35rem;
+    margin: 0;
+    pointer-events: none;
+  }
+
   .poll-composer-options {
     display: flex;
     flex-direction: column;
@@ -1539,12 +1587,21 @@ main,.layout {
 
   .poll-option-input {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 0.35rem;
   }
 
-  .poll-option-field {
+  .poll-option-field-wrap {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+  }
+
+  .poll-option-field {
+    flex: 0 0 auto;
+    width: 100%;
     border-radius: var(--radius-md);
     border: 1px solid var(--border-subtle);
     padding: 0.45rem 0.55rem;
@@ -1557,6 +1614,7 @@ main,.layout {
     width: 30px;
     height: 30px;
     border-radius: 999px;
+    margin-top: 0.1rem;
   }
 
   .poll-composer-actions {
@@ -1570,7 +1628,8 @@ main,.layout {
   }
 
   .chat-composer.is-poll-mode .composer-emoji,
-  .chat-composer.is-poll-mode .chat-textarea {
+  .chat-composer.is-poll-mode .chat-textarea,
+  .chat-composer.is-poll-mode .chat-input-wrap {
     display: none;
   }
 

@@ -10,6 +10,7 @@ use App\Models\Room;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use App\Events\MessageSent;
 use App\Events\QuestionCreated;
 use App\Events\MessageDeleted;
@@ -39,12 +40,12 @@ class MessageController extends Controller
 
         // Basic validation
         $data = $request->validate([
-            'content' => ['required', 'string', 'max:2000'],
+            'content' => ['required', 'string', 'max:2048'],
             'as_question' => ['nullable', 'boolean'],
             'reply_to_id' => ['nullable', 'integer', 'exists:messages,id'],
             'poll_mode' => ['nullable', 'boolean'],
             'poll_options' => ['nullable', 'array'],
-            'poll_options.*' => ['nullable', 'string', 'max:120'],
+            'poll_options.*' => ['nullable', 'string', 'max:480'],
         ]);
 
         // Identify participant (if not the owner)
@@ -106,6 +107,13 @@ class MessageController extends Controller
             }
             if ($pollOptions->count() > 6) {
                 $message = 'Polls can have up to 6 options.';
+                if ($request->expectsJson()) {
+                    return response()->json(['message' => $message], 422);
+                }
+                return back()->withErrors($message);
+            }
+            if (Str::length($data['content']) > 255) {
+                $message = 'Poll question cannot exceed 255 characters.';
                 if ($request->expectsJson()) {
                     return response()->json(['message' => $message], 422);
                 }

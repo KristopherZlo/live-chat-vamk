@@ -602,9 +602,11 @@
                                             name="poll_question"
                                             class="poll-composer-input"
                                             placeholder="Ask the room a question..."
+                                            maxlength="255"
                                             data-poll-question
                                             disabled
                                         >
+                                        <div class="input-counter" data-char-counter="poll-question" aria-live="polite"></div>
                                         <div class="poll-composer-options" data-poll-options-list></div>
                                         <div class="poll-composer-actions">
                                             <button type="button" class="btn btn-sm btn-ghost" data-poll-add-option disabled>Add option</button>
@@ -615,14 +617,18 @@
                                     <button type="button" class="composer-btn composer-emoji" id="chatEmojiToggle" title="Add emoji">
                                         <i data-lucide="smile"></i>
                                     </button>
-                                    <textarea
-                                        name="content"
-                                        id="chatInput"
-                                        class="chat-textarea"
-                                        placeholder="Type your message..."
-                                        rows="1"
-                                        data-onboarding-target="chat-input"
-                                    ></textarea>
+                                    <div class="chat-input-wrap">
+                                        <textarea
+                                            name="content"
+                                            id="chatInput"
+                                            class="chat-textarea"
+                                            placeholder="Type your message..."
+                                            rows="1"
+                                            maxlength="2000"
+                                            data-onboarding-target="chat-input"
+                                        ></textarea>
+                                        <div class="input-counter input-counter--chat" data-char-counter="chat" aria-live="polite"></div>
+                                    </div>
                                     <input type="hidden" name="reply_to_id" id="replyToId" value="">
                                     <button type="submit" class="composer-btn composer-send" id="sendButton" title="Send message">
                                         <i data-lucide="send"></i>
@@ -1433,6 +1439,7 @@
                 };
                 const chatInputWrapper = document.querySelector('[data-chat-panel=\"chat\"] .chat-input');
                 const chatInput = document.getElementById('chatInput');
+                const chatCharCounter = document.querySelector('[data-char-counter="chat"]');
                 const sendButton = document.getElementById('sendButton');
                 const chatEmojiToggle = document.getElementById('chatEmojiToggle');
                 const chatEmojiPanel = document.getElementById('chatEmojiPanel');
@@ -1441,6 +1448,7 @@
                 const pollModeInput = document.getElementById('pollMode');
                 const pollComposer = document.querySelector('[data-poll-composer]');
                 const pollQuestionInput = pollComposer?.querySelector('[data-poll-question]');
+                const pollQuestionCounter = pollComposer?.querySelector('[data-char-counter="poll-question"]');
                 const pollOptionsList = pollComposer?.querySelector('[data-poll-options-list]');
                 const pollAddOptionButton = pollComposer?.querySelector('[data-poll-add-option]');
                 const pollCancelButton = pollComposer?.querySelector('[data-poll-cancel]');
@@ -1536,6 +1544,52 @@
                     '"': '&quot;',
                     "'": '&#039;',
                 }[char] ?? char));
+                const CHAT_MESSAGE_CHAR_MAX = 2000;
+                const POLL_QUESTION_CHAR_MAX = 255;
+                const POLL_OPTION_CHAR_MAX = 120;
+                const getCounterThreshold = (maxLength) => {
+                    if (!Number.isFinite(maxLength)) return 0;
+                    if (maxLength >= 1000) return 200;
+                    return Math.max(10, Math.round(maxLength * 0.1));
+                };
+                const clampInputValue = (input, maxLength) => {
+                    if (!input || !Number.isFinite(maxLength)) return;
+                    const value = String(input.value || '');
+                    if (value.length <= maxLength) return;
+                    const start = input.selectionStart;
+                    input.value = value.slice(0, maxLength);
+                    if (start !== null && start !== undefined) {
+                        const pos = Math.min(start, maxLength);
+                        input.setSelectionRange(pos, pos);
+                    }
+                };
+                const updateInputCounter = (input, counter, maxLength) => {
+                    if (!input || !counter || !Number.isFinite(maxLength)) return;
+                    const length = input.value.length;
+                    const remaining = maxLength - length;
+                    const threshold = getCounterThreshold(maxLength);
+                    const shouldShow = remaining <= threshold;
+                    counter.textContent = `${length}/${maxLength}`;
+                    counter.classList.toggle('is-hidden', !shouldShow);
+                    counter.classList.toggle('is-limit', length >= maxLength);
+                    if (!shouldShow) {
+                        counter.setAttribute('aria-hidden', 'true');
+                    } else {
+                        counter.removeAttribute('aria-hidden');
+                    }
+                };
+                const bindInputLimiter = (input, maxLength, counter, onChange) => {
+                    if (!input || !Number.isFinite(maxLength)) return;
+                    const update = () => {
+                        clampInputValue(input, maxLength);
+                        updateInputCounter(input, counter, maxLength);
+                        if (typeof onChange === 'function') {
+                            onChange();
+                        }
+                    };
+                    input.addEventListener('input', update);
+                    update();
+                };
                 const showThrottleNotice = (text) => {
                     const message = text || 'You are doing that too quickly. Please slow down.';
                     if (typeof window.showFlashNotification === 'function') {
@@ -3484,7 +3538,7 @@
                 }
 
                 if (chatInput) {
-                    chatInput.addEventListener('input', () => {
+                    bindInputLimiter(chatInput, CHAT_MESSAGE_CHAR_MAX, chatCharCounter, () => {
                         autosizeComposer();
                         updateSendButtonState();
                     });
@@ -3970,14 +4024,18 @@
                     const wrapper = document.createElement('div');
                     wrapper.className = 'poll-option-input';
                     wrapper.innerHTML = `
-                        <input
-                            type="text"
-                            name="poll_options[]"
-                            class="poll-option-field"
-                            data-poll-option-input
-                            placeholder="Option text"
-                            value="${escapeHtml(value)}"
-                        >
+                        <div class="poll-option-field-wrap">
+                            <input
+                                type="text"
+                                name="poll_options[]"
+                                class="poll-option-field"
+                                data-poll-option-input
+                                placeholder="Option text"
+                                maxlength="${POLL_OPTION_CHAR_MAX}"
+                                value="${escapeHtml(value)}"
+                            >
+                            <div class="input-counter" data-poll-option-counter aria-live="polite"></div>
+                        </div>
                         <button type="button" class="icon-btn poll-option-remove" data-poll-remove aria-label="Remove option">
                             <i data-lucide="x"></i>
                         </button>
@@ -3999,9 +4057,10 @@
                 function attachPollOptionHandlers(wrapper) {
                     const input = wrapper.querySelector('[data-poll-option-input]');
                     const remove = wrapper.querySelector('[data-poll-remove]');
+                    const counter = wrapper.querySelector('[data-poll-option-counter]');
                     if (input) {
                         input.disabled = !isPollModeActive();
-                        input.addEventListener('input', updateSendButtonState);
+                        bindInputLimiter(input, POLL_OPTION_CHAR_MAX, counter, updateSendButtonState);
                         input.addEventListener('keydown', (event) => {
                             if (event.key === ' ' || event.key === 'Enter') {
                                 event.stopPropagation();
@@ -4029,6 +4088,7 @@
                 function clearPollComposer() {
                     if (pollQuestionInput) {
                         pollQuestionInput.value = '';
+                        updateInputCounter(pollQuestionInput, pollQuestionCounter, POLL_QUESTION_CHAR_MAX);
                     }
                     if (pollOptionsList) {
                         pollOptionsList.innerHTML = '';
@@ -4090,7 +4150,7 @@
                         pollAddOptionButton.addEventListener('click', () => addPollOptionField());
                     }
                     if (pollQuestionInput) {
-                        pollQuestionInput.addEventListener('input', updateSendButtonState);
+                        bindInputLimiter(pollQuestionInput, POLL_QUESTION_CHAR_MAX, pollQuestionCounter, updateSendButtonState);
                         pollQuestionInput.addEventListener('keydown', (event) => {
                             if (event.key === ' ' || event.key === 'Enter') {
                                 event.stopPropagation();
@@ -4683,6 +4743,7 @@
                                 textarea.style.height = 'auto';
                                 autosizeComposer();
                                 updateSendButtonState();
+                                updateInputCounter(textarea, chatCharCounter, CHAT_MESSAGE_CHAR_MAX);
                             }
                             const questionCheckbox = chatForm.querySelector('input[name="as_question"]');
                             if (questionCheckbox) {
