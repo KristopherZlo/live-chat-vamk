@@ -58,7 +58,7 @@
             </button>
           </form>
         @endif
-        <form method="POST" action="{{ route('questions.ownerDelete', $question) }}" onsubmit="return confirm('Delete this question permanently?');" data-remote="questions-panel">
+        <form method="POST" action="{{ route('questions.ownerDelete', $question) }}" data-remote="questions-panel" data-question-delete="1">
           @csrf
           @method('DELETE')
           <button class="btn btn-sm queue-delete-btn" type="submit">

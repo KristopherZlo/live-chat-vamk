@@ -3306,6 +3306,76 @@
                     return { open };
                 })();
 
+                const questionDeleteModal = (() => {
+                    let overlay = null;
+                    let confirmBtn = null;
+                    let cancelBtn = null;
+                    let resolver = null;
+
+                    const ensureModal = () => {
+                        if (overlay) return;
+                        overlay = document.createElement('div');
+                        overlay.className = 'modal-overlay';
+                        overlay.dataset.questionDeleteModal = '1';
+                        overlay.hidden = true;
+                        overlay.innerHTML = `
+                            <div class="modal-dialog">
+                                <div class="modal-header">
+                                    <div class="modal-title-group">
+                                        <div class="modal-eyebrow">Queue</div>
+                                        <div class="modal-title">Delete question?</div>
+                                    </div>
+                                    <button type="button" class="modal-close" data-question-delete-cancel aria-label="Close">
+                                        <i data-lucide="x"></i>
+                                    </button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="modal-text">This action cannot be undone. Remove the question from the queue?</div>
+                                </div>
+                                <div class="modal-actions">
+                                    <button type="button" class="btn btn-sm btn-ghost" data-question-delete-cancel>Cancel</button>
+                                    <button type="button" class="btn btn-sm btn-danger" data-question-delete-confirm>Delete</button>
+                                </div>
+                            </div>
+                        `;
+                        document.body.appendChild(overlay);
+                        confirmBtn = overlay.querySelector('[data-question-delete-confirm]');
+                        cancelBtn = overlay.querySelectorAll('[data-question-delete-cancel]');
+
+                        const close = (result = false) => {
+                            overlay.classList.remove('show');
+                            document.body.classList.remove('modal-open');
+                            if (resolver) {
+                                resolver(result);
+                                resolver = null;
+                            }
+                            setTimeout(() => overlay.hidden = true, 120);
+                        };
+
+                        overlay.addEventListener('click', (event) => {
+                            if (event.target === overlay) {
+                                close(false);
+                            }
+                        });
+
+                        cancelBtn.forEach((btn) => btn.addEventListener('click', () => close(false)));
+                        confirmBtn?.addEventListener('click', () => close(true));
+                    };
+
+                    const open = () => new Promise((resolve) => {
+                        ensureModal();
+                        resolver = resolve;
+                        overlay.hidden = false;
+                        requestAnimationFrame(() => overlay.classList.add('show'));
+                        document.body.classList.add('modal-open');
+                        if (window.refreshLucideIcons) {
+                            window.refreshLucideIcons();
+                        }
+                    });
+
+                    return { open };
+                })();
+
                 const requestDeleteMessage = async (url) => {
                     const result = { ok: false, status: 0, message: '' };
                     if (!url) return result;
@@ -4158,10 +4228,18 @@
 
                 function bindPipQueueForms(root) {
                     if (!root) return;
-                    const handler = (event) => {
+                    const handler = async (event) => {
                         const form = event.target.closest('form[data-remote=\"questions-panel\"]');
                         if (!form) return;
                         event.preventDefault();
+                        const methodAttr = (form.getAttribute('method') || 'POST').toUpperCase();
+                        const methodOverride = (form.querySelector('input[name=\"_method\"]')?.value || '').toUpperCase();
+                        const effectiveMethod = methodOverride || methodAttr;
+                        const isDeleteAction = effectiveMethod === 'DELETE';
+                        if (isDeleteAction) {
+                            const confirmed = await questionDeleteModal.open();
+                            if (!confirmed) return;
+                        }
                         submitRemoteForm(form, () => {
                             const item = form.closest('.queue-item');
                             const qId = normalizeId(item?.dataset.questionId);
@@ -4644,7 +4722,7 @@
                 }
 
                 if (questionsPanel) {
-                    questionsPanel.addEventListener('submit', (event) => {
+                    questionsPanel.addEventListener('submit', async (event) => {
                         const target = event.target;
                         if (!(target instanceof HTMLFormElement)) return;
                         if (target.dataset.remote !== 'questions-panel') return;
@@ -4661,6 +4739,11 @@
                         const methodOverride = (target.querySelector('input[name="_method"]')?.value || '').toUpperCase();
                         const effectiveMethod = methodOverride || methodAttr;
                         const isDeleteAction = effectiveMethod === 'DELETE';
+                        const isQuestionDelete = isDeleteAction || target.dataset.questionDelete === '1';
+                        if (isQuestionDelete) {
+                            const confirmed = await questionDeleteModal.open();
+                            if (!confirmed) return;
+                        }
                         const item = target.closest('.queue-item');
                         const qId = normalizeId(item?.dataset.questionId);
                         const shouldBlockActions = Boolean(qId && (desiredStatus || isDeleteAction));
@@ -4770,11 +4853,20 @@
                 }
 
                 if (myQuestionsPanel) {
-                    myQuestionsPanel.addEventListener('submit', (event) => {
+                    myQuestionsPanel.addEventListener('submit', async (event) => {
                         const target = event.target;
                         if (!(target instanceof HTMLFormElement)) return;
                         if (target.dataset.remote !== 'my-questions-panel') return;
                         event.preventDefault();
+                        const methodAttr = (target.getAttribute('method') || 'POST').toUpperCase();
+                        const methodOverride = (target.querySelector('input[name="_method"]')?.value || '').toUpperCase();
+                        const effectiveMethod = methodOverride || methodAttr;
+                        const isDeleteAction = effectiveMethod === 'DELETE';
+                        const isQuestionDelete = isDeleteAction || target.dataset.questionDelete === '1';
+                        if (isQuestionDelete) {
+                            const confirmed = await questionDeleteModal.open();
+                            if (!confirmed) return;
+                        }
                         submitRemoteForm(target, reloadMyQuestionsPanel);
                     });
                 }
