@@ -402,21 +402,54 @@
                                                         $optionPercent = (int) ($option['percent'] ?? 0);
                                                         $optionId = $option['id'] ?? null;
                                                         $isSelected = $pollMyVoteId && $optionId && (int) $pollMyVoteId === (int) $optionId;
+                                                        $optionLabel = (string) ($option['label'] ?? '');
+                                                        $normalizedLabel = preg_replace('/\s+/', '', \Illuminate\Support\Str::lower($optionLabel));
+                                                        $isStarWarsOption = in_array($normalizedLabel, ['starwar', 'starwars'], true);
                                                     @endphp
-                                                    <button
-                                                        type="button"
-                                                        class="poll-option {{ $isSelected ? 'is-selected' : '' }}"
-                                                        data-poll-option-id="{{ $optionId }}"
-                                                        aria-pressed="{{ $isSelected ? 'true' : 'false' }}"
-                                                        @unless($pollCanVote) disabled @endunless
-                                                    >
-                                                        <span class="poll-option-label">{{ $option['label'] ?? '' }}</span>
-                                                        <span class="poll-option-stats">
-                                                            <span class="poll-option-count">{{ $optionVotes }}</span>
-                                                            <span class="poll-option-percent">{{ $optionPercent }}%</span>
-                                                        </span>
-                                                        <span class="poll-option-bar" style="width: {{ $optionPercent }}%;"></span>
-                                                    </button>
+                                                    @if($isStarWarsOption)
+                                                        <button
+                                                            type="button"
+                                                            class="poll-option poll-option--saber saber-row {{ $isSelected ? 'is-selected' : '' }}"
+                                                            data-poll-option-id="{{ $optionId }}"
+                                                            aria-pressed="{{ $isSelected ? 'true' : 'false' }}"
+                                                            @unless($pollCanVote) disabled @endunless
+                                                        >
+                                                            <span class="yoda-hilt" aria-hidden="true">
+                                                                <span class="bottom">
+                                                                    <span class="grip"></span>
+                                                                </span>
+                                                                <span class="top">
+                                                                    <span class="on"></span>
+                                                                    <span class="power-adjust-off"></span>
+                                                                    <span class="length-adjust-off"></span>
+                                                                </span>
+                                                            </span>
+                                                            <span class="option yoda-blade {{ $isSelected ? 'selected' : '' }}">
+                                                                <span class="fill" style="width: {{ $optionPercent }}%;"></span>
+                                                                <span class="tip" aria-hidden="true"></span>
+                                                                <span class="label">{{ $optionLabel }}</span>
+                                                                <span class="right">
+                                                                    <span class="count">{{ $optionVotes }}</span>
+                                                                    <span>{{ $optionPercent }}%</span>
+                                                                </span>
+                                                            </span>
+                                                        </button>
+                                                    @else
+                                                        <button
+                                                            type="button"
+                                                            class="poll-option {{ $isSelected ? 'is-selected' : '' }}"
+                                                            data-poll-option-id="{{ $optionId }}"
+                                                            aria-pressed="{{ $isSelected ? 'true' : 'false' }}"
+                                                            @unless($pollCanVote) disabled @endunless
+                                                        >
+                                                            <span class="poll-option-label">{{ $optionLabel }}</span>
+                                                            <span class="poll-option-stats">
+                                                                <span class="poll-option-count">{{ $optionVotes }}</span>
+                                                                <span class="poll-option-percent">{{ $optionPercent }}%</span>
+                                                            </span>
+                                                            <span class="poll-option-bar" style="width: {{ $optionPercent }}%;"></span>
+                                                        </button>
+                                                    @endif
                                                 @endforeach
                                             </div>
                                             <div class="poll-footer">
@@ -1811,6 +1844,14 @@
                     if (!total || total <= 0) return 0;
                     return Math.round((votes / total) * 100);
                 };
+                const normalizePollLabel = (label) => String(label || '')
+                    .trim()
+                    .toLowerCase()
+                    .replace(/\s+/g, '');
+                const isStarWarsLabel = (label) => {
+                    const normalized = normalizePollLabel(label);
+                    return normalized === 'starwar' || normalized === 'starwars';
+                };
                 const buildPollOptionsHtml = (poll, myVoteId, interactive) => {
                     const options = Array.isArray(poll?.options) ? poll.options : [];
                     const totalVotes = Number(poll?.total_votes || 0);
@@ -1822,9 +1863,36 @@
                             : getPollPercent(votes, totalVotes);
                         const selected = myVoteId && optionId && Number(myVoteId) === Number(optionId);
                         const disabledAttr = interactive ? '' : ' disabled';
+                        const optionLabel = String(option?.label ?? '');
+                        const isSaber = isStarWarsLabel(optionLabel);
+                        if (isSaber) {
+                            return `
+                                <button type="button" class="poll-option poll-option--saber saber-row ${selected ? 'is-selected' : ''}" data-poll-option-id="${escapeHtml(String(optionId ?? ''))}" aria-pressed="${selected ? 'true' : 'false'}"${disabledAttr}>
+                                    <span class="yoda-hilt" aria-hidden="true">
+                                        <span class="bottom">
+                                            <span class="grip"></span>
+                                        </span>
+                                        <span class="top">
+                                            <span class="on"></span>
+                                            <span class="power-adjust-off"></span>
+                                            <span class="length-adjust-off"></span>
+                                        </span>
+                                    </span>
+                                    <span class="option yoda-blade ${selected ? 'selected' : ''}">
+                                        <span class="fill" style="width: ${escapeHtml(String(percent))}%;"></span>
+                                        <span class="tip" aria-hidden="true"></span>
+                                        <span class="label">${escapeHtml(optionLabel)}</span>
+                                        <span class="right">
+                                            <span class="count">${escapeHtml(String(votes))}</span>
+                                            <span>${escapeHtml(String(percent))}%</span>
+                                        </span>
+                                    </span>
+                                </button>
+                            `;
+                        }
                         return `
                             <button type="button" class="poll-option ${selected ? 'is-selected' : ''}" data-poll-option-id="${escapeHtml(String(optionId ?? ''))}" aria-pressed="${selected ? 'true' : 'false'}"${disabledAttr}>
-                                <span class="poll-option-label">${escapeHtml(option?.label || '')}</span>
+                                <span class="poll-option-label">${escapeHtml(optionLabel)}</span>
                                 <span class="poll-option-stats">
                                     <span class="poll-option-count">${escapeHtml(String(votes))}</span>
                                     <span class="poll-option-percent">${escapeHtml(String(percent))}%</span>
