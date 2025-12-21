@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/assets/ghostup_logo_white.svg" alt="Ghost Room" width="260">
+  <img src="resources/images/github-page-header.png" alt="Ghost Room" width="100%">
 </p>
 
 # Ghost Room
