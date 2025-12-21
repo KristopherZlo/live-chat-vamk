@@ -181,7 +181,7 @@ class RoomController extends Controller
     {
         $room = Room::where('slug', $slug)->firstOrFail();
 
-        if ($room->status === 'finished' && !$room->is_public_read) {
+        if ($room->status === 'finished' && !$room->is_public_read && !$this->isOwner($room)) {
             abort(403);
         }
 
@@ -646,7 +646,10 @@ class RoomController extends Controller
             return $query;
         }
 
-        return $query->whereNotIn('participant_id', $bannedIds);
+        return $query->where(function ($query) use ($bannedIds) {
+            $query->whereNull('participant_id')
+                ->orWhereNotIn('participant_id', $bannedIds);
+        });
     }
 
     protected function baseQueueQuery(Room $room)

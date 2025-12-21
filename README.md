@@ -199,6 +199,9 @@ Deployment notes:
   `php artisan chat:seed-demo <room-id-or-slug> [--count=200]`
   `php artisan chat:seed-questions <room-id-or-slug> [--count=50]`
   `php artisan chat:seed-messages <room-id-or-slug> [--count=200]`
+  `php artisan chat:seed-poll <room-id-or-slug> [--options=] [--votes=] [--replies=] [--reactions=] [--participants=]`
+* Simulate a live question stream (with a delay between questions):
+  `php artisan chat:seed-questions <room-id-or-slug> [--count=50] [--delay=1]`
 * Generate invite codes for registration:
   `php artisan invite:generate {count=1} [--length=12]`
 
@@ -206,10 +209,10 @@ Deployment notes:
 
 ## TODO
 
-* Polls and live voting
-* Further loading and performance optimizations
-* Interactive onboarding tutorial for hosts and students
-* Email verification
+* [x] Polls and live voting
+* [ ] Further loading and performance optimizations
+* [ ] Interactive onboarding tutorial for hosts and students
+* [ ] Email verification
 
 ---
 
