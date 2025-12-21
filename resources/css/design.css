@@ -28,7 +28,7 @@
   --radius-lg: 0.85rem;
   --radius-xl: 1rem;
   --radius-pill: 999px;
-  --saber-blade-bg: #f8fafc;
+  --saber-blade-bg: var(--bg-elevated);
   --saber-blade-border: #d7dde7;
   --saber-text: #0b2b14;
   --saber-text-muted: #0f3a1c;
@@ -6584,7 +6584,7 @@ body.modal-open {
     box-shadow: none;
     border-radius: var(--radius-lg);
     border: 1px solid var(--border-subtle);
-    background: #f8fafc;
+    background: var(--bg-elevated);
     min-height: 320px;
   }
   
