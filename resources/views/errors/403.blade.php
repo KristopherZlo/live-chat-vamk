@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>Page not found • {{ config('app.name', 'Ghost Room') }}</title>
+    <title>Access denied - {{ config('app.name', 'Ghost Room') }}</title>
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
     <script>
@@ -41,17 +41,22 @@
         <section class="panel error-panel">
             <div class="error-sheen"></div>
             <div class="error-glow"></div>
-            <div class="eyebrow error-eyebrow">404 / Not Found</div>
-            <div class="error-code">404</div>
-            <h1 class="error-title">This page went ghost</h1>
+            <div class="eyebrow error-eyebrow">403 / Forbidden</div>
+            <div class="error-code">403</div>
+            <h1 class="error-title">Access denied</h1>
             <p class="panel-subtitle error-lead">
-                We couldn't find what you were looking for. It might have been renamed, moved, or never existed.
+                You do not have permission to view this page. If you think this is a mistake, try signing in
+                with a different account or ask the room owner for access.
             </p>
             <div class="error-actions">
                 <button class="btn btn-primary" type="button" onclick="history.back()">
                     <i data-lucide="arrow-left"></i>
                     <span>Go back</span>
                 </button>
+                <a class="btn btn-ghost" href="{{ route('home') }}">
+                    <i data-lucide="home"></i>
+                    <span>Go to home</span>
+                </a>
             </div>
         </section>
     </main>
