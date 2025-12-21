@@ -15,9 +15,15 @@ return [
                     ],
                 ],
                 [
-                    'title' => '⚡ Quick-reply buttons',
+                    'title' => '⚡ Quick-text buttons',
                     'items' => [
                         'Up to three saved phrases per teacher. One click, message sent. More teaching, less typing.',
+                    ],
+                ],
+                [
+                    'title' => '📊 Polls in chat',
+                    'items' => [
+                        'Create a poll inside the chat and let the room vote in real time - democracy, but with fewer meetings.',
                     ],
                 ],
                 [
@@ -41,7 +47,7 @@ return [
                 [
                     'title' => '📣 Public Updates page',
                     'items' => [
-                        'You can finally check changes without guessing or asking devs nicely.',
+                        'You can finally check changes without guessing or asking dev nicely.',
                     ],
                 ],
                 [

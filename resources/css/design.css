@@ -6021,7 +6021,9 @@ body.modal-open {
 }
 
 .whats-new-items {
-  padding-left: 1rem;
+  padding-left: calc(1.1rem + 7px);
+  list-style: disc;
+  list-style-position: outside;
 }
 
   .whats-new-items,.whats-new-section-text {
