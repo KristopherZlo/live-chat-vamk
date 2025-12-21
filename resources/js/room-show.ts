@@ -51,6 +51,7 @@
                 const resizeState = {
                     left: null,
                     right: null,
+                    preferredRatio: null,
                 };
                 const RESIZE_STORAGE_KEY = `lc-layout-resize:${roomSlug}:${isOwnerUser ? 'owner' : 'guest'}`;
                 const RESIZE_COLLAPSE_BUFFER = 24;
@@ -73,6 +74,12 @@
                     if (!Number.isFinite(parsed)) return null;
                     if (parsed <= 0 || parsed >= 1) return null;
                     return parsed;
+                };
+                const updatePreferredRatio = (leftWidth, total) => {
+                    const ratio = normalizeRatio(leftWidth / total);
+                    if (ratio !== null) {
+                        resizeState.preferredRatio = ratio;
+                    }
                 };
                 const getCollapsedSide = () => {
                     if (!layoutRoot) return null;
@@ -117,8 +124,11 @@
                     const collapsed = getCollapsedSide();
                     const leftWidth = resizeState.left ?? chatPanel.getBoundingClientRect().width;
                     const rightWidth = resizeState.right ?? rightPanel.getBoundingClientRect().width;
-                    const leftRatio = normalizeRatio(leftWidth / total);
-                    const rightRatio = normalizeRatio(rightWidth / total);
+                    const preferredRatio = normalizeRatio(resizeState.preferredRatio);
+                    const leftRatio = preferredRatio ?? normalizeRatio(leftWidth / total);
+                    const rightRatio = leftRatio !== null
+                        ? normalizeRatio(1 - leftRatio)
+                        : normalizeRatio(rightWidth / total);
                     const payload = {
                         leftRatio,
                         rightRatio,
@@ -144,6 +154,12 @@
                         : null;
                     const leftRatio = normalizeRatio(stored.leftRatio);
                     const rightRatio = normalizeRatio(stored.rightRatio);
+                    const storedRatio = leftRatio !== null
+                        ? leftRatio
+                        : (rightRatio !== null ? 1 - rightRatio : null);
+                    if (storedRatio !== null) {
+                        resizeState.preferredRatio = storedRatio;
+                    }
                     let leftWidth = null;
                     if (leftRatio !== null) {
                         leftWidth = total * leftRatio;
@@ -204,6 +220,14 @@
                     if (rightPanel) {
                         resizeState.right = rightPanel.getBoundingClientRect().width;
                     }
+                };
+                const ensurePreferredRatio = (metrics) => {
+                    if (normalizeRatio(resizeState.preferredRatio) !== null) return;
+                    if (!chatPanel) return;
+                    const total = metrics.rect.width - metrics.resizerWidth;
+                    if (total <= 0) return;
+                    const leftWidth = chatPanel.getBoundingClientRect().width;
+                    updatePreferredRatio(leftWidth, total);
                 };
                 const applyResize = (clientX) => {
                     if (!layoutRoot || !layoutResizer || !chatPanel || !rightPanel) return;
@@ -290,6 +314,7 @@
                     const clampedRight = total - clampedLeft;
                     resizeState.left = clampedLeft;
                     resizeState.right = clampedRight;
+                    updatePreferredRatio(clampedLeft, total);
                     setLayoutSizes(clampedLeft, clampedRight);
                 };
                 const scheduleResize = (clientX) => {
@@ -323,6 +348,7 @@
                         );
                         resizeState.left = desiredLeft;
                         resizeState.right = total - desiredLeft;
+                        updatePreferredRatio(desiredLeft, total);
                         setLayoutSizes(desiredLeft, total - desiredLeft);
                         saveResizeState();
                         return;
@@ -337,6 +363,7 @@
                         );
                         resizeState.right = desiredRight;
                         resizeState.left = total - desiredRight;
+                        updatePreferredRatio(total - desiredRight, total);
                         setLayoutSizes(total - desiredRight, desiredRight);
                         saveResizeState();
                     }
@@ -350,6 +377,41 @@
                     layoutRoot.style.removeProperty('--layout-right-size');
                     lastLayoutSizes.left = null;
                     lastLayoutSizes.right = null;
+                };
+                const syncLayoutToViewport = () => {
+                    if (!layoutRoot || !chatPanel || !rightPanel) return;
+                    const metrics = getLayoutMetrics();
+                    if (!metrics) return;
+                    const total = metrics.rect.width - metrics.resizerWidth;
+                    if (total <= 0) return;
+                    const collapsedSide = getCollapsedSide();
+                    if (collapsedSide === 'left') {
+                        setLayoutSizes(metrics.collapsedWidth, total - metrics.collapsedWidth);
+                        return;
+                    }
+                    if (collapsedSide === 'right') {
+                        setLayoutSizes(total - metrics.collapsedWidth, metrics.collapsedWidth);
+                        return;
+                    }
+                    ensurePreferredRatio(metrics);
+                    const preferredRatio = normalizeRatio(resizeState.preferredRatio);
+                    let leftWidth = preferredRatio !== null
+                        ? total * preferredRatio
+                        : (resizeState.left ?? chatPanel.getBoundingClientRect().width);
+                    const minSum = metrics.leftMin + metrics.rightMin;
+                    if (total > minSum) {
+                        const rawLeft = leftWidth;
+                        leftWidth = clamp(rawLeft, metrics.leftMin, total - metrics.rightMin);
+                        if (preferredRatio === null || leftWidth === rawLeft) {
+                            updatePreferredRatio(leftWidth, total);
+                        }
+                    } else {
+                        leftWidth = Math.round(total * 0.5);
+                    }
+                    const rightWidth = total - leftWidth;
+                    resizeState.left = leftWidth;
+                    resizeState.right = rightWidth;
+                    setLayoutSizes(leftWidth, rightWidth);
                 };
                 const setupLayoutResizer = () => {
                     if (!layoutRoot || !layoutResizer || !chatPanel || !rightPanel) return;
@@ -380,6 +442,7 @@
                             return;
                         }
                         applyStoredResizeState();
+                        syncLayoutToViewport();
                     };
                     layoutResizer.addEventListener('mousedown', (event) => {
                         if (event.button !== 0 || !isResizableViewport()) return;
