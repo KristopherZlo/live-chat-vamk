@@ -2,6 +2,7 @@
     $myQuestionsCount = isset($myQuestions) ? $myQuestions->count() : 0;
 @endphp
 
+<button type="button" class="panel-collapse-handle" data-panel-expand="questions">My questions</button>
 <div class="panel-header">
     <div>
         <div class="panel-title">

@@ -25,12 +25,19 @@ type FlashNotificationOptions = {
     duration?: number;
 };
 
+type DocumentPictureInPicture = {
+    requestWindow?: (options?: { width?: number; height?: number; preferInitialWindowPlacement?: boolean }) => Promise<Window>;
+};
+
 declare global {
     interface Window {
+        __chatPageBound?: boolean;
         __reverbConfig?: ReverbConfig;
         __echoReady?: Promise<void>;
         __queueSoundDebug?: boolean;
         __networkStatusNotificationBound?: boolean;
+        __themeObserverBound?: boolean;
+        documentPictureInPicture?: DocumentPictureInPicture;
         axios: typeof axios;
         Alpine: typeof Alpine;
         Pusher?: typeof Pusher;

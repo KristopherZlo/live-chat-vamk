@@ -446,6 +446,108 @@ main,.layout {
   align-items: stretch;
 }
 
+.layout-resizer {
+  display: none;
+  position: relative;
+  width: var(--layout-resizer-width, 10px);
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+}
+
+.layout-resizer::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 50%;
+  width: 2px;
+  background: var(--border-strong);
+  border-radius: 999px;
+  opacity: 0.65;
+  transform: translateX(-50%);
+}
+
+.layout-resizer:hover::before {
+  background: var(--accent);
+  opacity: 1;
+}
+
+.panel-collapse-handle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+.panel-collapse-handle:focus-visible {
+  outline: var(--focus-outline);
+}
+
+.panel.is-collapsed {
+  align-items: center;
+  justify-content: center;
+}
+
+.panel.is-collapsed > :not(.panel-collapse-handle) {
+  display: none !important;
+}
+
+.panel.is-collapsed .panel-collapse-handle {
+  display: flex;
+}
+
+body.is-resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+@media (min-width: 1025px) {
+  .layout.layout-resizable {
+    --layout-resizer-width: 10px;
+    --layout-left-min: 350px;
+    --layout-right-min: 360px;
+    --layout-collapsed-width: 44px;
+    --layout-left-size: 1fr;
+    --layout-right-size: 1fr;
+    grid-template-columns: minmax(var(--layout-left-min), var(--layout-left-size)) var(--layout-resizer-width) minmax(var(--layout-right-min), var(--layout-right-size));
+    column-gap: 0;
+  }
+
+  .layout.teacher.layout-resizable {
+    grid-template-columns: minmax(var(--layout-left-min), var(--layout-left-size)) var(--layout-resizer-width) minmax(var(--layout-right-min), var(--layout-right-size)) !important;
+  }
+
+  .layout.teacher.layout-resizable .teacher-panels {
+    grid-column: 3 / span 1;
+  }
+
+  .layout.layout-resizable.is-left-collapsed {
+    --layout-left-min: var(--layout-collapsed-width);
+    --layout-left-size: var(--layout-collapsed-width);
+  }
+
+  .layout.layout-resizable.is-right-collapsed {
+    --layout-right-min: var(--layout-collapsed-width);
+    --layout-right-size: var(--layout-collapsed-width);
+  }
+
+  .layout-resizer {
+    display: block;
+  }
+}
+
 .mobile-tabs {
   display: none;
 }

@@ -13,6 +13,7 @@
   data-queue-remote="1"
   data-onboarding-target="queue-panel"
 >
+  <button type="button" class="panel-collapse-handle" data-panel-expand="queue">Question queue</button>
   <div class="panel-header">
     <div>
       <div class="panel-title">
