@@ -1,15 +1,84 @@
 import { showFlashNotification } from './flash';
 
+const copyCounters = new Map<string, number>();
+const copyJokes = [
+  'SUPER MEGA COPY!',
+  'DIVINE COPY!',
+  'UNIVERSAL COPY!',
+  'YOU FOUND THE ANSWER TO LIFE AND DEATH WITH YOUR COPYING',
+  'HYPER COPY MODE!',
+  'OMEGA COPY!',
+  'GALACTIC COPY!',
+  'ABSOLUTE COPY!',
+  'TRANSCENDENT COPY!',
+  'THE CLIPBOARD SURRENDERS',
+  'COPY ENGINE OVERDRIVE',
+  'MYTHIC COPY STREAK',
+  'COSMIC COPY STREAK!',
+  'REALITY IS BEING COPIED',
+  'TIMELINE DUPLICATED',
+  'MULTIVERSE-LEVEL COPYING',
+  'COPY FORCE: MAXIMUM',
+  'RED HOT COPYING!',
+  'THE COPY PROPHECY IS REAL',
+  'BEYOND LIMITS COPYING',
+  'YOU ARE THE CLIPBOARD NOW',
+  'TOTAL DOMINATION: COPY EDITION',
+];
+const MAX_COPY_COLOR_STEPS = copyJokes.length + 3;
+
+const getCopyFeedback = (value: string): { message: string; count: number } => {
+  const nextCount = (copyCounters.get(value) ?? 0) + 1;
+  copyCounters.set(value, nextCount);
+  if (nextCount === 1) return { message: 'Link copied to clipboard', count: nextCount };
+  if (nextCount === 2) return { message: 'Double copy!', count: nextCount };
+  if (nextCount === 3) return { message: 'Triple copy!', count: nextCount };
+  const jokeIndex = nextCount - 4;
+  const message = copyJokes[Math.min(jokeIndex, copyJokes.length - 1)];
+  return { message, count: nextCount };
+};
+
+const getCopyTone = (count: number): { border: string; background: string; text: string } => {
+  const step = Math.max(0, Math.min(count - 1, MAX_COPY_COLOR_STEPS));
+  const t = step / MAX_COPY_COLOR_STEPS;
+  const hue = Math.round(130 - 130 * t);
+  return {
+    border: `hsl(${hue} 85% 55%)`,
+    background: `hsla(${hue} 45% 18% / 0.78)`,
+    text: '#f8fafc',
+  };
+};
+
+const applyCopyFlashStyle = (flash: HTMLElement, count: number): void => {
+  const tone = getCopyTone(count);
+  flash.style.background = tone.background;
+  flash.style.borderColor = tone.border;
+  flash.style.color = tone.text;
+  const progress = flash.querySelector<HTMLElement>('.flash-progress span');
+  if (progress) {
+    progress.style.background = tone.border;
+  }
+};
+
 export function setupCopyButtons(): void {
   document.querySelectorAll<HTMLElement>('[data-copy]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const value = btn.dataset.copy;
       if (!value) return;
       const notify = (success: boolean): void => {
-        showFlashNotification(success ? 'Link copied to clipboard' : 'Unable to copy link', {
-          type: success ? 'success' : 'danger',
+        if (!success) {
+          showFlashNotification('Unable to copy link', {
+            type: 'danger',
+            source: 'room-copy-link',
+          });
+          return;
+        }
+        const { message, count } = getCopyFeedback(value);
+        const flash = showFlashNotification(message, {
+          type: 'success',
           source: 'room-copy-link',
         });
+        applyCopyFlashStyle(flash, count);
       };
 
       if (navigator.clipboard && navigator.clipboard.writeText) {

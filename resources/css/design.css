@@ -611,6 +611,20 @@ main,.layout {
   box-shadow: 0 0 0 1px var(--accent-soft);
 }
 
+.message--jeb .message-body {
+  --jeb-fill: var(--message-in);
+  border: 2px solid transparent;
+  background:
+    linear-gradient(var(--jeb-fill), var(--jeb-fill)) padding-box,
+    linear-gradient(90deg, #ff004c, #ff9500, #ffe600, #38f000, #00e5ff, #5271ff, #b700ff, #ff004c) border-box;
+  background-size: 200% 100%;
+  animation: jeb-border 6s linear infinite;
+}
+
+.message--jeb.message--outgoing .message-body {
+  --jeb-fill: var(--message-out);
+}
+
 .message-header {
   display: flex;
   justify-content: space-between;
@@ -695,6 +709,15 @@ main,.layout {
   100% {
     background: transparent;
     opacity: 0;
+  }
+}
+
+@keyframes jeb-border {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
   }
 }
 
@@ -1305,6 +1328,40 @@ main,.layout {
   }
 }
 
+.cacodemon-flyby {
+  position: fixed;
+  top: 18vh;
+  left: -35vw;
+  width: clamp(140px, 22vw, 260px);
+  z-index: 2000;
+  pointer-events: none;
+  animation: cacodemon-flyby 8s linear forwards;
+}
+
+.cacodemon-flyby img {
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.45));
+}
+
+@keyframes cacodemon-flyby {
+  0% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(140vw);
+    opacity: 0;
+  }
+}
+
 .poll-option--saber.saber-row {
   gap: 8px;
   margin: 2px 0 6px;
@@ -1453,20 +1510,6 @@ main,.layout {
 .poll-option--saber .yoda-blade .right,
 .poll-option--saber .yoda-blade .right .count {
   text-shadow: 0 0 4px rgba(255, 255, 255, 0.55), 0 0 2px rgba(0, 0, 0, 0.35);
-}
-
-@supports (mix-blend-mode: difference) {
-  .poll-option--saber .option {
-    isolation: isolate;
-  }
-
-  .poll-option--saber .yoda-blade .label,
-  .poll-option--saber .yoda-blade .right,
-  .poll-option--saber .yoda-blade .right .count {
-    color: #fff;
-    mix-blend-mode: difference;
-    text-shadow: none;
-  }
 }
 
 .poll-option-bar {

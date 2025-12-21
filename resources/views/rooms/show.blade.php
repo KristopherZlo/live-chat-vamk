@@ -271,6 +271,11 @@
                                 $initials = \Illuminate\Support\Str::of($authorName)->substr(0, 2)->upper();
                                 $isOutgoing = $isOwner ? $isOwnerMessage : ($participant && $message->participant && $message->participant->id === $participant->id);
                                 $isQuestionMessage = (bool) $message->question;
+                                $normalizedMessageContent = \Illuminate\Support\Str::lower(trim($message->content ?? ''));
+                                $isJebMessage = $normalizedMessageContent === 'jeb_';
+                                $isDeadRabbitMessage = $normalizedMessageContent === 'deadrabbit';
+                                $isZloyMessage = preg_match('/\bzloy\b/i', $message->content ?? '') === 1;
+                                $isGlitchMessage = $isDeadRabbitMessage || $isZloyMessage;
                                 $replyTo = $message->replyTo;
                                 $replyDeleted = $replyTo?->trashed();
                                 $deleteUrl = route('rooms.messages.destroy', [$room, $message]);
@@ -309,7 +314,7 @@
                                 }
                             @endphp
                             <li
-                                class="message {{ $isOutgoing ? 'message--outgoing' : '' }} {{ $isQuestionMessage ? 'message--question' : '' }} {{ $isPollMessage ? 'message--poll' : '' }}"
+                                class="message {{ $isOutgoing ? 'message--outgoing' : '' }} {{ $isQuestionMessage ? 'message--question' : '' }} {{ $isPollMessage ? 'message--poll' : '' }} {{ $isJebMessage ? 'message--jeb' : '' }} {{ $isGlitchMessage ? 'message--glitch' : '' }}"
                                 data-message-id="{{ $message->id }}"
                                 data-reactions-url="{{ route('rooms.messages.reactions.toggle', [$room, $message]) }}"
                                 data-reactions='@json($reactionsGrouped)'
@@ -832,6 +837,7 @@
                 const publicLink = @json($publicLink);
                 const queueSoundUrl = @json($queueSoundUrl);
                 window.queueSoundUrl = queueSoundUrl;
+                const cacodemonImageUrl = @json(\Illuminate\Support\Facades\Vite::asset('resources/images/cacodemon.png'));
                 const messagesHistoryUrl = @json($messagesHistoryUrl);
                 const messagesHasMoreInitial = @json($messagesHasMore ?? false);
                 const messagesOldestId = @json($messagesOldestId);
@@ -897,6 +903,29 @@
                     } catch (err) {
                         console.debug('[queue-sound] playQueueSoundSafe fallback error', err);
                     }
+                };
+                let cacodemonActive = false;
+                const spawnCacodemon = () => {
+                    if (!cacodemonImageUrl || cacodemonActive) return;
+                    const img = new Image();
+                    img.decoding = 'async';
+                    img.alt = 'Cacodemon';
+                    img.src = cacodemonImageUrl;
+                    img.addEventListener('load', () => {
+                        if (cacodemonActive) return;
+                        cacodemonActive = true;
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'cacodemon-flyby';
+                        wrapper.appendChild(img);
+                        document.body.appendChild(wrapper);
+                        wrapper.addEventListener('animationend', () => {
+                            wrapper.remove();
+                            cacodemonActive = false;
+                        }, { once: true });
+                    }, { once: true });
+                    img.addEventListener('error', () => {
+                        cacodemonActive = false;
+                    }, { once: true });
                 };
                 let queuePipButton;
                 const supportsDocumentPip = Boolean(window.documentPictureInPicture && window.documentPictureInPicture.requestWindow);
@@ -1430,9 +1459,11 @@
                             return;
                         }
                         const fragment = document.createDocumentFragment();
+                        const newNodes = [];
                         items.forEach((item) => {
                             const node = createMessageElement(item, { pending: false, allowBan: true });
                             fragment.appendChild(node);
+                            newNodes.push(node);
                         });
                         const loaderAnchor = chatMessagesList?.querySelector('[data-messages-loader]');
                         if (loaderAnchor && loaderAnchor.parentNode === chatContainer) {
@@ -1440,6 +1471,7 @@
                         } else {
                             chatContainer.prepend(fragment);
                         }
+                        newNodes.forEach((node) => applyGlitchToMessage(node));
                         bindBanForms(chatContainer);
                         bindDeleteForms(chatContainer);
                         bindDeleteTriggers(chatContainer);
@@ -1577,6 +1609,296 @@
                     '"': '&quot;',
                     "'": '&#039;',
                 }[char] ?? char));
+                const escapeXml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&apos;',
+                }[char] ?? char));
+                const parseColorToRgb = (value) => {
+                    if (!value) return null;
+                    const trimmed = String(value).trim().toLowerCase();
+                    if (trimmed.startsWith('#')) {
+                        let hex = trimmed.slice(1);
+                        if (hex.length === 3) {
+                            hex = hex.split('').map((ch) => ch + ch).join('');
+                        }
+                        if (hex.length !== 6) return null;
+                        const parsed = Number.parseInt(hex, 16);
+                        if (Number.isNaN(parsed)) return null;
+                        return [(parsed >> 16) & 255, (parsed >> 8) & 255, parsed & 255];
+                    }
+                    const match = trimmed.match(/rgba?\(([^)]+)\)/i);
+                    if (!match) return null;
+                    const parts = match[1].split(',').map((part) => Number.parseFloat(part.trim()));
+                    if (parts.length < 3 || parts.some((part) => Number.isNaN(part))) return null;
+                    return [parts[0], parts[1], parts[2]];
+                };
+                const getBlendModeForText = (color) => {
+                    const rgb = parseColorToRgb(color);
+                    if (!rgb) return 'screen';
+                    const [r, g, b] = rgb;
+                    const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+                    return luminance > 0.7 ? 'multiply' : 'screen';
+                };
+                const normalizeMessageTrigger = (value) => String(value ?? '').trim().toLowerCase();
+                const isJebTrigger = (value) => normalizeMessageTrigger(value) === 'jeb_';
+                const isDeadRabbitTrigger = (value) => normalizeMessageTrigger(value) === 'deadrabbit';
+                const isZloyTrigger = (value) => /\bzloy\b/i.test(String(value ?? ''));
+                const isGlitchTrigger = (value) => isDeadRabbitTrigger(value) || isZloyTrigger(value);
+                const ensureGlitchFilters = () => {
+                    if (document.getElementById('glitch-filters')) return;
+                    const svgNS = 'http://www.w3.org/2000/svg';
+                    const svg = document.createElementNS(svgNS, 'svg');
+                    svg.id = 'glitch-filters';
+                    svg.style.position = 'absolute';
+                    svg.style.width = '0';
+                    svg.style.height = '0';
+                    svg.style.overflow = 'hidden';
+                    svg.style.visibility = 'hidden';
+                    svg.innerHTML = `
+                        <filter id="alphaRed">
+                            <feColorMatrix type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.5 0"/>
+                        </filter>
+                        <filter id="alphaGreen">
+                            <feColorMatrix type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 0.5 0"/>
+                        </filter>
+                        <filter id="alphaBlue">
+                            <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 0.5 0"/>
+                        </filter>
+                    `;
+                    document.body.insertBefore(svg, document.body.firstChild);
+                };
+                const setupGlitchEffect = (originalImg) => {
+                    if (!originalImg || originalImg.dataset.glitchReady === '1') return;
+                    const init = () => {
+                    const strengthAttr = originalImg.getAttribute('glitch-strength-shift');
+                    const strength = strengthAttr ? parseFloat(strengthAttr) : 5;
+                    const containerShift = strength - 1;
+                    const sourceSrc = originalImg.dataset.glitchSource || originalImg.src;
+                    const blendMode = originalImg.dataset.glitchBlend || 'screen';
+                    const computedWidth = Number(originalImg.getAttribute('width'))
+                        || originalImg.naturalWidth
+                        || originalImg.clientWidth
+                        || 160;
+                        const computedHeight = Number(originalImg.getAttribute('height'))
+                            || originalImg.naturalHeight
+                            || originalImg.clientHeight
+                            || 160;
+                        originalImg.style.width = `${computedWidth}px`;
+                        originalImg.style.height = `${computedHeight}px`;
+                        originalImg.style.display = 'block';
+                        const container = document.createElement('div');
+                        container.style.position = 'relative';
+                        container.style.display = 'inline-block';
+                        container.style.overflow = 'hidden';
+                        container.style.lineHeight = '0';
+                        container.style.width = `${computedWidth}px`;
+                        container.style.height = `${computedHeight}px`;
+                        container.style.transform = 'translateZ(0)';
+                        container.style.isolation = 'isolate';
+                        originalImg.parentNode?.insertBefore(container, originalImg);
+                        const sourceImg = document.createElement('img');
+                        sourceImg.src = sourceSrc;
+                        sourceImg.alt = originalImg.alt || '';
+                        sourceImg.width = computedWidth;
+                        sourceImg.height = computedHeight;
+                        const createClone = (filterId) => {
+                            const clone = sourceImg.cloneNode(true);
+                            clone.style.position = 'absolute';
+                            clone.style.top = '0';
+                            clone.style.left = '0';
+                            clone.style.width = '100%';
+                        clone.style.height = '100%';
+                        clone.style.objectFit = 'contain';
+                        clone.style.pointerEvents = 'none';
+                        clone.style.zIndex = '4';
+                        clone.style.display = 'none';
+                        clone.style.opacity = '0.5';
+                        clone.style.filter = `url(#${filterId})`;
+                        clone.style.mixBlendMode = blendMode;
+                        return clone;
+                    };
+                        const redClone = createClone('alphaRed');
+                        const greenClone = createClone('alphaGreen');
+                        const blueClone = createClone('alphaBlue');
+                        container.appendChild(redClone);
+                        container.appendChild(greenClone);
+                        container.appendChild(blueClone);
+                        const createSlice = () => {
+                            const slice = document.createElement('div');
+                            slice.style.position = 'absolute';
+                            slice.style.top = '0';
+                            slice.style.left = '0';
+                            slice.style.width = '100%';
+                            slice.style.height = '100%';
+                            slice.style.backgroundImage = `url(${sourceSrc})`;
+                            slice.style.backgroundRepeat = 'no-repeat';
+                            slice.style.backgroundPosition = 'center';
+                            slice.style.backgroundSize = 'contain';
+                            slice.style.pointerEvents = 'none';
+                            slice.style.zIndex = '2';
+                            slice.style.display = 'none';
+                            return slice;
+                        };
+                        const slices = [];
+                        for (let i = 0; i < 3; i += 1) {
+                            const slice = createSlice();
+                            container.appendChild(slice);
+                            slices.push(slice);
+                        }
+                        originalImg.style.position = 'absolute';
+                        originalImg.style.top = '0';
+                        originalImg.style.left = '0';
+                        originalImg.style.width = '100%';
+                        originalImg.style.height = '100%';
+                        originalImg.style.zIndex = '3';
+                        originalImg.style.pointerEvents = 'auto';
+                        container.appendChild(originalImg);
+                        const referenceSize = 400;
+                        const scale = computedWidth / referenceSize;
+                        const totalFrames = 15;
+                        let hoverActive = false;
+                        let randomTimer = null;
+                        const randomOffset = (max) => ((Math.random() * 2 - 1) * max * scale).toFixed(2);
+                        const applyRandomTransform = () => {
+                            redClone.style.transform = `translate(${randomOffset(strength)}px, ${randomOffset(strength)}px)`;
+                            greenClone.style.transform = `translate(${randomOffset(strength)}px, ${randomOffset(strength)}px)`;
+                            blueClone.style.transform = `translate(${randomOffset(strength)}px, ${randomOffset(strength)}px)`;
+                            container.style.transform = `translate(${randomOffset(containerShift)}px, ${randomOffset(containerShift)}px)`;
+                        };
+                        const randomizeSlice = (slice) => {
+                            const sliceHeight = (Math.random() * 60 + 20) * scale;
+                            const top = Math.random() * (computedHeight - sliceHeight);
+                            const bottom = top + sliceHeight;
+                            slice.style.clip = `rect(${top}px, ${computedWidth}px, ${bottom}px, 0)`;
+                            slice.style.transform = `translate(${randomOffset(10)}px, ${randomOffset(10)}px)`;
+                            slice.style.opacity = (Math.random() * 0.5 + 0.5).toFixed(2);
+                            slice.style.display = 'block';
+                        };
+                        const resetGlitch = () => {
+                            redClone.style.transform = 'none';
+                            greenClone.style.transform = 'none';
+                            blueClone.style.transform = 'none';
+                            container.style.transform = 'none';
+                            redClone.style.display = 'none';
+                            greenClone.style.display = 'none';
+                            blueClone.style.display = 'none';
+                            slices.forEach((slice) => {
+                                slice.style.display = 'none';
+                            });
+                        };
+                        const glitchTrigger = (callback) => {
+                            redClone.style.display = 'block';
+                            greenClone.style.display = 'block';
+                            blueClone.style.display = 'block';
+                            let frame = 0;
+                            const frameInterval = 400 / totalFrames;
+                            const glitchInterval = setInterval(() => {
+                                applyRandomTransform();
+                                slices.forEach(randomizeSlice);
+                                frame += 1;
+                                if (frame >= totalFrames) {
+                                    clearInterval(glitchInterval);
+                                    resetGlitch();
+                                    if (callback) callback();
+                                }
+                            }, frameInterval);
+                        };
+                        const continuousGlitch = () => {
+                            if (!hoverActive) return;
+                            glitchTrigger(() => {
+                                if (hoverActive) continuousGlitch();
+                            });
+                        };
+                        const startRandomGlitch = () => {
+                            if (hoverActive) return;
+                            const delay = Math.random() * 2500 + 500;
+                            randomTimer = setTimeout(() => {
+                                if (!hoverActive) {
+                                    glitchTrigger(startRandomGlitch);
+                                }
+                            }, delay);
+                        };
+                        container.addEventListener('mouseenter', () => {
+                            hoverActive = true;
+                            if (randomTimer) {
+                                clearTimeout(randomTimer);
+                                randomTimer = null;
+                            }
+                            continuousGlitch();
+                        });
+                        container.addEventListener('mouseleave', () => {
+                            hoverActive = false;
+                            resetGlitch();
+                            startRandomGlitch();
+                        });
+                        startRandomGlitch();
+                        originalImg.dataset.glitchReady = '1';
+                    };
+                    if (originalImg.complete) {
+                        init();
+                    } else {
+                        originalImg.addEventListener('load', init, { once: true });
+                    }
+                };
+                const createGlitchImageFromText = (text, sourceEl) => {
+                    const style = sourceEl ? window.getComputedStyle(sourceEl) : null;
+                    const fontFamily = (style?.fontFamily || 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif').replace(/\"/g, "'");
+                    const fontSize = Number.parseFloat(style?.fontSize) || 14;
+                    const fontWeight = style?.fontWeight || '400';
+                    const lineHeightRaw = style?.lineHeight || '';
+                    const lineHeight = Number.isFinite(Number.parseFloat(lineHeightRaw))
+                        ? Number.parseFloat(lineHeightRaw)
+                        : fontSize * 1.2;
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                        ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+                    }
+                    const textWidth = ctx ? ctx.measureText(text).width : fontSize * String(text).length * 0.6;
+                    const paddingX = 4;
+                    const paddingY = 2;
+                    const width = Math.max(1, Math.ceil(textWidth + paddingX * 2));
+                    const height = Math.max(1, Math.ceil(lineHeight + paddingY * 2));
+                    const textColor = style?.color || '#0d0d0d';
+                    const blendMode = getBlendModeForText(textColor);
+                    const svgBase = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><style>text{font-family:${fontFamily};font-size:${fontSize}px;font-weight:${fontWeight};fill:${textColor};}</style><text x="${paddingX}" y="${paddingY + fontSize}" dominant-baseline="alphabetic">${escapeXml(text)}</text></svg>`;
+                    const svgGlitch = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><style>text{font-family:${fontFamily};font-size:${fontSize}px;font-weight:${fontWeight};fill:#ffffff;}</style><text x="${paddingX}" y="${paddingY + fontSize}" dominant-baseline="alphabetic">${escapeXml(text)}</text></svg>`;
+                    const img = document.createElement('img');
+                    img.className = 'glitch-effect';
+                    img.alt = text;
+                    img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgBase)}`;
+                    img.dataset.glitchSource = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgGlitch)}`;
+                    img.dataset.glitchBlend = blendMode;
+                    img.width = width;
+                    img.height = height;
+                    return img;
+                };
+                const applyGlitchToMessage = (messageEl) => {
+                    if (!messageEl || messageEl.dataset.glitchReady === '1') return;
+                    const content = messageEl.dataset.content || '';
+                    if (!isGlitchTrigger(content)) return;
+                    const textEl = messageEl.querySelector('.message-text');
+                    if (!textEl) return;
+                    if (textEl.querySelector('img.glitch-effect')) {
+                        messageEl.dataset.glitchReady = '1';
+                        return;
+                    }
+                    const textValue = textEl.textContent || content;
+                    const img = createGlitchImageFromText(textValue, textEl);
+                    textEl.textContent = '';
+                    textEl.appendChild(img);
+                    ensureGlitchFilters();
+                    setupGlitchEffect(img);
+                    messageEl.dataset.glitchReady = '1';
+                };
+                const setupInitialGlitchMessages = () => {
+                    document.querySelectorAll('.message[data-content]').forEach((message) => {
+                        applyGlitchToMessage(message);
+                    });
+                };
                 const CHAT_MESSAGE_CHAR_MAX = 2000;
                 const POLL_QUESTION_CHAR_MAX = 255;
                 const POLL_OPTION_CHAR_MAX = 120;
@@ -1977,8 +2299,12 @@
                     const isTempMessage = String(messageId).startsWith('temp-');
                     const authorUserId = normalizeId(author?.user_id);
                     const authorParticipantId = normalizeId(author?.participant_id);
-                    const messageKey = makeMessageKey(content, authorUserId, authorParticipantId, replyTo?.id, asQuestion);
-                    container.classList.add('message');
+                const messageKey = makeMessageKey(content, authorUserId, authorParticipantId, replyTo?.id, asQuestion);
+                const isJebMessage = isJebTrigger(content);
+                const isGlitchMessage = isGlitchTrigger(content);
+                container.classList.add('message');
+                if (isJebMessage) container.classList.add('message--jeb');
+                if (isGlitchMessage) container.classList.add('message--glitch');
                     container.dataset.messageId = messageId;
                     container.dataset.reactionsUrl = reactionUrlTemplate && messageId ? reactionUrlTemplate.replace('__MESSAGE__', messageId) : '';
                     container.dataset.reactions = JSON.stringify(reactions || []);
@@ -2012,6 +2338,7 @@
                     const pollVoteId = poll?.my_vote_id ?? null;
                     const pollInteractive = hasPoll && !poll?.is_closed && !roomIsClosed && !viewerIsBanned;
                     const pollHtml = hasPoll ? buildPollMarkup(poll, pollVoteId, pollInteractive) : '';
+                    const messageTextHtml = `<div class="message-text">${escapeHtml(content)}</div>`;
                     container.dataset.userId = authorUserId ?? '';
                     container.dataset.participantId = authorParticipantId ?? '';
                     container.dataset.author = authorNameRaw || 'Guest';
@@ -2064,7 +2391,7 @@
                                 </div>
                             </div>
                             ${replyHtml}
-                            ${pollHtml || `<div class="message-text">${escapeHtml(content)}</div>`}
+                            ${pollHtml || messageTextHtml}
                             <div class="message-reactions" data-message-reactions>
                                 <div class="reactions-list" data-reactions-list></div>
                             </div>
@@ -2109,6 +2436,7 @@
                     if (refreshIcons && window.refreshLucideIcons) {
                         window.refreshLucideIcons();
                     }
+                    applyGlitchToMessage(element);
                     return element;
                 };
                 const createMessageElement = (payload, options = {}) => buildMessageElement(payload, options);
@@ -3583,6 +3911,7 @@
                 setupRepliesPane();
                 setupInitialReactions();
                 setupInitialPolls();
+                setupInitialGlitchMessages();
                 renderReactionMenuOptions();
                 updateMessagesStateAttributes();
                 updateMessagesLoadMoreVisibility();
@@ -4583,6 +4912,7 @@
                         const fragment = document.createDocumentFragment();
                         newNodes.forEach((node) => fragment.appendChild(node));
                         chatContainer.appendChild(fragment);
+                        newNodes.forEach((node) => applyGlitchToMessage(node));
                     }
 
                     if (added) {
@@ -4702,6 +5032,7 @@
                         if (!content) {
                             return;
                         }
+                        const isCacodemonTrigger = content.toLowerCase() === 'iddqd';
                         formData.set('content', content);
                         const url = chatForm.action;
                         const optimisticId = `temp-${Date.now()}`;
@@ -4743,11 +5074,12 @@
                         };
                         const container = document.querySelector('.messages-container');
                         let optimisticEl = null;
-                        if (container) {
-                            removeEmptyMessageState();
-                            optimisticEl = createMessageElement(optimisticPayload, { pending: true, allowBan: true });
-                            container.appendChild(optimisticEl);
-                            scrollChatToBottom();
+                            if (container) {
+                                removeEmptyMessageState();
+                                optimisticEl = createMessageElement(optimisticPayload, { pending: true, allowBan: true });
+                                container.appendChild(optimisticEl);
+                                applyGlitchToMessage(optimisticEl);
+                                scrollChatToBottom();
                             if (window.refreshLucideIcons) {
                                 window.refreshLucideIcons();
                             }
@@ -4788,6 +5120,9 @@
                             }
 
                             const payload = await response.json().catch(() => ({}));
+                            if (isCacodemonTrigger) {
+                                spawnCacodemon();
+                            }
                             if (payload?.message_id) {
                                 const containerEl = document.querySelector('.messages-container');
                                 if (!optimisticEl || !optimisticEl.isConnected) {

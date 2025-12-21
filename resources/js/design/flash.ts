@@ -4,6 +4,7 @@ const NETWORK_STATUS_OFFLINE_SOURCE = 'network-status-offline';
 const NETWORK_STATUS_ONLINE_SOURCE = 'network-status-online';
 const NETWORK_STATUS_OFFLINE_MESSAGE = 'Internet connection lost. Some features may be unavailable.';
 const NETWORK_STATUS_ONLINE_MESSAGE = 'Internet connection restored.';
+const flashTimers = new WeakMap<HTMLElement, number>();
 
 function ensureFlashContainer(): HTMLElement {
   let container = document.querySelector<HTMLElement>('.flash-toaster');
@@ -33,6 +34,13 @@ export function setupFlashMessages(root: Document | Element = document): void {
   }
   flashes.push(...Array.from(root.querySelectorAll<HTMLElement>('[data-flash]')));
   flashes.forEach((flash) => {
+    const clearTimer = () => {
+      const timer = flashTimers.get(flash);
+      if (timer) {
+        clearTimeout(timer);
+        flashTimers.delete(flash);
+      }
+    };
     if (!flash.classList.contains('flash-toast')) {
       flash.classList.add('flash-toast');
     }
@@ -49,6 +57,7 @@ export function setupFlashMessages(root: Document | Element = document): void {
     }
     const progress = flash.querySelector<HTMLElement>('.flash-progress');
     if (progress) {
+      progress.innerHTML = '<span></span>';
       progress.style.setProperty('--flash-duration', `${duration}ms`);
     }
     const closeBtn = flash.querySelector<HTMLElement>('[data-flash-close]');
@@ -63,16 +72,23 @@ export function setupFlashMessages(root: Document | Element = document): void {
       flash.appendChild(btn);
       createdClose = true;
     }
+    clearTimer();
     const hide = () => {
+      clearTimer();
       flash.classList.add('hidden');
       setTimeout(() => flash.remove(), 250);
     };
     const close = flash.querySelector<HTMLElement>('[data-flash-close]');
     if (close) {
-      close.addEventListener('click', hide, { once: true });
+      if (!flash.dataset.flashBound) {
+        close.addEventListener('click', hide, { once: true });
+        flash.dataset.flashBound = '1';
+      }
     }
     if (duration > 0) {
-      setTimeout(hide, duration);
+      clearTimer();
+      const timer = window.setTimeout(hide, duration);
+      flashTimers.set(flash, timer);
     }
     if (createdClose) {
       refreshLucideIcons(flash);

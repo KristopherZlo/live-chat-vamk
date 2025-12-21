@@ -61,6 +61,7 @@ class SecurityHeaders
                 $styleSrc[] = $origin;
                 $scriptSrc[] = $origin;
                 $connectSrc[] = $origin;
+                $imgSrc[] = $origin;
             }
 
             foreach ($this->getDevWebsocketOrigins($devOrigins) as $wsOrigin) {
