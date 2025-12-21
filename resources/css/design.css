@@ -1981,7 +1981,7 @@ body.is-resizing {
   background: var(--bg-elevated);
   border-radius: 0 0 1rem 1rem;
   box-shadow: 0 -8px 18px rgba(15, 23, 42, 0.08);
-  max-height: 50vh;
+  max-height: 52vh;
   overflow-y: auto;
   overflow-x: hidden;
 }
