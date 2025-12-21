@@ -3393,8 +3393,8 @@ main,.layout {
   }
 
   .queue-pip-body #queuePanel {
-    width: 100vw;
-    max-width: 100vw;
+    width: 100%;
+    max-width: 100%;
     border-radius: 0;
   }
 
