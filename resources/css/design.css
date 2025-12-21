@@ -152,8 +152,8 @@
   --btn-gray-hover: #2b2b2b;
   --saber-blade-bg: #1d1e20;
   --saber-blade-border: #203051;
-  --saber-text: #0b2b14;
-  --saber-text-muted: #0f3a1c;
+  --saber-text: #def7e7;
+  --saber-text-muted: #bcd8c9;
 }
 
 * {
@@ -1510,6 +1510,12 @@ main,.layout {
 .poll-option--saber .yoda-blade .right,
 .poll-option--saber .yoda-blade .right .count {
   text-shadow: 0 0 4px rgba(255, 255, 255, 0.55), 0 0 2px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] .poll-option--saber .yoda-blade .label,
+[data-theme="dark"] .poll-option--saber .yoda-blade .right,
+[data-theme="dark"] .poll-option--saber .yoda-blade .right .count {
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.85), 0 0 8px rgba(0, 0, 0, 0.4);
 }
 
 .poll-option-bar {
@@ -3405,6 +3411,54 @@ main,.layout {
   display: inline-flex;
   align-items: center;
   font-size: 0.72rem;
+}
+
+.queue-panel .panel-body {
+  position: relative;
+}
+
+.queue-scroll-indicator {
+  position: absolute;
+  left: 50%;
+  bottom: 0.65rem;
+  transform: translateX(-50%) translateY(6px);
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  border: none;
+  background: var(--notify);
+  color: #f9fafb;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.2);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 4;
+}
+
+.queue-scroll-indicator svg,
+.queue-scroll-indicator i {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.queue-scroll-indicator.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+  animation: queue-scroll-bounce 1.2s ease-in-out infinite;
+}
+
+@keyframes queue-scroll-bounce {
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) translateY(6px);
+  }
 }
 
 .question-feedback {

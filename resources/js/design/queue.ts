@@ -3,6 +3,8 @@ const QUEUE_FILTER_KEY_PREFIX = 'lc-queue-filter';
 
 type QueueRoot = Document | Element;
 
+const QUEUE_SCROLL_MARGIN = 6;
+
 function normalizeId(value: unknown): number | null {
   const num = Number(value);
   return Number.isInteger(num) && num > 0 ? num : null;
@@ -14,6 +16,68 @@ function getQueuePanel(root: QueueRoot = document): HTMLElement | null {
     if (found) return found;
   }
   return document.getElementById('queuePanel');
+}
+
+function getQueueScrollContainer(queuePanel: HTMLElement | null = getQueuePanel()): HTMLElement | null {
+  if (!queuePanel) return null;
+  return queuePanel.querySelector<HTMLElement>('.queue-list')
+    || queuePanel.querySelector<HTMLElement>('.questions-list')
+    || queuePanel.querySelector<HTMLElement>('.panel-body');
+}
+
+function ensureQueueScrollIndicator(queuePanel: HTMLElement | null = getQueuePanel()): HTMLButtonElement | null {
+  if (!queuePanel) return null;
+  const body = queuePanel.querySelector<HTMLElement>('.panel-body');
+  if (!body) return null;
+  let indicator = body.querySelector<HTMLButtonElement>('[data-queue-scroll-indicator]');
+  if (indicator) return indicator;
+
+  const doc = queuePanel.ownerDocument || document;
+  indicator = doc.createElement('button');
+  indicator.type = 'button';
+  indicator.className = 'queue-scroll-indicator';
+  indicator.dataset.queueScrollIndicator = '1';
+  indicator.setAttribute('aria-label', 'Scroll to new question');
+  indicator.innerHTML = '<i data-lucide="arrow-down"></i>';
+  body.appendChild(indicator);
+
+  if (typeof window.refreshLucideIcons === 'function') {
+    window.refreshLucideIcons(indicator);
+  }
+
+  indicator.addEventListener('click', () => {
+    const container = getQueueScrollContainer(queuePanel);
+    if (!container) return;
+    const listRect = container.getBoundingClientRect();
+    const candidates = Array.from(container.querySelectorAll<HTMLElement>('.queue-item.queue-item-new:not([hidden])'));
+    if (!candidates.length) return;
+    const target = candidates.find((item) => item.getBoundingClientRect().top >= listRect.bottom - QUEUE_SCROLL_MARGIN)
+      || candidates[0];
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+
+  return indicator;
+}
+
+function updateQueueScrollIndicator(queuePanel: HTMLElement | null = getQueuePanel()): void {
+  if (!queuePanel) return;
+  const container = getQueueScrollContainer(queuePanel);
+  const existing = queuePanel.querySelector<HTMLButtonElement>('[data-queue-scroll-indicator]');
+  if (!container || container.clientHeight === 0) {
+    existing?.classList.remove('is-visible');
+    return;
+  }
+  const candidates = Array.from(container.querySelectorAll<HTMLElement>('.queue-item.queue-item-new:not([hidden])'));
+  if (!candidates.length) {
+    existing?.classList.remove('is-visible');
+    return;
+  }
+  const indicator = existing || ensureQueueScrollIndicator(queuePanel);
+  if (!indicator) return;
+
+  const listRect = container.getBoundingClientRect();
+  const next = candidates.find((item) => item.getBoundingClientRect().top >= listRect.bottom - QUEUE_SCROLL_MARGIN);
+  indicator.classList.toggle('is-visible', Boolean(next));
 }
 
 function getQueueStorageKey(queuePanel: HTMLElement | null = getQueuePanel()): string | null {
@@ -96,6 +160,8 @@ function updateQueueBadge(queuePanel: HTMLElement | null = getQueuePanel()): voi
   } else if (!hasNew && badge) {
     badge.remove();
   }
+
+  updateQueueScrollIndicator(queuePanel);
 }
 
 export function setupQueueFilter(root: QueueRoot = document): void {
@@ -226,6 +292,19 @@ export function setupQueueNewHandlers(root: QueueRoot = document): void {
       markSeen(id);
     });
   });
+
+  if (queuePanel) {
+    const container = getQueueScrollContainer(queuePanel);
+    if (container && container.dataset.queueScrollIndicatorBound !== '1') {
+      container.dataset.queueScrollIndicatorBound = '1';
+      container.addEventListener('scroll', () => updateQueueScrollIndicator(queuePanel));
+    }
+    if (queuePanel.dataset.queueScrollIndicatorBound !== '1') {
+      queuePanel.dataset.queueScrollIndicatorBound = '1';
+      queuePanel.addEventListener('queue:filter-change', () => updateQueueScrollIndicator(queuePanel));
+      window.addEventListener('resize', () => updateQueueScrollIndicator(queuePanel));
+    }
+  }
 
   updateQueueBadge(queuePanel);
 }

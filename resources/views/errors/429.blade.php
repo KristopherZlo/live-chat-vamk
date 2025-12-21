@@ -1,12 +1,11 @@
 @extends('errors.layout')
 
-@section('title', 'Access denied')
-@section('eyebrow', '403 / Forbidden')
-@section('code', '403')
-@section('heading', 'Access denied')
+@section('title', 'Too many requests')
+@section('eyebrow', '429 / Too Many Requests')
+@section('code', '429')
+@section('heading', 'Slow down')
 @section('message')
-    You do not have permission to view this page. If you think this is a mistake, try signing in
-    with a different account or ask the room owner for access.
+    You're sending requests too quickly. Please wait a moment and try again.
 @endsection
 @section('actions')
     <button class="btn btn-primary" type="button" onclick="history.back()">

@@ -397,6 +397,12 @@
                                             $pollOptions = $pollPayload['options'] ?? [];
                                             $pollIsClosed = (bool) ($pollPayload['is_closed'] ?? false);
                                             $pollCanVote = !$pollIsClosed && !$isClosed && !$isBanned;
+                                            $normalizeStarWarsLabel = static function (string $label): string {
+                                                return (string) \Illuminate\Support\Str::of($label)
+                                                    ->lower()
+                                                    ->replaceMatches('/[^a-z0-9]+/', '');
+                                            };
+                                            $starWarsTriggers = ['starwar', 'starwars'];
                                         @endphp
                                         <div class="message-poll" data-poll-card data-poll-id="{{ $pollPayload['id'] ?? '' }}">
                                             <div class="poll-question">{{ $pollPayload['question'] ?? $message->content }}</div>
@@ -408,8 +414,14 @@
                                                         $optionId = $option['id'] ?? null;
                                                         $isSelected = $pollMyVoteId && $optionId && (int) $pollMyVoteId === (int) $optionId;
                                                         $optionLabel = (string) ($option['label'] ?? '');
-                                                        $normalizedLabel = preg_replace('/\s+/', '', \Illuminate\Support\Str::lower($optionLabel));
-                                                        $isStarWarsOption = in_array($normalizedLabel, ['starwar', 'starwars'], true);
+                                                        $normalizedLabel = $normalizeStarWarsLabel($optionLabel);
+                                                        $isStarWarsOption = false;
+                                                        foreach ($starWarsTriggers as $trigger) {
+                                                            if ($trigger !== '' && str_contains($normalizedLabel, $trigger)) {
+                                                                $isStarWarsOption = true;
+                                                                break;
+                                                            }
+                                                        }
                                                     @endphp
                                                     @if($isStarWarsOption)
                                                         <button
@@ -2166,14 +2178,15 @@
                     if (!total || total <= 0) return 0;
                     return Math.round((votes / total) * 100);
                 };
-                const normalizePollLabel = (label) => String(label || '')
-                    .trim()
-                    .toLowerCase()
-                    .replace(/\s+/g, '');
-                const isStarWarsLabel = (label) => {
-                    const normalized = normalizePollLabel(label);
-                    return normalized === 'starwar' || normalized === 'starwars';
-                };
+                  const STAR_WARS_TRIGGERS = ['starwar', 'starwars'];
+                  const normalizePollLabel = (label) => String(label || '')
+                      .trim()
+                      .toLowerCase()
+                      .replace(/[^a-z0-9]+/g, '');
+                  const isStarWarsLabel = (label) => {
+                      const normalized = normalizePollLabel(label);
+                      return STAR_WARS_TRIGGERS.some((trigger) => trigger && normalized.includes(trigger));
+                  };
                 const buildPollOptionsHtml = (poll, myVoteId, interactive) => {
                     const options = Array.isArray(poll?.options) ? poll.options : [];
                     const totalVotes = Number(poll?.total_votes || 0);

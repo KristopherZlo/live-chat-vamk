@@ -130,4 +130,17 @@ Route::middleware(['auth', 'dev', 'admin.ip'])->group(function () {
 Route::view('/legal/privacy', 'legal.privacy')
     ->name('privacy');
 
+if (app()->environment('local')) {
+    // Local-only routes for testing error pages.
+    Route::prefix('/__test')->group(function () {
+        Route::get('/401', fn () => abort(401));
+        Route::get('/403', fn () => abort(403));
+        Route::get('/404', fn () => abort(404));
+        Route::get('/419', fn () => abort(419));
+        Route::get('/429', fn () => abort(429));
+        Route::get('/500', function () { throw new Exception('Test 500'); });
+        Route::get('/503', fn () => abort(503));
+    });
+}
+
 require __DIR__.'/auth.php';
