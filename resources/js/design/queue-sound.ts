@@ -1,4 +1,5 @@
 const QUEUE_SOUND_KEY = 'lc-queue-sound';
+const QUEUE_SOUND_SOURCE_KEY = 'lc-queue-sound-src';
 const QUEUE_SOUND_DEBUG_KEY = 'lc-queue-sound-debug';
 
 let queueSoundPlayer: HTMLAudioElement | null = null;
@@ -23,6 +24,45 @@ function logQueueSound(...args: unknown[]): void {
   if (!isQueueSoundDebugEnabled()) return;
   // eslint-disable-next-line no-console
   console.debug(...args);
+}
+
+function readQueueSoundSource(): string | null {
+  try {
+    const stored = localStorage.getItem(QUEUE_SOUND_SOURCE_KEY);
+    return stored && stored.trim().length > 0 ? stored : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+export function resolveQueueSoundUrl(defaultUrl?: string): string | null {
+  return readQueueSoundSource() || defaultUrl || null;
+}
+
+export function applyQueueSoundSource(defaultUrl?: string): string | null {
+  const resolved = resolveQueueSoundUrl(defaultUrl);
+  if (resolved && typeof window !== 'undefined') {
+    window.queueSoundUrl = resolved;
+  }
+  return resolved;
+}
+
+export function setQueueSoundSource(url?: string | null): void {
+  const trimmed = typeof url === 'string' ? url.trim() : '';
+  try {
+    if (trimmed) {
+      localStorage.setItem(QUEUE_SOUND_SOURCE_KEY, trimmed);
+    } else {
+      localStorage.removeItem(QUEUE_SOUND_SOURCE_KEY);
+    }
+  } catch (e) {
+    /* ignore */
+  }
+  queueSoundPlayer = null;
+  queueSoundPlayerSrc = null;
+  if (trimmed && typeof window !== 'undefined') {
+    window.queueSoundUrl = trimmed;
+  }
 }
 
 export function loadQueueSoundSetting(): boolean {
@@ -192,4 +232,37 @@ export function initQueueSoundPlayer(url?: string): void {
   // Try to prime immediately (muted play), then also bind user-gesture priming as fallback.
   primeQueueSound(url);
   setupSoundPriming(url);
+}
+
+export function setupQueueSoundSelect(): void {
+  const select = document.querySelector<HTMLSelectElement>('[data-queue-sound-select]');
+  if (!select) return;
+
+  const previewButton = document.querySelector<HTMLElement>('[data-queue-sound-preview]');
+  const noticeMessage = select.dataset.queueSoundNotice || 'Sound selection saved.';
+  const resolved = resolveQueueSoundUrl(window.queueSoundUrl);
+  if (resolved) {
+    const hasOption = Array.from(select.options).some((option) => option.value === resolved);
+    if (hasOption) {
+      select.value = resolved;
+    }
+  }
+
+  select.addEventListener('change', () => {
+    const nextUrl = select.value;
+    setQueueSoundSource(nextUrl);
+    initQueueSoundPlayer(nextUrl);
+    if (typeof window.showFlashNotification === 'function') {
+      window.showFlashNotification(noticeMessage, { type: 'success', source: 'queue-sound-select' });
+    }
+  });
+
+  if (previewButton) {
+    previewButton.addEventListener('click', () => {
+      const previewUrl = select.value || window.queueSoundUrl;
+      if (previewUrl) {
+        playQueueSound(previewUrl);
+      }
+    });
+  }
 }

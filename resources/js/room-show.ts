@@ -1,3 +1,5 @@
+import { resolveQueueSoundUrl } from './design/queue-sound';
+
             const getRoomPageConfig = () => {
                 const configEl = document.getElementById('roomPageConfig');
                 if (!configEl?.textContent) return null;
@@ -19,7 +21,7 @@
                 const currentUserName = roomPageConfig.currentUserName;
                 const currentParticipantName = roomPageConfig.currentParticipantName;
                 const publicLink = roomPageConfig.publicLink;
-                const queueSoundUrl = roomPageConfig.queueSoundUrl;
+                const queueSoundUrl = resolveQueueSoundUrl(roomPageConfig.queueSoundUrl) || roomPageConfig.queueSoundUrl;
                 window.queueSoundUrl = queueSoundUrl;
                 const cacodemonImageUrl = roomPageConfig.cacodemonImageUrl;
                 const messagesHistoryUrl = roomPageConfig.messagesHistoryUrl;

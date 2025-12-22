@@ -4243,7 +4243,7 @@ body.app, .app {
   gap: 1rem;
   max-width: 980px;
   margin: 0 auto;
-  padding: 1.25rem 1.2rem 1.8rem;
+  padding: 1.2rem 1.8rem;
   width: 100%;
 }
 
@@ -4975,6 +4975,32 @@ body.app, .app {
   background: var(--bg-elevated);
   padding: 0.6rem 0.65rem;
   transition: border 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.field-control.field-control-select {
+  appearance: none;
+  padding-right: 2.4rem;
+}
+
+.field-select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 1 1 220px;
+  min-width: 200px;
+}
+
+.field-select::after {
+  content: "";
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-left: 2px solid var(--text-secondary);
+  border-bottom: 2px solid var(--text-secondary);
+  transform: translateY(-50%) rotate(-45deg);
+  pointer-events: none;
 }
 
 [data-theme="dark"] .field-control {

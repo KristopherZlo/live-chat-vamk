@@ -14,6 +14,8 @@ import {
   playQueueSound,
   initQueueSoundPlayer,
   isQueueSoundEnabled,
+  applyQueueSoundSource,
+  setupQueueSoundSelect,
 } from './design/queue-sound';
 import {
   setupFlashMessages,
@@ -50,12 +52,14 @@ if (typeof window !== 'undefined') {
 
 document.addEventListener('DOMContentLoaded', () => {
   loadQueueSoundSetting();
+  applyQueueSoundSource(window.queueSoundUrl);
   initTheme();
   setupThemeToggle();
   setupCopyButtons();
   setupMobileMenu();
   setupUserMenus();
   setupQueueSoundToggle();
+  setupQueueSoundSelect();
   setupSoundPriming(window.queueSoundUrl);
   setupMobileTabs();
   setupChatEnterSubmit();
