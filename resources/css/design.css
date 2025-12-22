@@ -578,13 +578,12 @@ body.is-resizing {
 
 .panel-header,.panel-title {
   display: flex;
-  align-items: center;
+  align-items: start;
 }
 
 .panel-title {
   font-weight: 500;
   gap: 0.4rem;
-  margin-bottom: 10px;
 }
 
 .panel-title svg {
@@ -595,7 +594,6 @@ body.is-resizing {
 .panel-subtitle {
   color: var(--text-secondary);
   font-size: 0.75rem;
-  margin-bottom: 5px;
 }
 
 .text-ok {

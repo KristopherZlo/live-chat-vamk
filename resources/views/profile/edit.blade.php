@@ -1,6 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
-        {{ __('Profile settings') }}
+        <i data-lucide="user-cog"></i>
+        <span>{{ __('Profile settings') }}</span>
     </x-slot>
 
     <div class="profile-page">
