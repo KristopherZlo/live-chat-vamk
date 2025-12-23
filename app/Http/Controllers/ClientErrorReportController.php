@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ClientErrorReport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class ClientErrorReportController extends Controller
@@ -23,7 +24,7 @@ class ClientErrorReportController extends Controller
         ]);
 
         $metadata = $data['metadata'] ?? [];
-        if (!empty($data['source'])) {
+        if (! empty($data['source'])) {
             $metadata['source'] = $data['source'];
         }
         if (empty($metadata)) {
@@ -35,7 +36,7 @@ class ClientErrorReportController extends Controller
         $userAgent = $request->userAgent();
         $userAgent = $userAgent ? Str::limit($userAgent, 512, '') : null;
 
-        ClientErrorReport::create([
+        $report = ClientErrorReport::create([
             'severity' => $data['severity'] ?? 'error',
             'message' => $data['message'],
             'stack' => $data['stack'] ?? null,
@@ -49,6 +50,75 @@ class ClientErrorReportController extends Controller
             'metadata' => $metadata,
         ]);
 
+        Log::channel('client_errors')->warning('client.error.reported', [
+            'id' => $report->id,
+            'severity' => $report->severity,
+            'message' => Str::limit($report->message, 500, '...'),
+            'url' => $this->sanitizeUrl($report->url),
+            'line' => $report->line,
+            'column' => $report->column,
+            'user_id' => $report->user_id,
+            'request_id' => $report->request_id,
+            'ip_address' => $report->ip_address,
+            'user_agent' => $report->user_agent,
+            'metadata' => $this->sanitizeMetadata($metadata),
+        ]);
+
         return response()->json(['status' => 'ok'], 201);
+    }
+
+    private function sanitizeUrl(string $url): string
+    {
+        $parts = parse_url($url);
+        if ($parts === false) {
+            return Str::limit($url, 512, '');
+        }
+
+        $sanitized = '';
+        if (! empty($parts['scheme'])) {
+            $sanitized .= $parts['scheme'].'://';
+        }
+        if (! empty($parts['host'])) {
+            $sanitized .= $parts['host'];
+        }
+        if (! empty($parts['port'])) {
+            $sanitized .= ':'.$parts['port'];
+        }
+        if (! empty($parts['path'])) {
+            $sanitized .= $parts['path'];
+        }
+
+        return Str::limit($sanitized, 512, '');
+    }
+
+    private function sanitizeMetadata(?array $metadata): array
+    {
+        if ($metadata === null) {
+            return [];
+        }
+
+        $sanitized = [];
+
+        foreach ($metadata as $key => $value) {
+            if (count($sanitized) >= 25) {
+                break;
+            }
+
+            $stringValue = $this->stringifyMetadataValue($value);
+            $sanitized[(string) $key] = Str::limit($stringValue, 500, '...');
+        }
+
+        return $sanitized;
+    }
+
+    private function stringifyMetadataValue(mixed $value): string
+    {
+        if (is_scalar($value) || $value === null) {
+            return (string) $value;
+        }
+
+        $encoded = json_encode($value);
+
+        return $encoded !== false ? $encoded : '[unserializable]';
     }
 }

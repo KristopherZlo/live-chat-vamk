@@ -50,12 +50,25 @@ class AuditLog extends Model
         $requestId = is_string($requestId) && $requestId !== '' ? $requestId : null;
 
         $metadata = $context['metadata'] ?? [];
-        if (!is_array($metadata)) {
+        if (! is_array($metadata)) {
             $metadata = ['value' => $metadata];
         }
 
         $userAgent = $request->userAgent();
         $userAgent = $userAgent ? Str::limit($userAgent, 512, '') : null;
+
+        $auditContext = [
+            'action' => $action,
+            'actor_user_id' => $context['actor_user_id'] ?? $request->user()?->id,
+            'actor_participant_id' => $context['actor_participant_id'] ?? null,
+            'room_id' => $context['room_id'] ?? null,
+            'target_type' => $context['target_type'] ?? null,
+            'target_id' => $context['target_id'] ?? null,
+            'ip_address' => $request->ip(),
+            'request_id' => $requestId,
+            'user_agent' => $userAgent,
+            'metadata' => self::sanitizeMetadata($metadata),
+        ];
 
         try {
             self::create([
@@ -70,11 +83,40 @@ class AuditLog extends Model
                 'user_agent' => $userAgent,
                 'metadata' => $metadata,
             ]);
+
+            Log::channel('audit')->info('audit.recorded', $auditContext);
         } catch (\Throwable $e) {
             Log::warning('Audit log write failed', [
                 'action' => $action,
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    private static function sanitizeMetadata(array $metadata): array
+    {
+        $sanitized = [];
+
+        foreach ($metadata as $key => $value) {
+            if (count($sanitized) >= 25) {
+                break;
+            }
+
+            $stringValue = self::stringifyMetadataValue($value);
+            $sanitized[(string) $key] = Str::limit($stringValue, 500, '...');
+        }
+
+        return $sanitized;
+    }
+
+    private static function stringifyMetadataValue(mixed $value): string
+    {
+        if (is_scalar($value) || $value === null) {
+            return (string) $value;
+        }
+
+        $encoded = json_encode($value);
+
+        return $encoded !== false ? $encoded : '[unserializable]';
     }
 }
