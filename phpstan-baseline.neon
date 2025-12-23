@@ -1,0 +1,301 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Access to an undefined property App\\Models\\Room\:\:\$owner\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Console/Commands/SeedDemoChat.php
+
+		-
+			message: '#^Relation ''owner'' is not found in App\\Models\\Room model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Console/Commands/SeedDemoChat.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Message\:\:\$poll\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Console/Commands/SeedPoll.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\MessagePoll\:\:\$options\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Console/Commands/SeedPoll.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Room\:\:\$owner\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Console/Commands/SeedPoll.php
+
+		-
+			message: '#^Parameter \#1 \.\.\.\$values of method Illuminate\\Support\\Collection\<int,array\<string, mixed\>\>\:\:push\(\) expects array\{user_id\: null, participant_id\: mixed\}, array\{user_id\: int, participant_id\: null\} given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Console/Commands/SeedPoll.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Message\:\:\$poll\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Events/MessageSent.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Message\:\:\$question\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Events/MessageSent.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Message\:\:\$reactions\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Events/MessageSent.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Message\:\:\$replyTo\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Events/MessageSent.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Message\:\:\$room\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Events/MessageSent.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Message\:\:\$user\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Events/MessageSent.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>display_name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Events/MessageSent.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Question\:\:\$participant\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Events/QuestionCreated.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Question\:\:\$room\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Events/QuestionCreated.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Question\:\:\$ratings\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Events/QuestionUpdated.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Question\:\:\$room\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Events/QuestionUpdated.php
+
+		-
+			message: '#^Expression on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.expr
+			count: 1
+			path: app/Http/Controllers/AdminController.php
+
+		-
+			message: '#^Relation ''actorParticipant'' is not found in App\\Models\\AuditLog model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/AdminController.php
+
+		-
+			message: '#^Relation ''actorUser'' is not found in App\\Models\\AuditLog model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/AdminController.php
+
+		-
+			message: '#^Relation ''owner'' is not found in App\\Models\\Room model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/AdminController.php
+
+		-
+			message: '#^Relation ''participant'' is not found in App\\Models\\RoomBan model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/AdminController.php
+
+		-
+			message: '#^Relation ''room'' is not found in App\\Models\\AuditLog model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/AdminController.php
+
+		-
+			message: '#^Relation ''room'' is not found in App\\Models\\Participant model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/AdminController.php
+
+		-
+			message: '#^Relation ''room'' is not found in App\\Models\\RoomBan model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/AdminController.php
+
+		-
+			message: '#^Relation ''usedBy'' is not found in App\\Models\\InviteCode model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/AdminController.php
+
+		-
+			message: '#^Parameter \#1 \$user of class Illuminate\\Auth\\Events\\Verified constructor expects Illuminate\\Contracts\\Auth\\MustVerifyEmail, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Auth/VerifyEmailController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Message\:\:\$question\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/MessageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\MessagePoll\:\:\$options\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/MessageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\MessagePoll\:\:\$message\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/MessagePollController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\MessagePoll\:\:\$options\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/MessagePollController.php
+
+		-
+			message: '#^Anonymous function has an unused use \$selectedOptionId\.$#'
+			identifier: closure.unusedUse
+			count: 1
+			path: app/Http/Controllers/MessagePollController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Question\:\:\$room\.$#'
+			identifier: property.notFound
+			count: 5
+			path: app/Http/Controllers/QuestionController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Message\:\:\$question\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/RoomController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Message\:\:\$reactions\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/RoomController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Message\:\:\$replyTo\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/RoomController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Message\:\:\$room\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/RoomController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Message\:\:\$user\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/RoomController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\MessagePoll\:\:\$options\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/RoomController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/RoomController.php
+
+		-
+			message: '#^Negated boolean expression is always false\.$#'
+			identifier: booleanNot.alwaysFalse
+			count: 1
+			path: app/Http/Controllers/RoomController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array, Closure\(App\\Models\\Message\)\: array given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/RoomController.php
+
+		-
+			message: '#^Relation ''options'' is not found in App\\Models\\MessagePoll model\.$#'
+			identifier: larastan.relationExistence
+			count: 1
+			path: app/Http/Controllers/RoomController.php
+
+		-
+			message: '#^Right side of && is always true\.$#'
+			identifier: booleanAnd.rightAlwaysTrue
+			count: 1
+			path: app/Http/Controllers/RoomController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>display_name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Http/Controllers/RoomController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Http/Controllers/RoomController.php
+
+		-
+			message: '#^Called ''env'' outside of the config directory which returns null when the config is cached, use ''config''\.$#'
+			identifier: larastan.noEnvCallsOutsideOfConfig
+			count: 11
+			path: app/Http/Middleware/SecurityHeaders.php
+
+		-
+			message: '#^If condition is always true\.$#'
+			identifier: if.alwaysTrue
+			count: 1
+			path: app/Models/UpdatePost.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Models/UpdatePost.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type Illuminate\\Contracts\\Session\\Session\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Providers/AppServiceProvider.php
