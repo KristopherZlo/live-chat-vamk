@@ -9,6 +9,7 @@ use App\Http\Controllers\MessageReactionController;
 use App\Http\Controllers\MessagePollController;
 use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\RoomBanController;
+use App\Http\Controllers\ClientErrorReportController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AdminUpdatePostController;
 use App\Http\Controllers\UpdatePostController;
@@ -25,7 +26,13 @@ Route::get('/updates', [UpdatePostController::class, 'index'])->name('updates.in
 Route::get('/updates/{post:slug}', [UpdatePostController::class, 'show'])->name('updates.show');
 
 Route::get('/join', [RoomController::class, 'joinForm'])->name('rooms.join');
-Route::post('/join', [RoomController::class, 'joinSubmit'])->name('rooms.join.submit');
+Route::post('/join', [RoomController::class, 'joinSubmit'])
+    ->middleware('throttle:room-joins')
+    ->name('rooms.join.submit');
+
+Route::post('/client-errors', [ClientErrorReportController::class, 'store'])
+    ->middleware('throttle:client-errors')
+    ->name('client-errors.store');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -58,6 +65,7 @@ Route::get('/r/{slug}', [RoomController::class, 'showPublic'])
     ->name('rooms.public');
 
 Route::get('/rooms/{slug}/exists', [RoomController::class, 'checkExists'])
+    ->middleware('throttle:room-exists')
     ->name('rooms.exists');
 
 // Отправка сообщения (общий чат + опциональный вопрос)
