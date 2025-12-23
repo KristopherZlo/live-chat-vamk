@@ -28,7 +28,7 @@ class SecurityHeaders
         $headers['Content-Security-Policy'] = $this->buildContentSecurityPolicy($request);
 
         // HSTS only for HTTPS requests; browsers will cache this for 180 days.
-        if ($request->isSecure()) {
+        if ($this->isSecureRequest($request)) {
             $headers['Strict-Transport-Security'] = 'max-age=15552000; includeSubDomains; preload';
         }
 
@@ -39,6 +39,25 @@ class SecurityHeaders
         }
 
         return $response;
+    }
+
+    /**
+     * Determine if the request is HTTPS, including proxied HTTPS signals.
+     */
+    protected function isSecureRequest(Request $request): bool
+    {
+        if ($request->isSecure()) {
+            return true;
+        }
+
+        $forwardedProto = (string) $request->headers->get('X-Forwarded-Proto', '');
+        if ($forwardedProto === '') {
+            return false;
+        }
+
+        $parts = array_map('trim', explode(',', strtolower($forwardedProto)));
+
+        return in_array('https', $parts, true);
     }
 
     /**
@@ -90,7 +109,10 @@ class SecurityHeaders
             'script-src' => $scriptSrc,
             'font-src' => $fontSrc,
             'connect-src' => $connectSrc,
+            'object-src' => ["'none'"],
+            'base-uri' => ["'self'"],
             'frame-ancestors' => ["'self'"],
+            'frame-src' => ["'none'"],
             'form-action' => ["'self'"],
         ];
 
