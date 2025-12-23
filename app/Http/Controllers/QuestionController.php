@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Question;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -24,6 +25,7 @@ class QuestionController extends Controller
         ]);
 
         $status = $data['status'];
+        $previousStatus = $question->status;
         $question->status = $status;
 
         // отметки времени под статус
@@ -49,6 +51,16 @@ class QuestionController extends Controller
 
         event(new QuestionUpdated($question));
 
+        AuditLog::record($request, 'question.status.update', [
+            'room_id' => $room->id,
+            'target_type' => 'question',
+            'target_id' => $question->id,
+            'metadata' => [
+                'from' => $previousStatus,
+                'to' => $status,
+            ],
+        ]);
+
         return back();
     }
 
@@ -65,6 +77,15 @@ class QuestionController extends Controller
         $question->save();
 
         event(new QuestionUpdated($question));
+
+        AuditLog::record($request, 'question.owner_delete', [
+            'room_id' => $room->id,
+            'target_type' => 'question',
+            'target_id' => $question->id,
+            'metadata' => [
+                'status' => $question->status,
+            ],
+        ]);
 
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json(['deleted' => true]);
@@ -89,6 +110,16 @@ class QuestionController extends Controller
         $question->save();
 
         event(new QuestionUpdated($question));
+
+        AuditLog::record($request, 'question.participant_delete', [
+            'actor_participant_id' => $participantId,
+            'room_id' => $room->id,
+            'target_type' => 'question',
+            'target_id' => $question->id,
+            'metadata' => [
+                'status' => $question->status,
+            ],
+        ]);
 
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json(['deleted' => true]);
@@ -146,6 +177,15 @@ class QuestionController extends Controller
         $question->delete();
 
         event(new QuestionUpdated($question));
+
+        AuditLog::record($request, 'question.delete', [
+            'room_id' => $room->id,
+            'target_type' => 'question',
+            'target_id' => $question->id,
+            'metadata' => [
+                'status' => $question->status,
+            ],
+        ]);
 
         return back();
     }

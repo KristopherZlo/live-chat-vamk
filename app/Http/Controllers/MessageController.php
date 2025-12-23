@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Message;
 use App\Models\MessagePoll;
 use App\Models\Participant;
@@ -319,6 +320,18 @@ class MessageController extends Controller
             $deletedByUserId,
             $deletedByParticipantId
         ));
+
+        AuditLog::record($request, 'message.delete', [
+            'actor_user_id' => $deletedByUserId,
+            'actor_participant_id' => $deletedByParticipantId,
+            'room_id' => $room->id,
+            'target_type' => 'message',
+            'target_id' => $message->id,
+            'metadata' => [
+                'deleted_by_user_id' => $deletedByUserId,
+                'deleted_by_participant_id' => $deletedByParticipantId,
+            ],
+        ]);
 
         if ($request->expectsJson()) {
             return response()->json(['status' => 'deleted']);

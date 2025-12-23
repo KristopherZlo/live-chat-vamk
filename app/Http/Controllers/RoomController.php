@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Room;
 use App\Models\Message;
 use App\Models\MessageReaction;
@@ -113,6 +114,16 @@ class RoomController extends Controller
             'is_public_read' => $data['is_public_read'] ?? true,
         ]);
 
+        AuditLog::record($request, 'room.create', [
+            'room_id' => $room->id,
+            'target_type' => 'room',
+            'target_id' => $room->id,
+            'metadata' => [
+                'title' => $room->title,
+                'is_public_read' => $room->is_public_read,
+            ],
+        ]);
+
         return redirect()
             ->route('rooms.public', $room->slug)
             ->with('status', 'Room created.');
@@ -122,6 +133,7 @@ class RoomController extends Controller
     {
         $this->ensureOwner($room);
 
+        $previousStatus = $room->status;
         $data = $request->validate([
             'title' => ['sometimes', 'required', 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string'],
@@ -149,6 +161,23 @@ class RoomController extends Controller
 
         $room->update($changes);
 
+        $metadata = [
+            'changes' => array_keys($changes),
+        ];
+        if (array_key_exists('status', $changes)) {
+            $metadata['status'] = [
+                'from' => $previousStatus,
+                'to' => $changes['status'],
+            ];
+        }
+
+        AuditLog::record($request, 'room.update', [
+            'room_id' => $room->id,
+            'target_type' => 'room',
+            'target_id' => $room->id,
+            'metadata' => $metadata,
+        ]);
+
         $statusMessage = 'Room updated.';
 
         if (array_key_exists('status', $changes)) {
@@ -168,6 +197,15 @@ class RoomController extends Controller
             'confirm_title' => ['required', 'string', Rule::in([$room->title])],
         ], [
             'confirm_title.in' => 'The room name does not match. Type it exactly to delete.',
+        ]);
+
+        AuditLog::record($request, 'room.delete', [
+            'room_id' => $room->id,
+            'target_type' => 'room',
+            'target_id' => $room->id,
+            'metadata' => [
+                'title' => $room->title,
+            ],
         ]);
 
         $room->delete();

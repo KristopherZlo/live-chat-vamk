@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Events\ParticipantBanned;
 use App\Events\ParticipantUnbanned;
+use App\Models\AuditLog;
 use App\Models\Participant;
 use App\Models\Room;
 use Illuminate\Http\Request;
@@ -67,6 +68,16 @@ class RoomBanController extends Controller
             // Broadcast failures should not block the ban action.
         }
 
+        AuditLog::record($request, 'room.ban.create', [
+            'room_id' => $room->id,
+            'target_type' => 'room_ban',
+            'target_id' => $ban->id,
+            'metadata' => [
+                'participant_id' => $participant->id,
+                'display_name' => $ban->display_name ?? $participant->display_name ?? 'Guest',
+            ],
+        ]);
+
         if ($request->expectsJson()) {
             return response()->json([
                 'status' => 'banned',
@@ -84,7 +95,7 @@ class RoomBanController extends Controller
         return back()->with('status', 'Participant banned from this room.');
     }
 
-    public function destroy(Room $room, int $banId)
+    public function destroy(Request $request, Room $room, int $banId)
     {
         $this->ensureOwner($room);
 
@@ -107,6 +118,15 @@ class RoomBanController extends Controller
         } catch (\Throwable $e) {
             // Broadcast failures should not block the unban action.
         }
+
+        AuditLog::record($request, 'room.ban.delete', [
+            'room_id' => $room->id,
+            'target_type' => 'room_ban',
+            'target_id' => $banId,
+            'metadata' => [
+                'participant_id' => $participantId,
+            ],
+        ]);
 
         if (request()->expectsJson()) {
             return response()->json([
