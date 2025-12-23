@@ -1083,6 +1083,56 @@
                         </div>
                         <div class="admin-card__body">
                             <p class="admin-muted">Server logs live in <span class="admin-mono">storage/logs/laravel.log</span>. For production, forward logs to your platform or tail locally (e.g. <span class="admin-mono">php artisan tail</span>).</p>
+                            @if($auditLogs->isEmpty())
+                                <p class="admin-muted">No audit events yet.</p>
+                            @else
+                                <div class="admin-table-wrapper">
+                                    <table class="admin-table">
+                                        <thead>
+                                            <tr>
+                                                <th>When</th>
+                                                <th>Action</th>
+                                                <th>Actor</th>
+                                                <th>Room</th>
+                                                <th>Target</th>
+                                                <th>IP</th>
+                                                <th>Request</th>
+                                                <th>Meta</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($auditLogs as $log)
+                                                @php
+                                                    $actor = $log->actorUser?->name
+                                                        ?? $log->actorParticipant?->display_name
+                                                        ?? 'system';
+                                                    $roomLabel = $log->room?->title ?? '-';
+                                                    $target = $log->target_type
+                                                        ? ($log->target_type.($log->target_id ? '#'.$log->target_id : ''))
+                                                        : '-';
+                                                    $metadataJson = $log->metadata
+                                                        ? json_encode($log->metadata, JSON_UNESCAPED_SLASHES)
+                                                        : '';
+                                                @endphp
+                                                <tr>
+                                                    <td class="admin-muted">{{ $log->created_at?->format('Y-m-d H:i') }}</td>
+                                                    <td class="admin-mono">{{ $log->action }}</td>
+                                                    <td>{{ $actor }}</td>
+                                                    <td>{{ $roomLabel }}</td>
+                                                    <td class="admin-mono">{{ $target }}</td>
+                                                    <td class="admin-mono">{{ $log->ip_address ?? '-' }}</td>
+                                                    <td class="admin-mono">
+                                                        {{ $log->request_id ? \Illuminate\Support\Str::limit($log->request_id, 18) : '-' }}
+                                                    </td>
+                                                    <td class="admin-muted">
+                                                        {{ $metadataJson ? \Illuminate\Support\Str::limit($metadataJson, 80) : '-' }}
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            @endif
                         </div>
                     </div>
                 </section>

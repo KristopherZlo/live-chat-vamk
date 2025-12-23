@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Setting;
 use App\Models\UpdatePost;
 use Carbon\Carbon;
@@ -18,6 +19,16 @@ class AdminUpdatePostController extends Controller
         $post = new UpdatePost();
         $this->persist($post, $request, UpdatePost::TYPE_BLOG);
 
+        AuditLog::record($request, 'admin.blog.create', [
+            'target_type' => 'update_post',
+            'target_id' => $post->id,
+            'metadata' => [
+                'title' => $post->title,
+                'slug' => $post->slug,
+                'is_published' => (bool) $post->is_published,
+            ],
+        ]);
+
         return $this->redirectToAdmin('Update post saved.');
     }
 
@@ -29,10 +40,20 @@ class AdminUpdatePostController extends Controller
 
         $this->persist($post, $request, UpdatePost::TYPE_BLOG);
 
+        AuditLog::record($request, 'admin.blog.update', [
+            'target_type' => 'update_post',
+            'target_id' => $post->id,
+            'metadata' => [
+                'title' => $post->title,
+                'slug' => $post->slug,
+                'is_published' => (bool) $post->is_published,
+            ],
+        ]);
+
         return $this->redirectToAdmin('Update post updated.');
     }
 
-    public function destroyBlog(UpdatePost $post): RedirectResponse
+    public function destroyBlog(Request $request, UpdatePost $post): RedirectResponse
     {
         if ($post->type !== UpdatePost::TYPE_BLOG) {
             abort(404);
@@ -40,7 +61,19 @@ class AdminUpdatePostController extends Controller
 
         $this->deleteImage($post);
 
+        $postId = $post->id;
+        $title = $post->title;
+        $slug = $post->slug;
         $post->delete();
+
+        AuditLog::record($request, 'admin.blog.delete', [
+            'target_type' => 'update_post',
+            'target_id' => $postId,
+            'metadata' => [
+                'title' => $title,
+                'slug' => $slug,
+            ],
+        ]);
 
         return $this->redirectToAdmin('Update post removed.');
     }
@@ -53,6 +86,16 @@ class AdminUpdatePostController extends Controller
         if ($request->boolean('set_as_version')) {
             Setting::setValue('app_version', $post->version);
         }
+
+        AuditLog::record($request, 'admin.release.create', [
+            'target_type' => 'update_post',
+            'target_id' => $post->id,
+            'metadata' => [
+                'title' => $post->title,
+                'version' => $post->version,
+                'is_published' => (bool) $post->is_published,
+            ],
+        ]);
 
         return $this->redirectToAdmin('Release saved.');
     }
@@ -69,10 +112,20 @@ class AdminUpdatePostController extends Controller
             Setting::setValue('app_version', $post->version);
         }
 
+        AuditLog::record($request, 'admin.release.update', [
+            'target_type' => 'update_post',
+            'target_id' => $post->id,
+            'metadata' => [
+                'title' => $post->title,
+                'version' => $post->version,
+                'is_published' => (bool) $post->is_published,
+            ],
+        ]);
+
         return $this->redirectToAdmin('Release updated.');
     }
 
-    public function destroyRelease(UpdatePost $post): RedirectResponse
+    public function destroyRelease(Request $request, UpdatePost $post): RedirectResponse
     {
         if ($post->type !== UpdatePost::TYPE_WHATS_NEW) {
             abort(404);
@@ -80,7 +133,19 @@ class AdminUpdatePostController extends Controller
 
         $this->deleteImage($post);
 
+        $postId = $post->id;
+        $title = $post->title;
+        $version = $post->version;
         $post->delete();
+
+        AuditLog::record($request, 'admin.release.delete', [
+            'target_type' => 'update_post',
+            'target_id' => $postId,
+            'metadata' => [
+                'title' => $title,
+                'version' => $version,
+            ],
+        ]);
 
         return $this->redirectToAdmin('Release removed.');
     }
@@ -91,7 +156,17 @@ class AdminUpdatePostController extends Controller
             'version' => ['required', 'string', 'max:50'],
         ]);
 
-        Setting::setValue('app_version', $data['version']);
+        $previous = Setting::getValue('app_version', config('app.version', '1.0.0'));
+        $setting = Setting::setValue('app_version', $data['version']);
+
+        AuditLog::record($request, 'admin.version.update', [
+            'target_type' => 'setting',
+            'target_id' => $setting->id,
+            'metadata' => [
+                'from' => $previous,
+                'to' => $data['version'],
+            ],
+        ]);
 
         return $this->redirectToAdmin('Project version updated to '.$data['version'].'.');
     }
@@ -122,7 +197,8 @@ class AdminUpdatePostController extends Controller
         }
 
         $data = $request->validate($rules);
-        $slug = $data['slug'] ?: $post->slug ?: Str::slug($data['title']);
+        $slugInput = $data['slug'] ?? null;
+        $slug = $slugInput ?: $post->slug ?: Str::slug($data['title']);
 
         $post->fill([
             'type' => $type,

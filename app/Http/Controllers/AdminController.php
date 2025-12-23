@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\InviteCode;
 use App\Models\Message;
 use App\Models\Participant;
@@ -87,6 +88,16 @@ class AdminController extends Controller
             ->orderByDesc('created_at')
             ->paginate(8, ['*'], 'whatsnew_page');
 
+        $auditLogs = AuditLog::query()
+            ->with([
+                'actorUser:id,name',
+                'actorParticipant:id,display_name',
+                'room:id,title,slug',
+            ])
+            ->latest()
+            ->limit(50)
+            ->get();
+
         $editingBlog = null;
         $editingRelease = null;
 
@@ -121,7 +132,8 @@ class AdminController extends Controller
             'whatsNewEntries',
             'editingBlog',
             'editingRelease',
-            'appVersion'
+            'appVersion',
+            'auditLogs'
         ));
     }
 
@@ -133,16 +145,34 @@ class AdminController extends Controller
 
         $code = $request->input('code') ?: Str::upper(Str::random(12));
 
-        InviteCode::create([
+        $invite = InviteCode::create([
             'code' => $code,
+        ]);
+
+        AuditLog::record($request, 'admin.invite.create', [
+            'target_type' => 'invite_code',
+            'target_id' => $invite->id,
+            'metadata' => [
+                'code' => $invite->code,
+            ],
         ]);
 
         return redirect()->route('admin.index')->with('status', 'Invite code created: '.$code);
     }
 
-    public function destroyInvite(InviteCode $invite)
+    public function destroyInvite(Request $request, InviteCode $invite)
     {
+        $inviteId = $invite->id;
+        $code = $invite->code;
         $invite->delete();
+
+        AuditLog::record($request, 'admin.invite.delete', [
+            'target_type' => 'invite_code',
+            'target_id' => $inviteId,
+            'metadata' => [
+                'code' => $code,
+            ],
+        ]);
 
         return redirect()->route('admin.index')->with('status', 'Invite code removed.');
     }
@@ -158,14 +188,55 @@ class AdminController extends Controller
             'fingerprint' => ['nullable', 'string', 'max:255'],
         ]);
 
-        RoomBan::create($data);
+        $participant = null;
+        if (!empty($data['participant_id'])) {
+            $participant = Participant::find($data['participant_id']);
+        }
+
+        if (empty($data['session_token']) && $participant) {
+            $data['session_token'] = $participant->session_token;
+        }
+
+        if (empty($data['display_name']) && $participant) {
+            $data['display_name'] = $participant->display_name;
+        }
+
+        if (empty($data['session_token'])) {
+            return back()->withErrors(['session_token' => 'Session token is required.']);
+        }
+
+        $ban = RoomBan::create($data);
+
+        AuditLog::record($request, 'admin.ban.create', [
+            'room_id' => $ban->room_id,
+            'target_type' => 'room_ban',
+            'target_id' => $ban->id,
+            'metadata' => [
+                'participant_id' => $ban->participant_id,
+                'session_token' => $ban->session_token,
+                'display_name' => $ban->display_name,
+                'ip_address' => $ban->ip_address,
+            ],
+        ]);
 
         return redirect()->route('admin.index')->with('status', 'Ban added.');
     }
 
-    public function destroyBan(RoomBan $ban)
+    public function destroyBan(Request $request, RoomBan $ban)
     {
+        $banId = $ban->id;
+        $roomId = $ban->room_id;
+        $participantId = $ban->participant_id;
         $ban->delete();
+
+        AuditLog::record($request, 'admin.ban.delete', [
+            'room_id' => $roomId,
+            'target_type' => 'room_ban',
+            'target_id' => $banId,
+            'metadata' => [
+                'participant_id' => $participantId,
+            ],
+        ]);
 
         return redirect()->route('admin.index')->with('status', 'Ban removed.');
     }
