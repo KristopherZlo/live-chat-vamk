@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: live_chat_test
+          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: live_chat_test
+      DB_USERNAME: root
+      DB_PASSWORD: ""
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Prepare app key
+        run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+      - name: Generate app key
+        run: php artisan key:generate --ansi
+      - name: Install Node dependencies
+        run: npm ci
+      - name: Build frontend assets
+        run: npm run build
+      - name: Lint PHP
+        run: ./vendor/bin/pint --test --diff=origin/main
+      - name: Static analysis
+        run: ./vendor/bin/phpstan analyse --no-progress --memory-limit=512M
+      - name: Run tests
+        run: php artisan test --ansi
