@@ -58,6 +58,18 @@ return [
             'ignore_exceptions' => false,
         ],
 
+        'audit' => [
+            'driver' => 'stack',
+            'channels' => explode(',', (string) env('AUDIT_LOG_CHANNELS', env('LOG_STACK', 'single'))),
+            'ignore_exceptions' => false,
+        ],
+
+        'client_errors' => [
+            'driver' => 'stack',
+            'channels' => explode(',', (string) env('CLIENT_ERROR_LOG_CHANNELS', env('LOG_STACK', 'single'))),
+            'ignore_exceptions' => false,
+        ],
+
         'single' => [
             'driver' => 'single',
             'path' => storage_path('logs/laravel.log'),
