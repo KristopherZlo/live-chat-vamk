@@ -56,11 +56,15 @@
             "@php artisan config:clear --ansi",
             "@php artisan test"
         ],
+        "post-install-cmd": [
+            "@php scripts/patch-framework-config.php"
+        ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi"
         ],
         "post-update-cmd": [
+            "@php scripts/patch-framework-config.php",
             "@php artisan vendor:publish --tag=laravel-assets --ansi --force",
             "@php artisan boost:update --ansi"
         ],
