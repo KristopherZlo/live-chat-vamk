@@ -21,10 +21,12 @@ return Application::configure(basePath: dirname(__DIR__))
             'dev' => \App\Http\Middleware\EnsureDev::class,
             'admin.ip' => \App\Http\Middleware\AdminIpGuard::class,
             'security.headers' => \App\Http\Middleware\SecurityHeaders::class,
+            'request.id' => \App\Http\Middleware\RequestId::class,
         ]);
 
         // Throttle all web routes: 20 req/sec (~1200 per minute) per IP
         $middleware->appendToGroup('web', 'throttle:web');
+        $middleware->appendToGroup('web', 'request.id');
         $middleware->appendToGroup('web', 'security.headers');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
