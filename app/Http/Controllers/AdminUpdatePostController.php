@@ -153,7 +153,11 @@ class AdminUpdatePostController extends Controller
     public function updateVersion(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'version' => ['required', 'string', 'max:50'],
+            'version' => [
+                'required',
+                'string',
+                'max:' . config('ghostroom.limits.update_post.version_max', 50),
+            ],
         ]);
 
         $previous = Setting::getValue('app_version', config('app.version', '1.0.0'));
@@ -174,26 +178,46 @@ class AdminUpdatePostController extends Controller
     protected function persist(UpdatePost $post, Request $request, string $type): UpdatePost
     {
         $rules = [
-            'title' => ['required', 'string', 'max:255'],
+            'title' => [
+                'required',
+                'string',
+                'max:' . config('ghostroom.limits.update_post.title_max', 255),
+            ],
             'slug' => [
                 'nullable',
                 'string',
-                'max:255',
+                'max:' . config('ghostroom.limits.update_post.slug_max', 255),
                 Rule::unique('update_posts', 'slug')->ignore($post->id),
             ],
-            'excerpt' => ['nullable', 'string', 'max:500'],
+            'excerpt' => [
+                'nullable',
+                'string',
+                'max:' . config('ghostroom.limits.update_post.excerpt_max', 500),
+            ],
             'body' => ['required', 'string'],
-            'image' => ['nullable', 'image', 'max:4096'],
+            'image' => [
+                'nullable',
+                'image',
+                'max:' . config('ghostroom.limits.update_post.image_max_kb', 4096),
+            ],
             'is_published' => ['nullable', 'boolean'],
             'published_at' => ['nullable', 'date'],
             'remove_image' => ['nullable', 'boolean'],
         ];
 
         if ($type === UpdatePost::TYPE_WHATS_NEW) {
-            $rules['version'] = ['required', 'string', 'max:50'];
+            $rules['version'] = [
+                'required',
+                'string',
+                'max:' . config('ghostroom.limits.update_post.version_max', 50),
+            ];
             $rules['set_as_version'] = ['nullable', 'boolean'];
         } else {
-            $rules['version'] = ['nullable', 'string', 'max:50'];
+            $rules['version'] = [
+                'nullable',
+                'string',
+                'max:' . config('ghostroom.limits.update_post.version_max', 50),
+            ];
         }
 
         $data = $request->validate($rules);

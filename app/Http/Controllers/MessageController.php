@@ -41,12 +41,20 @@ class MessageController extends Controller
 
         // Basic validation
         $data = $request->validate([
-            'content' => ['required', 'string', 'max:2048'],
+            'content' => [
+                'required',
+                'string',
+                'max:' . config('ghostroom.limits.message.content_max', 2048),
+            ],
             'as_question' => ['nullable', 'boolean'],
             'reply_to_id' => ['nullable', 'integer', 'exists:messages,id'],
             'poll_mode' => ['nullable', 'boolean'],
             'poll_options' => ['nullable', 'array'],
-            'poll_options.*' => ['nullable', 'string', 'max:480'],
+            'poll_options.*' => [
+                'nullable',
+                'string',
+                'max:' . config('ghostroom.limits.message.poll_option_max', 480),
+            ],
         ]);
 
         // Identify participant (if not the owner)

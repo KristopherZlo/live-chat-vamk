@@ -46,7 +46,11 @@ class RoomController extends Controller
     public function joinSubmit(Request $request)
     {
         $data = $request->validate([
-            'code' => ['required', 'string', 'max:255'],
+            'code' => [
+                'required',
+                'string',
+                'max:' . config('ghostroom.limits.room.code_max', 255),
+            ],
         ]);
 
         $input = trim($data['code']);
@@ -101,7 +105,11 @@ class RoomController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
+            'title' => [
+                'required',
+                'string',
+                'max:' . config('ghostroom.limits.room.title_max', 255),
+            ],
             'description' => ['nullable', 'string'],
             'is_public_read' => ['nullable', 'boolean'],
         ]);
@@ -135,7 +143,12 @@ class RoomController extends Controller
 
         $previousStatus = $room->status;
         $data = $request->validate([
-            'title' => ['sometimes', 'required', 'string', 'max:255'],
+            'title' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:' . config('ghostroom.limits.room.title_max', 255),
+            ],
             'description' => ['sometimes', 'nullable', 'string'],
             'status' => ['sometimes', 'in:active,finished'],
         ]);

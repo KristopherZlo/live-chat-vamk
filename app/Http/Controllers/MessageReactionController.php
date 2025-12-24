@@ -25,7 +25,11 @@ class MessageReactionController extends Controller
         }
 
         $data = $request->validate([
-            'emoji' => ['required', 'string', 'max:32'],
+            'emoji' => [
+                'required',
+                'string',
+                'max:' . config('ghostroom.limits.message.emoji_max', 32),
+            ],
         ]);
 
         $user = Auth::user();

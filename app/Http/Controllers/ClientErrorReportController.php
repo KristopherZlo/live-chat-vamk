@@ -13,11 +13,33 @@ class ClientErrorReportController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'message' => ['required', 'string', 'max:2000'],
-            'stack' => ['nullable', 'string', 'max:12000'],
-            'url' => ['required', 'string', 'max:2048'],
-            'line' => ['nullable', 'integer', 'min:0', 'max:1000000'],
-            'column' => ['nullable', 'integer', 'min:0', 'max:1000000'],
+            'message' => [
+                'required',
+                'string',
+                'max:' . config('ghostroom.limits.client_error.message_max', 2000),
+            ],
+            'stack' => [
+                'nullable',
+                'string',
+                'max:' . config('ghostroom.limits.client_error.stack_max', 12000),
+            ],
+            'url' => [
+                'required',
+                'string',
+                'max:' . config('ghostroom.limits.client_error.url_max', 2048),
+            ],
+            'line' => [
+                'nullable',
+                'integer',
+                'min:0',
+                'max:' . config('ghostroom.limits.client_error.line_max', 1000000),
+            ],
+            'column' => [
+                'nullable',
+                'integer',
+                'min:0',
+                'max:' . config('ghostroom.limits.client_error.column_max', 1000000),
+            ],
             'severity' => ['nullable', 'in:error,warning,info'],
             'source' => ['nullable', 'in:error,unhandledrejection'],
             'metadata' => ['nullable', 'array'],

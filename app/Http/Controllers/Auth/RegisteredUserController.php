@@ -34,8 +34,15 @@ class RegisteredUserController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+            'name' => ['required', 'string', 'max:' . config('ghostroom.limits.user.name_max', 255)],
+            'email' => [
+                'required',
+                'string',
+                'lowercase',
+                'email',
+                'max:' . config('ghostroom.limits.user.email_max', 255),
+                'unique:' . User::class,
+            ],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'invite_code' => [
                 'required',

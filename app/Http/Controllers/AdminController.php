@@ -140,7 +140,12 @@ class AdminController extends Controller
     public function storeInvite(Request $request)
     {
         $request->validate([
-            'code' => ['nullable', 'string', 'max:64', 'unique:invite_codes,code'],
+            'code' => [
+                'nullable',
+                'string',
+                'max:' . config('ghostroom.limits.admin.invite_code_max', 64),
+                'unique:invite_codes,code',
+            ],
         ]);
 
         $code = $request->input('code') ?: Str::upper(Str::random(12));
@@ -182,10 +187,26 @@ class AdminController extends Controller
         $data = $request->validate([
             'room_id' => ['required', 'exists:rooms,id'],
             'participant_id' => ['nullable', 'exists:participants,id'],
-            'session_token' => ['nullable', 'string', 'max:255'],
-            'display_name' => ['nullable', 'string', 'max:255'],
-            'ip_address' => ['nullable', 'string', 'max:255'],
-            'fingerprint' => ['nullable', 'string', 'max:255'],
+            'session_token' => [
+                'nullable',
+                'string',
+                'max:' . config('ghostroom.limits.admin.session_token_max', 255),
+            ],
+            'display_name' => [
+                'nullable',
+                'string',
+                'max:' . config('ghostroom.limits.admin.display_name_max', 255),
+            ],
+            'ip_address' => [
+                'nullable',
+                'string',
+                'max:' . config('ghostroom.limits.admin.ip_address_max', 255),
+            ],
+            'fingerprint' => [
+                'nullable',
+                'string',
+                'max:' . config('ghostroom.limits.admin.fingerprint_max', 255),
+            ],
         ]);
 
         $participant = null;
