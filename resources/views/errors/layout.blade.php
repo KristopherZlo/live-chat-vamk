@@ -7,6 +7,9 @@
 
     <title>@yield('title') - {{ config('app.name', 'Ghost Room') }}</title>
 
+    <link rel="icon" type="image/svg+xml" href="{{ asset('icons/logo_white.svg') }}">
+    <link rel="shortcut icon" href="{{ asset('icons/logo_white.svg') }}">
+
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
     <script>
         (() => {

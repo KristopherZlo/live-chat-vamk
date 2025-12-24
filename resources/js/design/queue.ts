@@ -1,3 +1,5 @@
+import { updateFaviconBadge } from './favicon-badge';
+
 const QUEUE_SEEN_KEY_PREFIX = 'lc-queue-seen';
 const QUEUE_FILTER_KEY_PREFIX = 'lc-queue-filter';
 
@@ -141,7 +143,8 @@ function persistQueueSeenState(storageKey: string | null, seenIds: Set<number>):
 function updateQueueBadge(queuePanel: HTMLElement | null = getQueuePanel()): void {
   if (!queuePanel) return;
   const doc = queuePanel.ownerDocument || document;
-  const hasNew = queuePanel.querySelector('.queue-item.queue-item-new');
+  const newCount = queuePanel.querySelectorAll('.queue-item.queue-item-new').length;
+  const hasNew = newCount > 0;
   let badge = doc.getElementById('queueNewBadge');
 
   queuePanel.classList.toggle('has-new', !!hasNew);
@@ -161,6 +164,7 @@ function updateQueueBadge(queuePanel: HTMLElement | null = getQueuePanel()): voi
     badge.remove();
   }
 
+  updateFaviconBadge(newCount);
   updateQueueScrollIndicator(queuePanel);
 }
 

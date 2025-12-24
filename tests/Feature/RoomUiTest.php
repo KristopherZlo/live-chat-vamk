@@ -17,6 +17,7 @@ test('owner chat view includes host tools', function () {
     $this->actingAs($owner)
         ->get(route('rooms.public', $room->slug))
         ->assertOk()
+        ->assertSee('rel="icon"', false)
         ->assertSee('class="quick-responses"', false)
         ->assertSee('class="quick-responses__poll"', false)
         ->assertSee('class="quick-responses__settings"', false)
