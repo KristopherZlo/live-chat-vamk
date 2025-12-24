@@ -32,6 +32,8 @@ import { setupMobileMenu, setupUserMenus, setupMobileTabs } from './design/menu'
 import { setupRoomDescriptions, setupRoomDeleteModals } from './design/room';
 import { setupWhatsNewModal } from './design/whats-new';
 import { updateDashboardGreeting, scheduleGreetingRefresh } from './design/greeting';
+import { setupConfettiTrigger } from './design/confetti';
+import { setupTutorialModal } from './design/tutorial';
 
 if (typeof window !== 'undefined') {
   window.createQrModules = createQrModules;
@@ -71,6 +73,8 @@ document.addEventListener('DOMContentLoaded', () => {
   setupRoomDescriptions();
   setupRoomDeleteModals();
   setupWhatsNewModal();
+  setupConfettiTrigger();
+  setupTutorialModal();
   updateDashboardGreeting();
   scheduleGreetingRefresh();
   refreshLucideIcons();

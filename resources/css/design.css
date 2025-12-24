@@ -4319,6 +4319,68 @@ body.app, .app {
   line-height: 1.4;
 }
 
+.footer-confetti-trigger,
+.footer-link-button {
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+.footer-confetti-trigger:focus-visible,
+.footer-link-button:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.footer-confetti-trigger:hover,
+.footer-link-button:hover {
+  color: var(--accent-strong);
+}
+
+.confetti-burst {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.confetti-piece {
+  position: absolute;
+  width: 8px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--confetti-color);
+  opacity: 0;
+  transform: translate(0, 0) rotate(0deg);
+  animation: confetti-burst var(--confetti-duration) ease-out forwards;
+  animation-delay: var(--confetti-delay);
+  will-change: transform, opacity;
+}
+
+@keyframes confetti-burst {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0deg);
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--confetti-x), var(--confetti-y)) rotate(var(--confetti-rot));
+  }
+}
+
 .footer-social {
   align-self: flex-start;
 }
@@ -5860,6 +5922,10 @@ body.modal-open {
   flex-direction: column;
 }
 
+.tutorial-modal {
+  width: min(860px, 100%);
+}
+
 .modal-overlay.show .modal-dialog {
   opacity: 1;
   transform: translateY(0);
@@ -5935,6 +6001,25 @@ body.modal-open {
   margin: 0;
   color: var(--text-secondary);
   line-height: 1.45;
+}
+
+.tutorial-video {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: var(--bg-soft);
+  border: 1px solid var(--border-strong);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.tutorial-video iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
 }
 
 .modal-alert {

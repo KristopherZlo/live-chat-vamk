@@ -246,8 +246,19 @@
                 <div class="footer-heading">About</div>
                 <div class="footer-links-list">
                     <span class="footer-muted">Ghost Room - Anonymous live chat for lectures. Send questions without interrupting the class.</span>
-                    <span class="footer-muted">Made with 💜 by Zloy</span>
-                    <a class="footer-muted" href="https://github.com/KristopherZlo/live-chat-vamk" target="_blank" rel="noreferrer">
+                    <span class="footer-muted">
+                        Made with
+                        <button class="footer-confetti-trigger" type="button" data-confetti-trigger aria-label="Launch confetti">
+                            💜
+                        </button>
+                        by Zloy
+                    </span>
+                    @auth
+                        <button class="footer-muted footer-link-button" type="button" data-tutorial-open>
+                            Watch tutorial
+                        </button>
+                    @endauth
+                    <a class="footer-muted" href="{{ $githubRepoUrl }}" target="_blank" rel="noreferrer">
                         GitHub repository
                     </a>
                     <span class="footer-muted footer-version">
@@ -396,6 +407,43 @@
             </div>
             <div class="modal-actions">
                 <button class="btn btn-primary" type="button" data-whats-new-close>Got it!</button>
+            </div>
+        </div>
+    </div>
+@endif
+@if ($authUser)
+    <div
+        class="modal-overlay"
+        data-tutorial-modal
+        data-tutorial-autoshow="{{ $shouldShowTutorial ? '1' : '0' }}"
+        data-tutorial-video-url="{{ $tutorialVideoUrl }}"
+        hidden
+        tabindex="-1"
+    >
+        <div class="modal-dialog tutorial-modal" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span class="modal-eyebrow">Tutorial</span>
+                    <h2 id="tutorialTitle" class="modal-title">Get started with Ghost Room</h2>
+                </div>
+                <button class="modal-close" type="button" data-tutorial-close aria-label="Close tutorial">
+                    <i data-lucide="x" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="tutorial-video">
+                    <iframe
+                        title="Ghost Room tutorial video"
+                        data-tutorial-iframe
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowfullscreen
+                    ></iframe>
+                </div>
+                <p class="modal-text">A quick walkthrough of creating rooms, asking questions, and managing the queue.</p>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" type="button" data-tutorial-skip>Skip tutorial</button>
+                <button class="btn btn-primary" type="button" data-tutorial-close>Got it</button>
             </div>
         </div>
     </div>
