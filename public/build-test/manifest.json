@@ -15,29 +15,37 @@
     "file": "assets/login.css",
     "src": "resources/css/login.css"
   },
+  "resources/images/cacodemon.png": {
+    "file": "assets/cacodemon.png",
+    "src": "resources/images/cacodemon.png"
+  },
   "resources/js/app.ts": {
     "file": "assets/app.js",
     "src": "resources/js/app.ts"
   },
-  "resources/js/design.js": {
+  "resources/js/design.ts": {
     "file": "assets/design.js",
-    "src": "resources/js/design.js"
+    "src": "resources/js/design.ts"
   },
   "resources/js/join-last-visited.ts": {
     "file": "assets/join-last-visited.js",
     "src": "resources/js/join-last-visited.ts"
   },
-  "resources/js/login.js": {
+  "resources/js/login.ts": {
     "file": "assets/login.js",
-    "src": "resources/js/login.js"
+    "src": "resources/js/login.ts"
   },
-  "resources/js/lucide.js": {
+  "resources/js/lucide.ts": {
     "file": "assets/lucide.js",
-    "src": "resources/js/lucide.js"
+    "src": "resources/js/lucide.ts"
   },
-  "resources/js/quick-responses.js": {
+  "resources/js/quick-responses.ts": {
     "file": "assets/quick-responses.js",
-    "src": "resources/js/quick-responses.js"
+    "src": "resources/js/quick-responses.ts"
+  },
+  "resources/js/room-show.ts": {
+    "file": "assets/room-show.js",
+    "src": "resources/js/room-show.ts"
   },
   "resources/js/track-last-visited-room.ts": {
     "file": "assets/track-last-visited-room.js",

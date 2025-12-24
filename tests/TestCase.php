@@ -21,6 +21,7 @@ abstract class TestCase extends BaseTestCase
 
         // Keep @vite rendering stable in tests without a real build.
         Vite::useBuildDirectory('build-test');
+        Vite::useHotFile(public_path('hot-test'));
 
         // Reset the room-messages limiter so tests do not leak overrides.
         RateLimiter::for('room-messages', function (Request $request) {

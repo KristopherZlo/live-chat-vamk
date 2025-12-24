@@ -3,6 +3,7 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 jobs:
   ci:
@@ -23,6 +24,7 @@ jobs:
     env:
       APP_ENV: testing
       BROADCAST_CONNECTION: log
+      BROADCAST_DRIVER: log
       REVERB_APP_KEY: ci-dummy
       REVERB_APP_SECRET: ci-dummy
       REVERB_APP_ID: "1"

@@ -1,5 +1,10 @@
 <?php
 
+$isProduction = env('APP_ENV') === 'production';
+$reverbKeyFallback = $isProduction ? null : 'local';
+$reverbSecretFallback = $isProduction ? null : 'local';
+$reverbAppIdFallback = $isProduction ? null : '1';
+
 return [
 
     /*
@@ -15,7 +20,7 @@ return [
     |
     */
 
-    'default' => env('BROADCAST_CONNECTION', env('APP_ENV') === 'production' ? 'reverb' : 'log'),
+    'default' => env('BROADCAST_CONNECTION', env('BROADCAST_DRIVER', $isProduction ? 'reverb' : 'log')),
 
     /*
     |--------------------------------------------------------------------------
@@ -32,9 +37,9 @@ return [
 
         'reverb' => [
             'driver' => 'reverb',
-            'key' => env('REVERB_APP_KEY'),
-            'secret' => env('REVERB_APP_SECRET'),
-            'app_id' => env('REVERB_APP_ID'),
+            'key' => env('REVERB_APP_KEY', $reverbKeyFallback),
+            'secret' => env('REVERB_APP_SECRET', $reverbSecretFallback),
+            'app_id' => env('REVERB_APP_ID', $reverbAppIdFallback),
             'options' => [
                 'host' => env('REVERB_HOST'),
                 'port' => env('REVERB_PORT', 443),
