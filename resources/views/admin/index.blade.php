@@ -8,6 +8,8 @@
         $latestInviteUsage = $recentUsedInvites->first();
         $avgMessagesPerRoom = $stats['rooms'] ? round($stats['messages'] / max($stats['rooms'], 1), 1) : 0;
         $avgQuestionsPerRoom = $stats['rooms'] ? round($stats['questions'] / max($stats['rooms'], 1), 1) : 0;
+        $supportEmail = config('ghostroom.links.support_email');
+        $githubRepoUrl = config('ghostroom.links.github_repository');
         $authUser = auth()->user();
         $userInitials = 'AD';
         if ($authUser && $authUser->name) {
@@ -1061,11 +1063,11 @@
                             <div class="admin-list">
                                 <div class="admin-list__item">
                                     <span>Contact</span>
-                                    <a class="admin-link" href="mailto:zloydeveloper.info@gmail.com">zloydeveloper.info@gmail.com</a>
+                                    <a class="admin-link" href="mailto:{{ $supportEmail }}">{{ $supportEmail }}</a>
                                 </div>
                                 <div class="admin-list__item">
                                     <span>Repository</span>
-                                    <a class="admin-link" href="https://github.com/KristopherZlo/live-chat-vamk" target="_blank" rel="noreferrer">GitHub link</a>
+                                    <a class="admin-link" href="{{ $githubRepoUrl }}" target="_blank" rel="noreferrer">GitHub link</a>
                                 </div>
                                 <div class="admin-list__item">
                                     <span>Privacy</span>
@@ -1324,4 +1326,3 @@
         });
     </script>
 </x-app-layout>
-

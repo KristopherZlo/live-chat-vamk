@@ -9,7 +9,8 @@
 
     @php
         $appName = config('app.name', 'Ghost Room');
-        $defaultDescription = 'Ghost Room is an anonymous live Q&A chat for lectures so attendees can send questions without interrupting the class.';
+        $defaultDescription = config('ghostroom.meta.default_description')
+            ?? 'Ghost Room is an anonymous live Q&A chat for lectures so attendees can send questions without interrupting the class.';
         $metaTitle = $attributes->get('meta-title') ?? ($metaTitle ?? null);
         $metaDescription = $attributes->get('meta-description') ?? ($metaDescription ?? null) ?? $defaultDescription;
         $metaImage = $attributes->get('meta-image') ?? ($metaImage ?? null) ?? asset('icons/logo_black.svg');
@@ -169,6 +170,17 @@
 @php
     $authUser = Auth::user();
     $routeName = \Illuminate\Support\Facades\Route::currentRouteName();
+    $supportEmail = config('ghostroom.links.support_email');
+    $githubRepoUrl = config('ghostroom.links.github_repository');
+    $tutorialVideoUrl = config('ghostroom.links.tutorial_video_url') ?? '';
+    $tutorialAutoRoutes = config('ghostroom.tutorial.auto_show_routes', ['dashboard']);
+    if (! is_array($tutorialAutoRoutes)) {
+        $tutorialAutoRoutes = [$tutorialAutoRoutes];
+    }
+    $shouldShowTutorial = false;
+    if ($authUser && request()->routeIs($tutorialAutoRoutes)) {
+        $shouldShowTutorial = ! $authUser->rooms()->exists();
+    }
 @endphp
 @php($pageClass = $pageClass ?? $attributes->get('page-class'))
 <body
@@ -218,7 +230,7 @@
                 <div class="footer-heading">Support</div>
                 <div class="footer-links-list">
                     <a href="{{ route('privacy') }}">Privacy & terms</a>
-                    <a href="mailto:zloydeveloper.info@gmail.com">Contact</a>
+                    <a href="mailto:{{ $supportEmail }}">Contact</a>
                 </div>
             </div>
             <div class="footer-column">
@@ -288,8 +300,8 @@
         </div>
         <div class="modal-body modal-text">
             <p>This service was created by a TT2025 student from VAMK and launched in test mode. This is a <span class="text-beta">beta</span> version, and it may have bugs.</p>
-            <p>You can send bug reports, feedback, and other things to my email: <a href="mailto:zloydeveloper.info@gmail.com">zloydeveloper.info@gmail.com</a></p>
-            <p>GitHub repository of the project: <a href="https://github.com/KristopherZlo/live-chat-vamk" target="_blank" rel="noreferrer">https://github.com/KristopherZlo/live-chat-vamk</a></p>
+            <p>You can send bug reports, feedback, and other things to my email: <a href="mailto:{{ $supportEmail }}">{{ $supportEmail }}</a></p>
+            <p>GitHub repository of the project: <a href="{{ $githubRepoUrl }}" target="_blank" rel="noreferrer">{{ $githubRepoUrl }}</a></p>
         </div>
         <div class="modal-actions" style="justify-content: flex-end; gap: 0.5rem;">
             <button class="btn btn-ghost" type="button" x-on:click="close()">Got it</button>

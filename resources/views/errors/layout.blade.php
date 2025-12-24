@@ -60,7 +60,7 @@
                 <div class="footer-heading">Support</div>
                 <div class="footer-links-list">
                     <a href="{{ route('privacy') }}">Privacy & terms</a>
-                    <a href="mailto:zloydeveloper.info@gmail.com">Contact</a>
+                    <a href="mailto:{{ config('ghostroom.links.support_email') }}">Contact</a>
                 </div>
             </div>
             <div class="footer-column">

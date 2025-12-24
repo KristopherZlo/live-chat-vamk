@@ -1,4 +1,5 @@
 <x-app-layout page-class="page-legal">
+    @php($supportEmail = config('ghostroom.links.support_email'))
     <section class="panel legal-page">
         <header class="panel-header">
             <p class="panel-title">
@@ -20,7 +21,7 @@
             <p>This service is operated by a private individual.</p>
             <ul>
                 <li>Data Controller: the owner of this site.</li>
-                <li>Contact: <strong><a href="mailto:zloydeveloper.info@gmail.com">zloydeveloper.info@gmail.com</a></strong></li>
+                <li>Contact: <strong><a href="mailto:{{ $supportEmail }}">{{ $supportEmail }}</a></strong></li>
             </ul>
 
             <h2>2. What we collect</h2>
@@ -105,7 +106,7 @@
 
             <h2>9. Contact</h2>
             <ul>
-                <li>For privacy requests, write to: <strong><a href="mailto:zloydeveloper.info@gmail.com">zloydeveloper.info@gmail.com</a></strong></li>
+                <li>For privacy requests, write to: <strong><a href="mailto:{{ $supportEmail }}">{{ $supportEmail }}</a></strong></li>
             </ul>
         </article>
     </section>
