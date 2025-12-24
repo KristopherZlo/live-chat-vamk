@@ -41,10 +41,10 @@ jobs:
         with:
           node-version: "20"
           cache: npm
+      - name: Prepare app env
+        run: php -r "file_exists('.env') || copy('.env.example', '.env');"
       - name: Install PHP dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
-      - name: Prepare app key
-        run: php -r "file_exists('.env') || copy('.env.example', '.env');"
       - name: Generate app key
         run: php artisan key:generate --ansi
       - name: Install Node dependencies
