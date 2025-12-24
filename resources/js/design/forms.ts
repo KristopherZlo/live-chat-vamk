@@ -162,12 +162,23 @@ export function setupInlineEditors(root: Document | Element = document): void {
     if (!trigger || !form || !display) return;
 
     const cancel = block.querySelector<HTMLElement>('[data-inline-cancel]');
-    const input = form.querySelector<HTMLInputElement | HTMLTextAreaElement>('input, textarea');
+    const input = form.querySelector<HTMLInputElement | HTMLTextAreaElement>(
+      '.inline-edit-input, textarea, input:not([type="hidden"])',
+    );
+    const isSingleLine = !!input && input.hasAttribute('data-inline-single-line');
+    const panelTitle = block.closest<HTMLElement>('.panel-title');
+    const setEditingState = (editing: boolean) => {
+      block.classList.toggle('is-editing', editing);
+      if (panelTitle) {
+        panelTitle.classList.toggle('inline-editing', editing);
+      }
+    };
 
     const show = () => {
       display.hidden = true;
       form.hidden = false;
       trigger.classList.add('active');
+      setEditingState(true);
       if (input) {
         input.focus();
         if (typeof input.select === 'function') {
@@ -180,6 +191,7 @@ export function setupInlineEditors(root: Document | Element = document): void {
       form.hidden = true;
       display.hidden = false;
       trigger.classList.remove('active');
+      setEditingState(false);
     };
 
     trigger.addEventListener('click', (event) => {
@@ -192,6 +204,34 @@ export function setupInlineEditors(root: Document | Element = document): void {
         event.preventDefault();
         hide();
       });
+    }
+
+    if (input) {
+      const sanitizeSingleLine = () => {
+        if (!isSingleLine) return;
+        const value = input.value;
+        if (!/[\r\n]/.test(value)) return;
+        const start = input.selectionStart ?? value.length;
+        const end = input.selectionEnd ?? value.length;
+        input.value = value.replace(/[\r\n]/g, ' ');
+        if (typeof input.setSelectionRange === 'function') {
+          const max = input.value.length;
+          input.setSelectionRange(Math.min(start, max), Math.min(end, max));
+        }
+      };
+
+      input.addEventListener('keydown', (event) => {
+        if (event.key === ' ' || event.key === 'Enter') {
+          event.stopPropagation();
+        }
+        if (isSingleLine && event.key === 'Enter' && !event.isComposing) {
+          event.preventDefault();
+        }
+      });
+
+      if (isSingleLine) {
+        input.addEventListener('input', sanitizeSingleLine);
+      }
     }
   });
 }

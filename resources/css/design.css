@@ -4455,6 +4455,10 @@ body.app, .app {
   gap: 0.35rem;
 }
 
+.room-header .inline-edit-inline {
+  align-items: flex-start;
+}
+
 .inline-edit-trigger.active {
   opacity: 0;
   visibility: hidden;
@@ -4530,6 +4534,10 @@ body.app, .app {
   flex-direction: column;
   gap: 0.15rem;
   margin-top: -1rem;
+}
+
+.room-header .panel-title.inline-editing + .room-description-block {
+  margin-top: 0;
 }
 
 .room-description-row {

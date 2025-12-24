@@ -111,13 +111,13 @@
                                 <form class="inline-edit-form" method="POST" action="{{ route('rooms.update', $room) }}" hidden>
                                     @csrf
                                     @method('PATCH')
-                                    <input
-                                        type="text"
+                                    <textarea
                                         name="title"
+                                        rows="2"
                                         class="field-control inline-edit-input"
-                                        value="{{ $room->title }}"
+                                        data-inline-single-line="1"
                                         required
-                                    >
+                                    >{{ $room->title }}</textarea>
                                     <div class="inline-edit-actions">
                                         <button type="submit" class="btn btn-sm btn-primary">Save</button>
                                         <button type="button" class="btn btn-sm btn-ghost" data-inline-cancel>Cancel</button>
