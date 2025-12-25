@@ -1,4 +1,4 @@
-@php use Illuminate\Support\Str; @endphp
+@php use Illuminate\Support\HtmlString; use Illuminate\Support\Str; @endphp
 
 <x-app-layout
     page-class="page-updates"
@@ -71,8 +71,14 @@
                             <span class="update-card__cta">Read update</span>
                             <i data-lucide="arrow-right"></i>
                         </div>
+                        @php
+                            $postBodyHtml = new HtmlString(Str::markdown($post->body ?? '', [
+                                'html_input' => 'strip',
+                                'allow_unsafe_links' => false,
+                            ]));
+                        @endphp
                         <div class="update-card__body" data-update-body hidden>
-                            {!! Str::markdown($post->body ?? '', ['html_input' => 'strip']) !!}
+                            {{ $postBodyHtml }}
                         </div>
                         <div
                             data-update-meta
@@ -135,11 +141,16 @@
                                     <i data-lucide="arrow-up-right"></i>
                                 </div>
                             @endif
-                            @if(!empty($release['body_html']))
-                                <div class="update-card__body" data-update-body hidden>
-                                    {!! $release['body_html'] !!}
-                                </div>
-                            @endif
+                        @php
+                            $releaseBodyHtml = !empty($release['body_html'])
+                                ? new HtmlString($release['body_html'])
+                                : null;
+                        @endphp
+                        @if($releaseBodyHtml)
+                            <div class="update-card__body" data-update-body hidden>
+                                {{ $releaseBodyHtml }}
+                            </div>
+                        @endif
                         </article>
                     @endforeach
                 </div>

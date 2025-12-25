@@ -1,9 +1,15 @@
 @php
+    use Illuminate\Support\HtmlString;
     use Illuminate\Support\Str;
     $publishedAt = $post->published_at?->format('M d, Y') ?? $post->created_at?->format('M d, Y');
     $coverUrl = $post->cover_url;
     $metaDescription = $post->excerpt ?: Str::limit(strip_tags($post->body ?? ''), 180);
-    $bodyHtml = $post->body ? Str::markdown($post->body, ['html_input' => 'strip']) : '';
+    $bodyHtml = $post->body
+        ? new HtmlString(Str::markdown($post->body, [
+            'html_input' => 'strip',
+            'allow_unsafe_links' => false,
+        ]))
+        : null;
 @endphp
 
 <x-app-layout
@@ -30,7 +36,7 @@
                 </div>
             @endif
             <div class="update-article__body markdown-body">
-                {!! $bodyHtml !!}
+                {{ $bodyHtml }}
             </div>
         </article>
     </div>

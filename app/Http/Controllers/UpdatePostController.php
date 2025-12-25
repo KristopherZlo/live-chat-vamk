@@ -55,7 +55,10 @@ class UpdatePostController extends Controller
                     }
 
                     if (! $bodyHtml && ! empty($release['body'])) {
-                        $bodyHtml = Str::markdown($release['body'], ['html_input' => 'strip']);
+                        $bodyHtml = Str::markdown($release['body'], [
+                            'html_input' => 'strip',
+                            'allow_unsafe_links' => false,
+                        ]);
                     }
 
                     return [
@@ -86,7 +89,10 @@ class UpdatePostController extends Controller
                     'date_human' => $date ? Carbon::parse($date)->format('M d, Y') : null,
                     'is_config' => false,
                     'body_html' => $post->body
-                        ? Str::markdown($post->body, ['html_input' => 'strip'])
+                        ? Str::markdown($post->body, [
+                            'html_input' => 'strip',
+                            'allow_unsafe_links' => false,
+                        ])
                         : null,
                 ];
             });

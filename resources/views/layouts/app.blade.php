@@ -86,6 +86,7 @@
         use App\Models\Setting;
         use App\Models\UpdatePost;
         use Illuminate\Support\Facades\Cache;
+        use Illuminate\Support\HtmlString;
         use Illuminate\Support\Str;
 
         $appVersion = Setting::getValue('app_version', config('app.version'));
@@ -128,7 +129,10 @@
             $whatsNewImageUrl = $whatsNewEntry?->cover_url
                 ?? ($configRelease['image'] ?? false ? asset($configRelease['image']) : null);
             $whatsNewContentHtml = $whatsNewEntry?->body
-                ? Str::markdown($whatsNewEntry->body, ['html_input' => 'strip'])
+                ? Str::markdown($whatsNewEntry->body, [
+                    'html_input' => 'strip',
+                    'allow_unsafe_links' => false,
+                ])
                 : null;
             $whatsNewSections = is_array($configRelease['sections'] ?? null) ? $configRelease['sections'] : [];
             $whatsNewDate = $whatsNewEntry?->published_at?->format('Y-m-d') ?? ($configRelease['date'] ?? null);
@@ -157,6 +161,9 @@
         $whatsNewImageUrl = $whatsNewData['image_url'] ?? null;
         $whatsNewImageAlt = $whatsNewData['image_alt'] ?? 'Update preview';
         $whatsNewContentHtml = $whatsNewData['content_html'] ?? null;
+        $whatsNewContentHtmlSafe = !empty($whatsNewContentHtml)
+            ? new HtmlString($whatsNewContentHtml)
+            : null;
         $whatsNewSections = $whatsNewData['sections'] ?? [];
         $whatsNewDate = $whatsNewData['date'] ?? null;
         $whatsNewTitle = $whatsNewData['title'] ?? null;
@@ -382,7 +389,7 @@
                 @endif
                 @if (!empty($whatsNewContentHtml))
                     <div class="whats-new-content markdown-body">
-                        {!! $whatsNewContentHtml !!}
+                        {{ $whatsNewContentHtmlSafe }}
                     </div>
                 @elseif (!empty($whatsNewSections))
                     <div class="whats-new-sections">
