@@ -6,7 +6,7 @@ test('security headers are applied to web responses', function () {
     $response->assertHeader('X-Frame-Options', 'SAMEORIGIN');
     $response->assertHeader('X-Content-Type-Options', 'nosniff');
     $response->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-    $response->assertHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=(), fullscreen=(self), payment=()');
+    $response->assertHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=(), fullscreen=(self "https://www.youtube.com" "https://www.youtube-nocookie.com"), payment=()');
     $response->assertHeader('Cross-Origin-Opener-Policy', 'same-origin');
     $response->assertHeader('Cross-Origin-Resource-Policy', 'same-origin');
     $response->assertHeader('Content-Security-Policy');
@@ -16,7 +16,7 @@ test('security headers are applied to web responses', function () {
     expect($csp)->toContain("frame-ancestors 'self'");
     expect($csp)->toContain("object-src 'none'");
     expect($csp)->toContain("base-uri 'self'");
-    expect($csp)->toContain("frame-src 'none'");
+    expect($csp)->toContain("frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com");
     expect($csp)->toContain("form-action 'self'");
 });
 
