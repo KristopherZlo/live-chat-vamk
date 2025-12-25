@@ -4,7 +4,7 @@ return [
     'links' => [
         'support_email' => env('SUPPORT_EMAIL', 'zloydeveloper.info@gmail.com'),
         'github_repository' => env('GITHUB_REPO_URL', 'https://github.com/KristopherZlo/live-chat-vamk'),
-        'tutorial_video_url' => env('TUTORIAL_VIDEO_URL', 'https://www.youtube.com/embed/VIDEO_ID'),
+        'tutorial_video_url' => env('TUTORIAL_VIDEO_URL', 'https://www.youtube.com/embed/_ZLGiWFADis'),
     ],
     'meta' => [
         'default_description' => 'Ghost Room is an anonymous live Q&A chat for lectures so attendees can send questions without interrupting the class.',

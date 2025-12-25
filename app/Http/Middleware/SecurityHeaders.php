@@ -20,7 +20,7 @@ class SecurityHeaders
             'X-Frame-Options' => 'SAMEORIGIN',
             'X-Content-Type-Options' => 'nosniff',
             'Referrer-Policy' => 'strict-origin-when-cross-origin',
-            'Permissions-Policy' => "geolocation=(), microphone=(), camera=(), fullscreen=(self), payment=()",
+            'Permissions-Policy' => "geolocation=(), microphone=(), camera=(), fullscreen=(self \"https://www.youtube.com\" \"https://www.youtube-nocookie.com\"), payment=()",
             'Cross-Origin-Opener-Policy' => 'same-origin',
             'Cross-Origin-Resource-Policy' => 'same-origin',
         ];
@@ -72,6 +72,7 @@ class SecurityHeaders
         $scriptSrc = ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'];
         $fontSrc = ["'self'", 'data:', 'https://fonts.gstatic.com'];
         $connectSrc = ["'self'", 'https://cdn.jsdelivr.net'];
+        $frameSrc = ["'self'", 'https://www.youtube.com', 'https://www.youtube-nocookie.com'];
 
         if (app()->environment('local')) {
             $devOrigins = $this->getDevOrigins($request);
@@ -112,7 +113,7 @@ class SecurityHeaders
             'object-src' => ["'none'"],
             'base-uri' => ["'self'"],
             'frame-ancestors' => ["'self'"],
-            'frame-src' => ["'none'"],
+            'frame-src' => $frameSrc,
             'form-action' => ["'self'"],
         ];
 
