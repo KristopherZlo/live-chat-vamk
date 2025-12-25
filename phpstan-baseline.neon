@@ -19,20 +19,8 @@ parameters:
 			path: app/Console/Commands/SeedPoll.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\MessagePoll\:\:\$options\.$#'
-			identifier: property.notFound
-			count: 3
-			path: app/Console/Commands/SeedPoll.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\Room\:\:\$owner\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Console/Commands/SeedPoll.php
-
-		-
-			message: '#^Parameter \#1 \.\.\.\$values of method Illuminate\\Support\\Collection\<int,array\<string, mixed\>\>\:\:push\(\) expects array\{user_id\: null, participant_id\: mixed\}, array\{user_id\: int, participant_id\: null\} given\.$#'
-			identifier: argument.type
 			count: 1
 			path: app/Console/Commands/SeedPoll.php
 
@@ -77,30 +65,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Events/MessageSent.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Question\:\:\$participant\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Events/QuestionCreated.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Question\:\:\$room\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Events/QuestionCreated.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Question\:\:\$ratings\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Events/QuestionUpdated.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Question\:\:\$room\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Events/QuestionUpdated.php
 
 		-
 			message: '#^Expression on left side of \?\? is not nullable\.$#'
@@ -169,34 +133,10 @@ parameters:
 			path: app/Http/Controllers/MessageController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\MessagePoll\:\:\$options\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/MessageController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\MessagePoll\:\:\$message\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/MessagePollController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\MessagePoll\:\:\$options\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/MessagePollController.php
-
-		-
 			message: '#^Anonymous function has an unused use \$selectedOptionId\.$#'
 			identifier: closure.unusedUse
 			count: 1
 			path: app/Http/Controllers/MessagePollController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Question\:\:\$room\.$#'
-			identifier: property.notFound
-			count: 5
-			path: app/Http/Controllers/QuestionController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\Message\:\:\$question\.$#'
@@ -229,32 +169,8 @@ parameters:
 			path: app/Http/Controllers/RoomController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\MessagePoll\:\:\$options\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/RoomController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Http/Controllers/RoomController.php
-
-		-
 			message: '#^Negated boolean expression is always false\.$#'
 			identifier: booleanNot.alwaysFalse
-			count: 1
-			path: app/Http/Controllers/RoomController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array, Closure\(App\\Models\\Message\)\: array given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/RoomController.php
-
-		-
-			message: '#^Relation ''options'' is not found in App\\Models\\MessagePoll model\.$#'
-			identifier: larastan.relationExistence
 			count: 1
 			path: app/Http/Controllers/RoomController.php
 

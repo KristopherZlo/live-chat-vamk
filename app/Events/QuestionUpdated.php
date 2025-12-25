@@ -3,6 +3,8 @@
 namespace App\Events;
 
 use App\Models\Question;
+use App\Models\QuestionRating;
+use App\Models\Room;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
@@ -22,7 +24,9 @@ class QuestionUpdated implements ShouldBroadcastNow
 
     public function broadcastOn(): Channel
     {
-        $slug = $this->question->room?->slug;
+        /** @var Room|null $room */
+        $room = $this->question->room;
+        $slug = $room?->slug;
         $channelId = $slug ?: (string) $this->question->room_id;
 
         return new Channel('room.' . $channelId);
@@ -36,10 +40,12 @@ class QuestionUpdated implements ShouldBroadcastNow
             'status' => $this->question->status,
             'deleted_by_owner_at' => $this->question->deleted_by_owner_at,
             'deleted_by_participant_at' => $this->question->deleted_by_participant_at,
-            'ratings' => $this->question->ratings->map(fn ($r) => [
-                'participant_id' => $r->participant_id,
-                'rating' => $r->rating,
-            ])->values(),
+            'ratings' => $this->question->ratings
+                ->map(fn (QuestionRating $r) => [
+                    'participant_id' => $r->participant_id,
+                    'rating' => $r->rating,
+                ])
+                ->values(),
         ];
     }
 }

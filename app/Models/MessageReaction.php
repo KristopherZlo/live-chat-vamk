@@ -6,6 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property-read \App\Models\Message|null $message
+ * @property-read \App\Models\User|null $user
+ * @property-read \App\Models\Participant|null $participant
+ */
 class MessageReaction extends Model
 {
     use HasFactory;

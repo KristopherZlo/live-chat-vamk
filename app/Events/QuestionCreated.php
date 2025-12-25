@@ -2,7 +2,9 @@
 
 namespace App\Events;
 
+use App\Models\Participant;
 use App\Models\Question;
+use App\Models\Room;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
@@ -23,7 +25,9 @@ class QuestionCreated implements ShouldBroadcastNow
 
     public function broadcastOn(): Channel
     {
-        $slug = $this->question->room?->slug;
+        /** @var Room|null $room */
+        $room = $this->question->room;
+        $slug = $room?->slug;
         $channelId = $slug ?: (string) $this->question->room_id;
 
         return new Channel('room.' . $channelId);
@@ -31,12 +35,15 @@ class QuestionCreated implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
+        /** @var Participant|null $participant */
+        $participant = $this->question->participant;
+
         return [
             'id' => $this->question->id,
             'room_id' => $this->question->room_id,
             'content' => $this->question->content,
             'status' => $this->question->status,
-            'participant' => $this->question->participant?->display_name,
+            'participant' => $participant?->display_name,
         ];
     }
 }

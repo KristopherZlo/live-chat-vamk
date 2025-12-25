@@ -7,6 +7,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property-read \App\Models\Room|null $room
+ * @property-read \App\Models\Message|null $message
+ * @property-read \App\Models\Participant|null $participant
+ * @property-read \App\Models\User|null $user
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\QuestionRating> $ratings
+ */
 class Question extends Model
 {
     use HasFactory;

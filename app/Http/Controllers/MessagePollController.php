@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Events\PollUpdated;
 use App\Models\MessagePoll;
+use App\Models\MessagePollOption;
 use App\Models\MessagePollVote;
 use App\Models\Participant;
 use App\Models\Room;
@@ -18,7 +19,8 @@ class MessagePollController extends Controller
     {
         $poll->loadMissing(['message', 'options']);
 
-        if (!$poll->message || $poll->message->room_id !== $room->id) {
+        $pollMessage = $poll->message;
+        if (!$pollMessage || $pollMessage->room_id !== $room->id) {
             abort(404);
         }
 
@@ -135,9 +137,11 @@ class MessagePollController extends Controller
         $counts = $votes->groupBy('option_id')->map->count();
         $totalVotes = $counts->sum();
 
-        $options = $poll->options
+        /** @var \Illuminate\Database\Eloquent\Collection<int, MessagePollOption> $pollOptions */
+        $pollOptions = $poll->options;
+        $options = $pollOptions
             ->sortBy('position')
-            ->map(function ($option) use ($counts, $totalVotes) {
+            ->map(function (MessagePollOption $option) use ($counts, $totalVotes) {
                 $votesCount = (int) ($counts->get($option->id, 0));
                 $percent = $totalVotes > 0 ? (int) round(($votesCount / $totalVotes) * 100) : 0;
                 return [

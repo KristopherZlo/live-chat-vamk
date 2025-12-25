@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AuditLog;
 use App\Models\Message;
 use App\Models\MessagePoll;
+use App\Models\MessagePollOption;
 use App\Models\Participant;
 use App\Models\Question;
 use App\Models\Room;
@@ -222,9 +223,11 @@ class MessageController extends Controller
             $pollPayload = null;
             if ($poll) {
                 $poll->loadMissing('options');
-                $options = $poll->options
+                /** @var \Illuminate\Database\Eloquent\Collection<int, MessagePollOption> $pollOptions */
+                $pollOptions = $poll->options;
+                $options = $pollOptions
                     ->sortBy('position')
-                    ->map(fn ($option) => [
+                    ->map(fn (MessagePollOption $option) => [
                         'id' => $option->id,
                         'label' => $option->label,
                         'votes' => 0,

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\Question;
+use App\Models\Room;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\QuestionRating;
@@ -14,7 +15,11 @@ class QuestionController extends Controller
     // смена статуса вопроса: new / answered / ignored / later
     public function updateStatus(Request $request, Question $question)
     {
+        /** @var Room|null $room */
         $room = $question->room;
+        if (!$room) {
+            abort(404);
+        }
 
         if (!Auth::check() || Auth::id() !== $room->user_id) {
             abort(403);
@@ -67,7 +72,11 @@ class QuestionController extends Controller
     // удаление вопроса владельцем (soft delete)
     public function ownerDelete(Request $request, Question $question)
     {
+        /** @var Room|null $room */
         $room = $question->room;
+        if (!$room) {
+            abort(404);
+        }
 
         if (!Auth::check() || Auth::id() !== $room->user_id) {
             abort(403);
@@ -97,7 +106,11 @@ class QuestionController extends Controller
     // удаление вопроса участником
     public function participantDelete(Request $request, Question $question)
     {
+        /** @var Room|null $room */
         $room = $question->room;
+        if (!$room) {
+            abort(404);
+        }
 
         $sessionKey = 'room_participant_' . $room->id;
         $participantId = $request->session()->get($sessionKey);
@@ -131,7 +144,11 @@ class QuestionController extends Controller
     // Оценка ответа (лайк / дизлайк)
     public function rate(Request $request, Question $question)
     {
+        /** @var Room|null $room */
         $room = $question->room;
+        if (!$room) {
+            abort(404);
+        }
 
         // Оценивать можно только свои вопросы
         $sessionKey = 'room_participant_' . $room->id;
@@ -168,7 +185,11 @@ class QuestionController extends Controller
     // Полное удаление вопроса (только владелец)
     public function destroy(Request $request, Question $question)
     {
+        /** @var Room|null $room */
         $room = $question->room;
+        if (!$room) {
+            abort(404);
+        }
 
         if (!Auth::check() || Auth::id() !== $room->user_id) {
             abort(403);

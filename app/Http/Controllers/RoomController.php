@@ -7,6 +7,7 @@ use App\Models\Room;
 use App\Models\Message;
 use App\Models\MessageReaction;
 use App\Models\MessagePoll;
+use App\Models\MessagePollOption;
 use App\Models\MessagePollVote;
 use App\Models\Participant;
 use App\Models\RoomBan;
@@ -254,11 +255,13 @@ class RoomController extends Controller
             ->limit(self::MESSAGE_PAGE_SIZE + 1)
             ->get();
 
+        /** @var \Illuminate\Database\Eloquent\Collection<int, Message> $messagesCollection */
         $hasMoreMessages = $messagesCollection->count() > self::MESSAGE_PAGE_SIZE;
         $messages = $messagesCollection
             ->take(self::MESSAGE_PAGE_SIZE)
             ->reverse()
             ->values();
+        /** @var Collection<int, Message> $messages */
         $oldestMessageId = $messages->first()?->id;
 
         $viewer = $request->user();
@@ -636,11 +639,13 @@ class RoomController extends Controller
             ->limit($limit + 1)
             ->get();
 
+        /** @var \Illuminate\Database\Eloquent\Collection<int, Message> $messagesCollection */
         $hasMore = $messagesCollection->count() > $limit;
         $messages = $messagesCollection
             ->take($limit)
             ->reverse()
             ->values();
+        /** @var Collection<int, Message> $messages */
 
         $reactionPayload = $this->summarizeMessageReactions($messages, $viewer, $participant);
         $pollPayloads = $this->summarizeMessagePolls($messages, $viewer, $participant);
@@ -882,6 +887,9 @@ class RoomController extends Controller
         ];
     }
 
+    /**
+     * @param Collection<int, Message> $messages
+     */
     protected function summarizeMessagePolls(Collection $messages, ?User $user = null, ?Participant $participant = null): array
     {
         $messageIds = $messages->pluck('id')->filter()->values();
@@ -889,6 +897,7 @@ class RoomController extends Controller
             return [];
         }
 
+        /** @var \Illuminate\Database\Eloquent\Collection<int, MessagePoll> $polls */
         $polls = MessagePoll::query()
             ->with('options')
             ->whereIn('message_id', $messageIds)
@@ -947,9 +956,11 @@ class RoomController extends Controller
         $countMap = collect($counts)->map(fn ($count) => (int) $count);
         $totalVotes = $countMap->sum();
 
-        $options = $poll->options
+        /** @var \Illuminate\Database\Eloquent\Collection<int, MessagePollOption> $pollOptions */
+        $pollOptions = $poll->options;
+        $options = $pollOptions
             ->sortBy('position')
-            ->map(function ($option) use ($countMap, $totalVotes) {
+            ->map(function (MessagePollOption $option) use ($countMap, $totalVotes) {
                 $votes = (int) ($countMap->get($option->id, 0));
                 $percent = $totalVotes > 0 ? (int) round(($votes / $totalVotes) * 100) : 0;
                 return [

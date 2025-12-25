@@ -9,6 +9,7 @@ use App\Events\QuestionUpdated;
 use App\Events\ReactionUpdated;
 use App\Models\Message;
 use App\Models\MessagePoll;
+use App\Models\MessagePollOption;
 use App\Models\MessagePollVote;
 use App\Models\MessageReaction;
 use App\Models\Participant;
@@ -16,8 +17,8 @@ use App\Models\Question;
 use App\Models\QuestionRating;
 use App\Models\Room;
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 class StreamDemoChat extends Command
@@ -165,7 +166,10 @@ class StreamDemoChat extends Command
             ->first();
     }
 
-    protected function loadBotParticipants(Room $room, int $targetCount): Collection
+    /**
+     * @return EloquentCollection<int, Participant>
+     */
+    protected function loadBotParticipants(Room $room, int $targetCount): EloquentCollection
     {
         $participants = Participant::where('room_id', $room->id)
             ->where('session_token', 'like', 'demo_stream_%')
@@ -237,9 +241,12 @@ class StreamDemoChat extends Command
         return $recent;
     }
 
+    /**
+     * @param EloquentCollection<int, Participant> $participants
+     */
     protected function scanNewMessages(
         Room $room,
-        Collection $participants,
+        EloquentCollection $participants,
         array $botLookup,
         int $lastMessageId,
         array $recentMessageIds,
@@ -273,9 +280,12 @@ class StreamDemoChat extends Command
         return [$lastMessageId, $recentMessageIds, $pendingActions];
     }
 
+    /**
+     * @param EloquentCollection<int, Participant> $participants
+     */
     protected function scanNewReactions(
         Room $room,
-        Collection $participants,
+        EloquentCollection $participants,
         array $botLookup,
         int $lastReactionId,
         array $pendingActions
@@ -303,9 +313,12 @@ class StreamDemoChat extends Command
         return [$lastReactionId, $pendingActions];
     }
 
+    /**
+     * @param EloquentCollection<int, Participant> $participants
+     */
     protected function scanNewPolls(
         Room $room,
-        Collection $participants,
+        EloquentCollection $participants,
         int $lastPollId,
         array $pendingPolls
     ): array {
@@ -327,7 +340,10 @@ class StreamDemoChat extends Command
         return [$lastPollId, $pendingPolls];
     }
 
-    protected function buildPollPlan(MessagePoll $poll, Collection $participants): array
+    /**
+     * @param EloquentCollection<int, Participant> $participants
+     */
+    protected function buildPollPlan(MessagePoll $poll, EloquentCollection $participants): array
     {
         $participantIds = $participants->pluck('id')->all();
         $existingVotes = MessagePollVote::where('poll_id', $poll->id)
@@ -358,8 +374,10 @@ class StreamDemoChat extends Command
                 continue;
             }
 
+            /** @var MessagePoll|null $poll */
             $poll = MessagePoll::with(['message', 'options'])->find($pollId);
-            if (!$poll || $poll->is_closed || !$poll->message || $poll->message->room_id !== $room->id) {
+            $pollMessage = $poll?->message;
+            if (!$poll || $poll->is_closed || !$pollMessage || $pollMessage->room_id !== $room->id) {
                 unset($pendingPolls[$pollId]);
                 continue;
             }
@@ -432,9 +450,12 @@ class StreamDemoChat extends Command
         return $pendingRatings;
     }
 
+    /**
+     * @param EloquentCollection<int, Participant> $participants
+     */
     protected function queueRepliesAndReactions(
         Message $message,
-        Collection $participants,
+        EloquentCollection $participants,
         array $pendingActions
     ): array {
         $replyCount = random_int(1, 2);
@@ -465,9 +486,12 @@ class StreamDemoChat extends Command
         return $pendingActions;
     }
 
+    /**
+     * @param EloquentCollection<int, Participant> $participants
+     */
     protected function queueFollowUpReactions(
         int $messageId,
-        Collection $participants,
+        EloquentCollection $participants,
         array $pendingActions
     ): array {
         $reactionCount = random_int(1, 2);
@@ -523,7 +547,10 @@ class StreamDemoChat extends Command
         return $remaining;
     }
 
-    protected function sendStreamMessage(Room $room, Collection $participants, array $recentMessageIds): ?Message
+    /**
+     * @param EloquentCollection<int, Participant> $participants
+     */
+    protected function sendStreamMessage(Room $room, EloquentCollection $participants, array $recentMessageIds): ?Message
     {
         $roll = random_int(1, 100);
         $participant = $participants->random();
@@ -651,11 +678,14 @@ class StreamDemoChat extends Command
     protected function castPollVote(Room $room, MessagePoll $poll, int $participantId): void
     {
         $poll->loadMissing(['options', 'message']);
-        if ($poll->is_closed || !$poll->message || $poll->message->room_id !== $room->id) {
+        $pollMessage = $poll->message;
+        if ($poll->is_closed || !$pollMessage || $pollMessage->room_id !== $room->id) {
             return;
         }
 
-        if ($poll->options->isEmpty()) {
+        /** @var EloquentCollection<int, MessagePollOption> $pollOptions */
+        $pollOptions = $poll->options;
+        if ($pollOptions->isEmpty()) {
             return;
         }
 
@@ -667,7 +697,7 @@ class StreamDemoChat extends Command
             return;
         }
 
-        $optionId = $poll->options->random()->id;
+        $optionId = $pollOptions->random()->id;
 
         MessagePollVote::create([
             'poll_id' => $poll->id,
@@ -702,9 +732,11 @@ class StreamDemoChat extends Command
         $counts = $votes->groupBy('option_id')->map->count();
         $totalVotes = $counts->sum();
 
-        $options = $poll->options
+        /** @var EloquentCollection<int, MessagePollOption> $pollOptions */
+        $pollOptions = $poll->options;
+        $options = $pollOptions
             ->sortBy('position')
-            ->map(function ($option) use ($counts, $totalVotes) {
+            ->map(function (MessagePollOption $option) use ($counts, $totalVotes) {
                 $votesCount = (int) ($counts->get($option->id, 0));
                 $percent = $totalVotes > 0 ? (int) round(($votesCount / $totalVotes) * 100) : 0;
                 return [

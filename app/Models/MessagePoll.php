@@ -7,6 +7,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property-read \App\Models\Message|null $message
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MessagePollOption> $options
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\MessagePollVote> $votes
+ */
 class MessagePoll extends Model
 {
     use HasFactory;

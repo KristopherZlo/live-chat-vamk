@@ -7,12 +7,14 @@ use App\Events\PollUpdated;
 use App\Events\ReactionUpdated;
 use App\Models\Message;
 use App\Models\MessagePoll;
+use App\Models\MessagePollOption;
 use App\Models\MessagePollVote;
 use App\Models\MessageReaction;
 use App\Models\Participant;
 use App\Models\Room;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -85,7 +87,10 @@ class SeedPoll extends Command
             ->first();
     }
 
-    protected function loadParticipants(Room $room, int $targetCount): Collection
+    /**
+     * @return EloquentCollection<int, Participant>
+     */
+    protected function loadParticipants(Room $room, int $targetCount): EloquentCollection
     {
         $participants = Participant::where('room_id', $room->id)->get();
         $missing = max(0, $targetCount - $participants->count());
@@ -231,10 +236,13 @@ class SeedPoll extends Command
         return $message;
     }
 
+    /**
+     * @param EloquentCollection<int, Participant> $participants
+     */
     protected function seedReplies(
         Room $room,
         Message $message,
-        Collection $participants,
+        EloquentCollection $participants,
         int $hostId,
         int $count,
         Carbon $baseTime
@@ -270,18 +278,24 @@ class SeedPoll extends Command
         }
     }
 
+    /**
+     * @param EloquentCollection<int, Participant> $participants
+     */
     protected function seedVotes(
         Room $room,
         MessagePoll $poll,
-        Collection $participants,
+        EloquentCollection $participants,
         int $hostId,
         int $count
     ): void {
         $poll->loadMissing('options');
-        if ($poll->options->isEmpty()) {
+        /** @var EloquentCollection<int, MessagePollOption> $pollOptions */
+        $pollOptions = $poll->options;
+        if ($pollOptions->isEmpty()) {
             return;
         }
 
+        /** @var Collection<int, array{user_id:int|null, participant_id:int|null}> $actors */
         $actors = $this->actorPool($participants, $hostId);
         if ($actors->isEmpty()) {
             return;
@@ -291,7 +305,7 @@ class SeedPoll extends Command
         $actors = $actors->shuffle()->take($count);
 
         foreach ($actors as $actor) {
-            $optionId = $poll->options->random()->id;
+            $optionId = $pollOptions->random()->id;
             MessagePollVote::create([
                 'poll_id' => $poll->id,
                 'option_id' => $optionId,
@@ -313,13 +327,17 @@ class SeedPoll extends Command
         ));
     }
 
+    /**
+     * @param EloquentCollection<int, Participant> $participants
+     */
     protected function seedReactions(
         Room $room,
         int $messageId,
-        Collection $participants,
+        EloquentCollection $participants,
         int $hostId,
         int $count
     ): void {
+        /** @var Collection<int, array{user_id:int|null, participant_id:int|null}> $actors */
         $actors = $this->actorPool($participants, $hostId);
         if ($actors->isEmpty()) {
             return;
@@ -354,19 +372,27 @@ class SeedPoll extends Command
         ));
     }
 
-    protected function actorPool(Collection $participants, int $hostId): Collection
+    /**
+     * @param EloquentCollection<int, Participant> $participants
+     */
+    protected function actorPool(EloquentCollection $participants, int $hostId)
     {
-        $actors = $participants->map(fn ($participant) => [
-            'user_id' => null,
-            'participant_id' => $participant->id,
-        ])->values();
+        /** @var Collection<int, array{user_id:int|null, participant_id:int|null}> $actors */
+        $actors = collect();
+
+        foreach ($participants as $participant) {
+            $actors->push([
+                'user_id' => null,
+                'participant_id' => $participant->id,
+            ]);
+        }
 
         $actors->push([
             'user_id' => $hostId,
             'participant_id' => null,
         ]);
 
-        return $actors;
+        return $actors->values();
     }
 
     protected function buildPollPayload(MessagePoll $poll): array
@@ -381,9 +407,11 @@ class SeedPoll extends Command
         $counts = $votes->groupBy('option_id')->map->count();
         $totalVotes = $counts->sum();
 
-        $options = $poll->options
+        /** @var EloquentCollection<int, MessagePollOption> $pollOptions */
+        $pollOptions = $poll->options;
+        $options = $pollOptions
             ->sortBy('position')
-            ->map(function ($option) use ($counts, $totalVotes) {
+            ->map(function (MessagePollOption $option) use ($counts, $totalVotes) {
                 $votesCount = (int) ($counts->get($option->id, 0));
                 $percent = $totalVotes > 0 ? (int) round(($votesCount / $totalVotes) * 100) : 0;
                 return [
