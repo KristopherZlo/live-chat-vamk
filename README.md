@@ -196,10 +196,12 @@ Deployment notes:
 ### Dev / test only
 
 * Seed a room with demo chat data (messages, replies, questions, reactions):
-  `php artisan chat:seed-demo <room-id-or-slug> [--count=200]`
+  `php artisan chat:seed-demo <room-id-or-slug> [--count=200] [--delay=0]`
   `php artisan chat:seed-questions <room-id-or-slug> [--count=50]`
   `php artisan chat:seed-messages <room-id-or-slug> [--count=200]`
   `php artisan chat:seed-poll <room-id-or-slug> [--options=] [--votes=] [--replies=] [--reactions=] [--participants=]`
+* Stream continuous demo activity (messages, replies, questions, reactions, poll votes):
+  `php artisan chat:stream-demo <room-id-or-slug> [--delay=1-3] [--participants=8]`
 * Simulate a live question stream (with a delay between questions):
   `php artisan chat:seed-questions <room-id-or-slug> [--count=50] [--delay=1]`
 * Generate invite codes for registration:

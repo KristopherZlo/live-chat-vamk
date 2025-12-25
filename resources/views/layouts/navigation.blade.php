@@ -3,8 +3,8 @@
     @php $logoRoute = Auth::check() ? route('dashboard') : route('rooms.join'); @endphp
     <div class="app-logo">
       <a class="app-logo-link" href="{{ $logoRoute }}" aria-label="Ghost Room">
-        <img src="{{ asset('icons/logo_black_xmas.svg') }}" class="app-logo-img app-logo-img--light" alt="Ghost Room logo">
-        <img src="{{ asset('icons/logo_white_xmas.svg') }}" class="app-logo-img app-logo-img--dark" alt="Ghost Room logo">
+        <img src="{{ asset('icons/logo_black.svg') }}" class="app-logo-img app-logo-img--light" alt="Ghost Room logo">
+        <img src="{{ asset('icons/logo_white.svg') }}" class="app-logo-img app-logo-img--dark" alt="Ghost Room logo">
       </a>
     </div>
     <div class="app-title-text">

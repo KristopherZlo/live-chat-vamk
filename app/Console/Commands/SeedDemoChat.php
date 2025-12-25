@@ -9,7 +9,6 @@ use App\Events\ReactionUpdated;
 use App\Models\MessageReaction;
 use App\Events\QuestionUpdated;
 use App\Models\Message;
-use App\Models\MessagePoll;
 use App\Models\Participant;
 use App\Models\Question;
 use App\Models\Room;
@@ -25,7 +24,7 @@ class SeedDemoChat extends Command
      *
      * @var string
      */
-    protected $signature = 'chat:seed-demo {room : Room ID or slug} {--count= : Number of messages (default: random 5-30)}';
+    protected $signature = 'chat:seed-demo {room : Room ID or slug} {--count= : Number of messages (default: random 5-30)} {--delay=0}';
 
     /**
      * The console command description.
@@ -46,6 +45,8 @@ class SeedDemoChat extends Command
         $targetCount = is_numeric($countOption)
             ? max(1, min(200, (int) $countOption)) // allow larger simulations, but clamp
             : random_int(5, 30);
+        $delayOption = $this->option('delay');
+        [$delayMin, $delayMax] = $this->parseDelay($delayOption !== null ? (string) $delayOption : '0');
 
         /** @var Room|null $room */
         $room = Room::with('owner')
@@ -60,14 +61,16 @@ class SeedDemoChat extends Command
 
         $host = $room->owner;
 
-        $participantNames = [
-            'Alex', 'Casey', 'Jordan', 'Taylor', 'Sam', 'Morgan', 'Riley', 'Drew',
-        ];
-
-        $participants = collect($participantNames)
-            ->shuffle()
-            ->take(random_int(3, 6))
-            ->map(fn ($name) => $this->createParticipant($room, $name));
+        $usedNames = [];
+        $participantCount = random_int(3, 6);
+        $participants = collect(range(1, $participantCount))
+            ->map(function () use ($room, &$usedNames) {
+                do {
+                    $name = 'user' . random_int(100, 999);
+                } while (in_array($name, $usedNames, true));
+                $usedNames[] = $name;
+                return $this->createParticipant($room, $name);
+            });
 
         $now = Carbon::now();
 
@@ -164,21 +167,6 @@ class SeedDemoChat extends Command
             'Start with a small prototype, then iterate.',
         ];
 
-        $pollSeeds = [
-            [
-                'question' => 'Which topic needs another example?',
-                'options' => ['Loops', 'Arrays', 'Functions', 'Debugging'],
-            ],
-            [
-                'question' => 'How confident do you feel about the homework?',
-                'options' => ['Very', 'Somewhat', 'Need help'],
-            ],
-            [
-                'question' => 'Preferred pace for the next section?',
-                'options' => ['Slow', 'Medium', 'Fast'],
-            ],
-        ];
-
         $messages = collect();
 
         // Seed a few host messages first (if a host exists).
@@ -194,23 +182,7 @@ class SeedDemoChat extends Command
                     userId: $host->id,
                     createdAt: $now->copy()->subMinutes(20 - $index)
                 ));
-            }
-        }
-
-        if ($host && $messages->count() < $targetCount) {
-            $pollCount = min(2, max(1, (int) floor($targetCount / 10)));
-            $pollSamples = collect($pollSeeds)->shuffle()->take($pollCount);
-            foreach ($pollSamples as $index => $pollSeed) {
-                if ($messages->count() >= $targetCount) {
-                    break;
-                }
-                $messages->push($this->createPollMessage(
-                    room: $room,
-                    question: $pollSeed['question'],
-                    options: $pollSeed['options'],
-                    userId: $host->id,
-                    createdAt: $now->copy()->subMinutes(12 - $index)
-                ));
+                $this->sleepRandom($delayMin, $delayMax);
             }
         }
 
@@ -227,6 +199,7 @@ class SeedDemoChat extends Command
                 participantId: $participant->id,
                 createdAt: $now->copy()->subMinutes(15 - $index)
             ));
+            $this->sleepRandom($delayMin, $delayMax);
         }
 
         // Generate replies, nested replies, and questions.
@@ -265,6 +238,7 @@ class SeedDemoChat extends Command
 
             $messages->push($message);
             $replyParents[] = $parent->id;
+            $this->sleepRandom($delayMin, $delayMax);
 
             // Occasionally add a reply to this reply (nested).
             if ($messages->count() < $targetCount && random_int(0, 3) === 0) {
@@ -278,6 +252,7 @@ class SeedDemoChat extends Command
                     createdAt: $message->created_at->copy()->addMinutes(random_int(1, 6))
                 ));
                 $replyParents[] = $message->id;
+                $this->sleepRandom($delayMin, $delayMax);
             }
         }
 
@@ -338,6 +313,26 @@ class SeedDemoChat extends Command
         ]);
     }
 
+    private function parseDelay(string $raw): array
+    {
+        if (preg_match('/^(\\d+(?:\\.\\d+)?)-(\\d+(?:\\.\\d+)?)$/', $raw, $m)) {
+            $a = (float) $m[1];
+            $b = (float) $m[2];
+            return [min($a, $b), max($a, $b)];
+        }
+        $sec = max(0.0, (float) $raw);
+        return [$sec, $sec];
+    }
+
+    private function sleepRandom(float $min, float $max): void
+    {
+        $delay = $min === $max ? $min : random_int((int) round($min * 1000), (int) round($max * 1000)) / 1000;
+        if ($delay <= 0) {
+            return;
+        }
+        usleep((int) round($delay * 1_000_000));
+    }
+
     private function createMessage(
         Room $room,
         string $content,
@@ -382,53 +377,6 @@ class SeedDemoChat extends Command
         if ($question) {
             event(new QuestionCreated($question));
         }
-
-        return $message;
-    }
-
-    private function createPollMessage(
-        Room $room,
-        string $question,
-        array $options,
-        int $userId,
-        ?Carbon $createdAt = null
-    ): Message {
-        $message = Message::create([
-            'room_id' => $room->id,
-            'participant_id' => null,
-            'user_id' => $userId,
-            'reply_to_id' => null,
-            'is_system' => false,
-            'content' => $question,
-        ]);
-
-        $poll = MessagePoll::create([
-            'message_id' => $message->id,
-            'question' => $question,
-            'is_closed' => false,
-        ]);
-
-        $poll->options()->createMany(
-            collect($options)->values()->map(fn ($option, $index) => [
-                'label' => Str::limit((string) $option, 120, ''),
-                'position' => $index,
-            ])->all()
-        );
-
-        if ($createdAt) {
-            $message->forceFill([
-                'created_at' => $createdAt,
-                'updated_at' => $createdAt,
-            ])->save();
-            $poll->forceFill([
-                'created_at' => $createdAt,
-                'updated_at' => $createdAt,
-            ])->save();
-        }
-
-        $message->setRelation('poll', $poll->loadMissing('options'));
-        $message->loadMissing(['user', 'participant', 'room', 'replyTo.user', 'replyTo.participant', 'reactions']);
-        event(new MessageSent($message));
 
         return $message;
     }
