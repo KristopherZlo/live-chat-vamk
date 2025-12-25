@@ -3,7 +3,7 @@
 return [
     'releases' => [
         '1.3.0' => [
-            'date' => '2025-12-10',
+            'date' => '2025-12-25',
             'image' => 'whats-new/130.png',
             'image_alt' => 'Preview of the 1.3.0 classroom updates',
             'excerpt' => 'Replies moved to their own tab, quick-reply buttons, room speed-dial, new filters, and a public updates page polish the experience.',
