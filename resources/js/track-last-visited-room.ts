@@ -9,6 +9,7 @@ const normalizeRoom = (input: StoredRoom): RoomMeta => ({
     slug: sanitize(input?.slug),
     title: sanitize(input?.title),
     description: sanitize(input?.description),
+    owner: sanitize(input?.owner),
 });
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -25,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
         slug: roomEl.dataset.roomSlug,
         title: roomEl.dataset.roomTitle,
         description: roomEl.dataset.roomDescription,
+        owner: roomEl.dataset.roomOwner,
     });
 
     if (!currentRoom.slug) {

@@ -8,6 +8,7 @@ const toRoomMeta = (value: StoredRoom): RoomMeta => ({
     slug: sanitize(value?.slug),
     title: sanitize(value?.title),
     description: sanitize(value?.description),
+    owner: sanitize(value?.owner),
 });
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -63,7 +64,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const code = document.createElement('span');
         code.className = 'room-code';
         code.textContent = `Code: ${room.slug}`;
+        const owner = document.createElement('span');
+        owner.className = 'room-owner';
+        owner.textContent = `Owner: ${room.owner || 'Unknown'}`;
+        const separator = document.createElement('span');
+        separator.className = 'dot-separator';
+        separator.textContent = '•';
         meta.appendChild(code);
+        meta.appendChild(separator);
+        meta.appendChild(owner);
 
         const titleRow = document.createElement('div');
         titleRow.className = 'room-card-title';

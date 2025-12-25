@@ -92,6 +92,7 @@
         data-room-slug="{{ $room->slug }}"
         data-room-title="{{ $room->title ?? 'Untitled room' }}"
         data-room-description="{{ $room->description ?? '' }}"
+        data-room-owner="{{ $room->owner?->name ?? 'Host' }}"
     >
         <div class="panel room-header">
             @php
