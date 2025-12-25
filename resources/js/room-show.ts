@@ -1190,6 +1190,7 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                 const repliesMobileQuery = window.matchMedia('(max-width: 720px)');
                 const isRepliesMobile = () => repliesMobileQuery.matches;
                 const repliesBadge = document.querySelector('[data-replies-unread]');
+                const replyInboxEmpty = replyInbox?.querySelector('.reply-inbox-empty');
                 const replyThreadsState = new Map();
                 let activeReplyParentId = null;
                 let chatActiveTab = 'chat';
@@ -3187,11 +3188,18 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                     }
                 };
 
+                const updateReplyInboxEmptyState = () => {
+                    if (!replyInbox || !replyInboxEmpty) return;
+                    const hasItems = replyInbox.querySelector('.reply-inbox-item');
+                    replyInboxEmpty.hidden = Boolean(hasItems);
+                };
+
                 const ensureInboxItem = (state) => {
                     if (!replyInbox || !state || !state.parent) return null;
                     let item = replyInbox.querySelector(`.reply-inbox-item[data-reply-parent="${state.parent.id}"]`);
                     if (item) {
                         syncReplyInboxItem(item, state);
+                        updateReplyInboxEmptyState();
                         return item;
                     }
                     item = document.createElement('li');
@@ -3219,6 +3227,7 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                     `;
                     replyInbox.prepend(item);
                     syncReplyInboxItem(item, state);
+                    updateReplyInboxEmptyState();
                     return item;
                 };
 
@@ -3235,6 +3244,7 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                         syncReplyInboxItem(item, thread);
                     });
                     updateRepliesBadge();
+                    updateReplyInboxEmptyState();
                 };
 
                 const renderReplyBranch = (node, depth = 0) => {
