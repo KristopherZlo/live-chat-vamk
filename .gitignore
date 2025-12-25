@@ -6,6 +6,7 @@
 /.cursor
 AGENTS.md
 .gitignore
+deploy_ghostroom.sh
 /.aider
 /.aider*
 /.cline
