@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class MessagePoll extends Model
 {
@@ -19,17 +21,17 @@ class MessagePoll extends Model
         'is_closed' => 'bool',
     ];
 
-    public function message()
+    public function message(): BelongsTo
     {
         return $this->belongsTo(Message::class);
     }
 
-    public function options()
+    public function options(): HasMany
     {
         return $this->hasMany(MessagePollOption::class, 'poll_id');
     }
 
-    public function votes()
+    public function votes(): HasMany
     {
         return $this->hasMany(MessagePollVote::class, 'poll_id');
     }

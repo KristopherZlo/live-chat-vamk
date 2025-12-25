@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Question extends Model
 {
@@ -29,27 +31,27 @@ class Question extends Model
         'deleted_by_owner_at' => 'datetime',
     ];
 
-    public function room()
+    public function room(): BelongsTo
     {
         return $this->belongsTo(Room::class);
     }
 
-    public function message()
+    public function message(): BelongsTo
     {
         return $this->belongsTo(Message::class);
     }
 
-    public function participant()
+    public function participant(): BelongsTo
     {
         return $this->belongsTo(Participant::class);
     }
 
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    public function ratings()
+    public function ratings(): HasMany
     {
         return $this->hasMany(QuestionRating::class);
     }

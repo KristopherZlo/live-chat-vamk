@@ -26,6 +26,8 @@ class StreamDemoChat extends Command
 
     protected $description = 'Run a continuous stream of demo messages, replies, questions, reactions, and poll votes';
 
+    protected bool $shouldStop = false;
+
     public function handle(): int
     {
         if (!$this->option('force') && app()->environment('production')) {
@@ -47,6 +49,8 @@ class StreamDemoChat extends Command
         }
 
         [$delayMin, $delayMax] = $this->parseDelay((string) $this->option('delay'));
+
+        $this->registerSignalHandlers();
 
         $botIds = $participants->pluck('id')->all();
         $botLookup = array_fill_keys($botIds, true);
@@ -73,7 +77,7 @@ class StreamDemoChat extends Command
 
         $this->info("Streaming demo activity into room {$room->id} ({$room->slug})");
 
-        while (true) {
+        while ($this->shouldContinue()) {
             $now = microtime(true);
 
             $pendingActions = $this->processPendingActions($pendingActions, $room, $now);
@@ -128,6 +132,30 @@ class StreamDemoChat extends Command
 
             usleep(200000);
         }
+
+        return self::SUCCESS;
+    }
+
+    protected function shouldContinue(): bool
+    {
+        return ! $this->shouldStop;
+    }
+
+    protected function registerSignalHandlers(): void
+    {
+        if (!function_exists('pcntl_async_signals') || !function_exists('pcntl_signal')) {
+            return;
+        }
+
+        pcntl_async_signals(true);
+
+        pcntl_signal(SIGINT, function () {
+            $this->shouldStop = true;
+        });
+
+        pcntl_signal(SIGTERM, function () {
+            $this->shouldStop = true;
+        });
     }
 
     protected function findRoom(string $input): ?Room
