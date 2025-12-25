@@ -69,7 +69,7 @@ class SecurityHeaders
         $defaultSrc = ["'self'"];
         $imgSrc = ["'self'", 'data:'];
         $styleSrc = ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdn.jsdelivr.net'];
-        $scriptSrc = ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'];
+        $scriptSrc = ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://cdn.jsdelivr.net'];
         $fontSrc = ["'self'", 'data:', 'https://fonts.gstatic.com'];
         $connectSrc = ["'self'", 'https://cdn.jsdelivr.net'];
         $frameSrc = ["'self'", 'https://www.youtube.com', 'https://www.youtube-nocookie.com'];
@@ -88,8 +88,6 @@ class SecurityHeaders
                 $connectSrc[] = $wsOrigin;
             }
 
-            // Needed for some dev tools / HMR shims.
-            $scriptSrc[] = "'unsafe-eval'";
         }
 
         // Allow realtime connections (e.g., Reverb/Pusher).
