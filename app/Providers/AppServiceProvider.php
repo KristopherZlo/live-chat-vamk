@@ -36,15 +36,18 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('web', function (Request $request) {
             $userId = $request->user()?->getAuthIdentifier();
             $ip = $request->ip();
+            $guestIpPerMinute = (int) config('ghostroom.limits.web.guest_ip_per_minute', 1200);
+            $userPerMinute = (int) config('ghostroom.limits.web.user_per_minute', 3600);
+            $userIpPerMinute = (int) config('ghostroom.limits.web.user_ip_per_minute', 2400);
 
             if ($userId) {
                 return [
-                    Limit::perMinute(3600)->by('user|'.$userId),
-                    Limit::perMinute(2400)->by($ip),
+                    Limit::perMinute($userPerMinute)->by('user|'.$userId),
+                    Limit::perMinute($userIpPerMinute)->by($ip),
                 ];
             }
 
-            return Limit::perMinute(1200)->by($ip);
+            return Limit::perMinute($guestIpPerMinute)->by($ip);
         });
 
         RateLimiter::for('login', function (Request $request) {
@@ -74,25 +77,46 @@ class AppServiceProvider extends ServiceProvider
             $roomId = is_object($room) && method_exists($room, 'getKey') ? $room->getKey() : $room;
             $userId = $request->user()?->getAuthIdentifier();
             $sessionId = $request->session()?->getId();
+            $fingerprint = $request->cookie('lc_fp');
             $ip = $request->ip();
-            $compositeKey = implode('|', array_filter([$roomId, $userId, $sessionId, $ip]));
             $isAuthenticated = (bool) $userId;
-            $perMinute = $isAuthenticated ? 120 : 20;
-            $perMinuteIp = $isAuthenticated ? 240 : 40;
-
-            return [
+            $perMinuteAuth = (int) config('ghostroom.limits.room.messages_per_minute_auth', 120);
+            $perMinuteGuest = (int) config('ghostroom.limits.room.messages_per_minute_guest', 20);
+            $perMinuteIpAuth = (int) config('ghostroom.limits.room.messages_per_minute_ip_auth', 240);
+            $perMinuteIpGuest = (int) config('ghostroom.limits.room.messages_per_minute_ip_guest', 40);
+            $perMinute = $isAuthenticated ? $perMinuteAuth : $perMinuteGuest;
+            $perMinuteIp = $isAuthenticated ? $perMinuteIpAuth : $perMinuteIpGuest;
+            $identityKey = $userId
+                ? implode('|', ['user', $userId, 'session', $sessionId])
+                : ($fingerprint ? 'fp|'.$fingerprint : ($sessionId ? 'session|'.$sessionId : 'ip|'.$ip));
+            $compositeKey = implode('|', array_filter([$roomId, $identityKey, $ip]));
+            $limits = [
                 Limit::perMinute($perMinute)->by($compositeKey),
                 Limit::perMinute($perMinuteIp)->by($ip),
             ];
+
+            if ($roomId) {
+                $perMinuteRoom = (int) config('ghostroom.limits.room.messages_per_minute_room', 600);
+                $limits[] = Limit::perMinute($perMinuteRoom)->by('room|'.$roomId);
+            }
+
+            if (!$isAuthenticated && $fingerprint && $roomId) {
+                $perMinuteFingerprint = (int) config('ghostroom.limits.room.messages_per_minute_fingerprint', $perMinute);
+                $limits[] = Limit::perMinute($perMinuteFingerprint)->by('room|'.$roomId.'|fp|'.$fingerprint);
+            }
+
+            return $limits;
         });
 
         RateLimiter::for('room-joins', function (Request $request) {
             $ip = $request->ip();
             $codeKey = Str::lower((string) $request->input('code'));
+            $perMinuteIp = (int) config('ghostroom.limits.room.join_per_minute_ip', 15);
+            $perMinuteCodeIp = (int) config('ghostroom.limits.room.join_per_minute_code_ip', 5);
 
             return [
-                Limit::perMinute(15)->by($ip),
-                Limit::perMinute(5)->by($codeKey.'|'.$ip),
+                Limit::perMinute($perMinuteIp)->by($ip),
+                Limit::perMinute($perMinuteCodeIp)->by($codeKey.'|'.$ip),
             ];
         });
 
