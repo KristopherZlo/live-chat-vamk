@@ -20,6 +20,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
@@ -391,6 +392,8 @@ class RoomController extends Controller
             }
         }
 
+        $this->enforceParticipantCreationLimit($request, $room, $fingerprint, $ipAddress);
+
         $token = Str::uuid()->toString();
 
         $participantData = [
@@ -409,6 +412,45 @@ class RoomController extends Controller
         $request->session()->put($sessionKey, $participant->id);
 
         return $participant;
+    }
+
+    protected function enforceParticipantCreationLimit(
+        Request $request,
+        Room $room,
+        string $fingerprint,
+        ?string $ipAddress = null
+    ): void {
+        if ($this->isOwner($room)) {
+            return;
+        }
+
+        $sessionKey = 'room_participant_' . $room->id;
+        if ($request->session()->has($sessionKey)) {
+            return;
+        }
+
+        $ipAddress = $ipAddress ?? $request->ip();
+        $baseKey = 'room-participant|' . $room->id;
+        $ipKey = $baseKey . '|ip|' . $ipAddress;
+        $fingerprintKey = $fingerprint !== '' ? $baseKey . '|fp|' . $fingerprint : null;
+
+        $perMinuteFingerprint = (int) config('ghostroom.limits.room.participant_create_per_minute', 8);
+        $perMinuteIp = (int) config('ghostroom.limits.room.participant_create_per_minute_ip', 60);
+        $decaySeconds = 60;
+
+        if ($fingerprintKey && RateLimiter::tooManyAttempts($fingerprintKey, $perMinuteFingerprint)) {
+            abort(429, 'Too many new sessions. Please wait a minute and try again.');
+        }
+
+        if (RateLimiter::tooManyAttempts($ipKey, $perMinuteIp)) {
+            abort(429, 'Too many new sessions. Please wait a minute and try again.');
+        }
+
+        if ($fingerprintKey) {
+            RateLimiter::hit($fingerprintKey, $decaySeconds);
+        }
+
+        RateLimiter::hit($ipKey, $decaySeconds);
     }
 
     public function questionsPanel(Request $request, Room $room)
