@@ -29,7 +29,7 @@ import {
   syncLogoutForms,
 } from './design/forms';
 import { setupMobileMenu, setupUserMenus, setupMobileTabs } from './design/menu';
-import { setupRoomDescriptions, setupRoomDeleteModals } from './design/room';
+import { setupRoomColorPickers, setupRoomDescriptions, setupRoomDeleteModals, setupRoomSorting } from './design/room';
 import { setupWhatsNewModal } from './design/whats-new';
 import { updateDashboardGreeting, scheduleGreetingRefresh } from './design/greeting';
 import { setupConfettiTrigger } from './design/confetti';
@@ -71,6 +71,8 @@ document.addEventListener('DOMContentLoaded', () => {
   syncLogoutForms();
   setupInlineEditors();
   setupRoomDescriptions();
+  setupRoomColorPickers();
+  setupRoomSorting();
   setupRoomDeleteModals();
   setupWhatsNewModal();
   setupConfettiTrigger();
@@ -87,6 +89,8 @@ window.rebindQueuePanels = (root: Document | Element = document): void => {
   if (!isExternalDoc) {
     setupFlashMessages(root);
     setupRoomDescriptions(root);
+    setupRoomColorPickers(root);
+    setupRoomSorting(root);
     syncLogoutForms();
   }
 

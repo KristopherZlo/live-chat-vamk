@@ -6,6 +6,7 @@ use App\Models\Setting;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
 use Illuminate\Support\ServiceProvider;
 
@@ -32,6 +33,24 @@ class AppServiceProvider extends ServiceProvider
         } catch (\Throwable $e) {
             // Settings table may not exist during early migrations.
         }
+
+        $monthDay = now()->format('m-d');
+        $isHolidayLogoSeason = $monthDay >= '12-15' || $monthDay <= '01-15';
+        $seasonalLogoAssets = $isHolidayLogoSeason
+            ? [
+                'light' => 'icons/logo_black_xmas.svg',
+                'dark' => 'icons/logo_white_xmas.svg',
+                'meta' => 'icons/logo_black_xmas.svg',
+                'favicon' => 'icons/logo_white_xmas.svg',
+            ]
+            : [
+                'light' => 'icons/logo_black.svg',
+                'dark' => 'icons/logo_white.svg',
+                'meta' => 'icons/logo_black.svg',
+                'favicon' => 'icons/logo_white.svg',
+            ];
+        View::share('isHolidayLogoSeason', $isHolidayLogoSeason);
+        View::share('seasonalLogoAssets', $seasonalLogoAssets);
 
         RateLimiter::for('web', function (Request $request) {
             $userId = $request->user()?->getAuthIdentifier();
@@ -117,6 +136,19 @@ class AppServiceProvider extends ServiceProvider
             return [
                 Limit::perMinute($perMinuteIp)->by($ip),
                 Limit::perMinute($perMinuteCodeIp)->by($codeKey.'|'.$ip),
+            ];
+        });
+
+        RateLimiter::for('room-reorder', function (Request $request) {
+            $ip = $request->ip();
+            $userId = $request->user()?->getAuthIdentifier();
+            $perMinuteUser = (int) config('ghostroom.limits.room.reorder_per_minute_user', 90);
+            $perMinuteIp = (int) config('ghostroom.limits.room.reorder_per_minute_ip', 240);
+            $identityKey = $userId ? 'user|'.$userId : 'guest|'.$ip;
+
+            return [
+                Limit::perMinute($perMinuteUser)->by('reorder|'.$identityKey),
+                Limit::perMinute($perMinuteIp)->by('reorder|ip|'.$ip),
             ];
         });
 

@@ -20,6 +20,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
@@ -93,6 +94,8 @@ class RoomController extends Controller
         $rooms = $request->user()
             ->rooms()
             ->withCount(['messages', 'questions'])
+            ->orderByRaw('CASE WHEN sort_order IS NULL THEN 1 ELSE 0 END')
+            ->orderBy('sort_order')
             ->latest('updated_at')
             ->get();
 
@@ -116,11 +119,17 @@ class RoomController extends Controller
             'is_public_read' => ['nullable', 'boolean'],
         ]);
 
+        $nextSortOrder = (int) Room::where('user_id', Auth::id())->max('sort_order');
+        if ($nextSortOrder === 0) {
+            $nextSortOrder = (int) Room::where('user_id', Auth::id())->count();
+        }
+
         $room = Room::create([
             'user_id' => Auth::id(),
             'title' => $data['title'],
             'description' => $data['description'] ?? null,
             'slug' => Str::random(10),
+            'sort_order' => $nextSortOrder + 1,
             'is_public_read' => $data['is_public_read'] ?? true,
         ]);
 
@@ -143,6 +152,10 @@ class RoomController extends Controller
     {
         $this->ensureOwner($room);
 
+        if ($request->has('card_color') && $request->input('card_color') === '') {
+            $request->merge(['card_color' => null]);
+        }
+
         $previousStatus = $room->status;
         $data = $request->validate([
             'title' => [
@@ -153,6 +166,7 @@ class RoomController extends Controller
             ],
             'description' => ['sometimes', 'nullable', 'string'],
             'status' => ['sometimes', 'in:active,finished'],
+            'card_color' => ['sometimes', 'nullable', Rule::in(array_merge(['default'], Room::CARD_COLORS))],
         ]);
 
         $changes = [];
@@ -168,6 +182,13 @@ class RoomController extends Controller
         if (array_key_exists('status', $data) && $data['status'] !== $room->status) {
             $changes['status'] = $data['status'];
             $changes['finished_at'] = $data['status'] === 'finished' ? now() : null;
+        }
+
+        if (array_key_exists('card_color', $data)) {
+            $nextCardColor = $data['card_color'] === 'default' ? null : $data['card_color'];
+            if ($nextCardColor !== $room->card_color) {
+                $changes['card_color'] = $nextCardColor;
+            }
         }
 
         if (empty($changes)) {
@@ -201,7 +222,67 @@ class RoomController extends Controller
                 : 'Room reopened for participants.';
         }
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $statusMessage,
+                'room' => [
+                    'slug' => $room->slug,
+                    'status' => $room->status,
+                    'card_color' => $room->card_color,
+                    'updated_at' => optional($room->updated_at)->toIso8601String(),
+                ],
+            ]);
+        }
+
         return back()->with('status', $statusMessage);
+    }
+
+    public function reorder(Request $request)
+    {
+        $batchMax = max(1, (int) config('ghostroom.limits.room.reorder_batch_max', 500));
+        $data = $request->validate([
+            'room_order' => ['required', 'array', 'min:1', 'max:'.$batchMax],
+            'room_order.*' => ['required', 'integer', 'distinct'],
+        ]);
+
+        $user = $request->user();
+        $roomIds = array_values(array_map('intval', $data['room_order']));
+        $ownedRooms = $user
+            ->rooms()
+            ->select(['id', 'sort_order'])
+            ->whereIn('id', $roomIds)
+            ->get();
+
+        if ($ownedRooms->count() !== count($roomIds)) {
+            abort(403);
+        }
+
+        $currentSortByRoomId = $ownedRooms->pluck('sort_order', 'id');
+        $updates = [];
+        foreach ($roomIds as $index => $roomId) {
+            $nextSortOrder = $index + 1;
+            if ((int) ($currentSortByRoomId[$roomId] ?? 0) !== $nextSortOrder) {
+                $updates[$roomId] = $nextSortOrder;
+            }
+        }
+
+        if (empty($updates)) {
+            return response()->json([
+                'message' => 'Room order is unchanged.',
+            ]);
+        }
+
+        DB::transaction(function () use ($updates, $user) {
+            foreach ($updates as $roomId => $sortOrder) {
+                Room::where('user_id', $user->id)->whereKey($roomId)->update([
+                    'sort_order' => $sortOrder,
+                ]);
+            }
+        });
+
+        return response()->json([
+            'message' => 'Room order saved.',
+        ]);
     }
 
     public function destroy(Request $request, Room $room)

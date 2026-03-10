@@ -50,6 +50,9 @@ Route::middleware(['auth'])->group(function () {
         ->name('rooms.create');
     Route::post('/rooms', [RoomController::class, 'store'])
         ->name('rooms.store');
+    Route::patch('/rooms/reorder', [RoomController::class, 'reorder'])
+        ->middleware('throttle:room-reorder')
+        ->name('rooms.reorder');
     Route::patch('/rooms/{room}', [RoomController::class, 'update'])
         ->name('rooms.update');
     Route::delete('/rooms/{room}', [RoomController::class, 'destroy'])

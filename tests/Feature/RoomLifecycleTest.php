@@ -74,6 +74,20 @@ test('owner can create update and delete a room', function () {
     expect($room->finished_at)->toBeNull();
 
     $this->actingAs($owner)
+        ->patch(route('rooms.update', $room), ['card_color' => 'teal'])
+        ->assertSessionHasNoErrors();
+
+    $room->refresh();
+    expect($room->card_color)->toBe('teal');
+
+    $this->actingAs($owner)
+        ->patch(route('rooms.update', $room), ['card_color' => 'default'])
+        ->assertSessionHasNoErrors();
+
+    $room->refresh();
+    expect($room->card_color)->toBeNull();
+
+    $this->actingAs($owner)
         ->delete(route('rooms.destroy', $room), ['confirm_title' => $room->title])
         ->assertRedirect(route('dashboard'));
 
@@ -98,6 +112,38 @@ test('non owners cannot update or delete rooms', function () {
         ->assertStatus(403);
 });
 
+test('owner can reorder rooms and persist sort order', function () {
+    $owner = User::factory()->create();
+
+    $first = Room::create([
+        'user_id' => $owner->id,
+        'title' => 'First',
+        'slug' => Str::random(8),
+        'sort_order' => 1,
+    ]);
+    $second = Room::create([
+        'user_id' => $owner->id,
+        'title' => 'Second',
+        'slug' => Str::random(8),
+        'sort_order' => 2,
+    ]);
+    $third = Room::create([
+        'user_id' => $owner->id,
+        'title' => 'Third',
+        'slug' => Str::random(8),
+        'sort_order' => 3,
+    ]);
+
+    $this->actingAs($owner)
+        ->patchJson(route('rooms.reorder'), ['room_order' => [$third->id, $first->id, $second->id]])
+        ->assertOk()
+        ->assertJson(['message' => 'Room order saved.']);
+
+    expect($third->fresh()->sort_order)->toBe(1);
+    expect($first->fresh()->sort_order)->toBe(2);
+    expect($second->fresh()->sort_order)->toBe(3);
+});
+
 test('room deletion requires confirm title', function () {
     $owner = User::factory()->create();
     $room = Room::create([
@@ -111,4 +157,17 @@ test('room deletion requires confirm title', function () {
         ->assertSessionHasErrors('confirm_title');
 
     $this->assertDatabaseHas('rooms', ['id' => $room->id]);
+});
+
+test('room card color validates against allowed palette', function () {
+    $owner = User::factory()->create();
+    $room = Room::create([
+        'user_id' => $owner->id,
+        'title' => 'Color check',
+        'slug' => Str::random(8),
+    ]);
+
+    $this->actingAs($owner)
+        ->patch(route('rooms.update', $room), ['card_color' => 'not-a-color'])
+        ->assertSessionHasErrors('card_color');
 });

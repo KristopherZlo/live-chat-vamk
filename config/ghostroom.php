@@ -32,6 +32,9 @@ return [
             'participant_create_per_minute_ip' => 1200, // Per-IP participant creation limit.
             'join_per_minute_ip' => 600, // Per-IP room join attempts.
             'join_per_minute_code_ip' => 400, // Per-IP room join attempts per code.
+            'reorder_per_minute_user' => 90, // Per-user room reorder requests.
+            'reorder_per_minute_ip' => 240, // Per-IP room reorder requests.
+            'reorder_batch_max' => 500, // Max room ids accepted in one reorder payload.
         ],
         'web' => [
             'guest_ip_per_minute' => 6000, // Global per-IP limit for guest web routes.

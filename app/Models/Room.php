@@ -13,6 +13,16 @@ class Room extends Model
     use HasFactory;
 
     private static ?bool $banIdentityColumns = null;
+    public const CARD_COLORS = [
+        'ocean',
+        'mint',
+        'amber',
+        'rose',
+        'violet',
+        'teal',
+        'slate',
+        'coral',
+    ];
 
     protected $fillable = [
         'user_id',
@@ -20,12 +30,15 @@ class Room extends Model
         'description',
         'slug',
         'status',
+        'card_color',
+        'sort_order',
         'is_public_read',
         'finished_at',
     ];
 
     protected $casts = [
         'is_public_read' => 'bool',
+        'sort_order' => 'int',
         'finished_at' => 'datetime',
     ];
 

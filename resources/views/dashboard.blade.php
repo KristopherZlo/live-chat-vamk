@@ -4,16 +4,24 @@
         $latestRoom = $rooms->first();
         $totalMessages = $rooms->sum('messages_count');
         $totalQuestions = $rooms->sum('questions_count');
+        $roomCardPalette = [
+            'default' => 'Default',
+            'ocean' => 'Ocean',
+            'mint' => 'Mint',
+            'amber' => 'Amber',
+            'rose' => 'Rose',
+            'violet' => 'Violet',
+            'teal' => 'Teal',
+            'slate' => 'Slate',
+            'coral' => 'Coral',
+        ];
+        $roomCardColorKeys = \App\Models\Room::CARD_COLORS;
     @endphp
 
-    <section class="panel dashboard-hero">
-        <div class="dashboard-hero__content">
-            <div class="eyebrow">Dashboard</div>
-            <h1 class="dashboard-hero__title" id="dashboardGreeting" data-username="{{ $user->name }}">
-                Good day, {{ $user->name }}
-            </h1>
-            <p class="panel-subtitle">Run live rooms in the same sleek style as your chats.</p>
-        </div>
+    <section class="dashboard-title">
+        <h1 class="dashboard-title__text" id="dashboardGreeting" data-username="{{ $user->name }}">
+            Hello, {{ $user->name }}
+        </h1>
     </section>
 
     @if (session('status'))
@@ -56,17 +64,74 @@
                     </div>
                 </div>
             @else
-                <div class="rooms-grid">
+                <div class="rooms-grid" data-rooms-grid data-rooms-reorder-url="{{ route('rooms.reorder') }}">
                     @foreach($rooms as $room)
                         @php
                             $publicLink = route('rooms.public', $room->slug);
+                            $cardColor = in_array($room->card_color, $roomCardColorKeys, true) ? $room->card_color : null;
+                            $cardColorKey = $cardColor ?? 'default';
+                            $cardColorMenuId = 'roomColorMenu' . $room->id;
                         @endphp
-                        <article class="room-card panel">
+                        <article
+                            class="room-card panel{{ $cardColor ? ' room-card--color-' . $cardColor : '' }}"
+                            data-room-card
+                            data-room-id="{{ $room->id }}"
+                            draggable="false"
+                        >
                             <div class="room-card-meta">
-                                <span class="room-code">Code: <span class="room-code-value">{{ $room->slug }}</span></span>
-                                <span class="dot-separator">&bull;</span>
-                                <span class="message-meta">Updated {{ $room->updated_at->format('d.m H:i') }}</span>
-                                <span class="status-pill status-{{ $room->status }}">{{ ucfirst($room->status) }}</span>
+                                <div class="room-card-meta-info">
+                                    <span class="room-code">Code: <span class="room-code-value">{{ $room->slug }}</span></span>
+                                    <span class="dot-separator">&bull;</span>
+                                    <span class="message-meta">Updated {{ $room->updated_at->format('d.m H:i') }}</span>
+                                    <span class="status-pill status-{{ $room->status }}">{{ ucfirst($room->status) }}</span>
+                                </div>
+                                <div class="room-card-meta-controls">
+                                    <button
+                                        type="button"
+                                        class="icon-btn room-card-sort-handle"
+                                        data-room-sort-handle
+                                        aria-label="Drag to reorder room"
+                                        title="Drag to reorder room"
+                                    >
+                                        <i data-lucide="grip-vertical"></i>
+                                    </button>
+                                    <div class="room-card-color-picker" data-room-color-picker>
+                                        <button
+                                            type="button"
+                                            class="icon-btn room-card-color-trigger"
+                                            data-room-color-trigger
+                                            aria-label="Change room card color"
+                                            aria-haspopup="true"
+                                            aria-expanded="false"
+                                            aria-controls="{{ $cardColorMenuId }}"
+                                        >
+                                            <span class="room-card-color-dot room-card-color-dot--{{ $cardColorKey }}"></span>
+                                            <span class="visually-hidden">Change room card color</span>
+                                        </button>
+                                        <form
+                                            method="POST"
+                                            action="{{ route('rooms.update', $room) }}"
+                                            class="room-card-color-menu"
+                                            id="{{ $cardColorMenuId }}"
+                                            data-room-color-menu
+                                            hidden
+                                        >
+                                            @csrf
+                                            @method('PATCH')
+                                            @foreach($roomCardPalette as $colorKey => $colorLabel)
+                                                <button
+                                                    type="submit"
+                                                    class="room-card-color-option{{ $cardColorKey === $colorKey ? ' is-active' : '' }}"
+                                                    name="card_color"
+                                                    value="{{ $colorKey }}"
+                                                    aria-label="Use {{ $colorLabel }} color"
+                                                >
+                                                    <span class="room-card-color-dot room-card-color-dot--{{ $colorKey }}"></span>
+                                                </button>
+                                            @endforeach
+                                        </form>
+                                    </div>
+                                </div>
                             </div>
                             <div class="room-card-header">
                                 <div class="room-card-title">
