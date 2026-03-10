@@ -169,8 +169,11 @@ return [
     |
     */
 
-    // Force Secure cookies unless explicitly disabled (default true)
-    'secure' => env('SESSION_SECURE_COOKIE', true),
+    // Default follows APP_URL scheme; override with SESSION_SECURE_COOKIE=true/false.
+    'secure' => env(
+        'SESSION_SECURE_COOKIE',
+        parse_url((string) env('APP_URL', ''), PHP_URL_SCHEME) === 'https'
+    ),
 
     /*
     |--------------------------------------------------------------------------
