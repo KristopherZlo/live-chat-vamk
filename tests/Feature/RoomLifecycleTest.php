@@ -7,7 +7,7 @@ use Illuminate\Support\Str;
 test('join form renders', function () {
     $this->get(route('rooms.join'))
         ->assertOk()
-        ->assertSeeText('Enter a room code to jump in');
+        ->assertSeeText('Enter a room code to get started.');
 });
 
 test('join submit validates missing code', function () {

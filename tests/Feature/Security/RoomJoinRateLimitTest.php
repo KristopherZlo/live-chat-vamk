@@ -1,6 +1,9 @@
 <?php
 
 test('room join is rate limited per code and ip', function () {
+    config()->set('ghostroom.limits.room.join_per_minute_ip', 5);
+    config()->set('ghostroom.limits.room.join_per_minute_code_ip', 5);
+
     $ip = '10.10.10.1';
     $code = 'missing-room-code';
 
