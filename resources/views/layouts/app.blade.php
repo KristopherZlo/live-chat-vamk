@@ -13,7 +13,9 @@
             ?? 'Ghost Room is an anonymous live Q&A chat for lectures so attendees can send questions without interrupting the class.';
         $metaTitle = $attributes->get('meta-title') ?? ($metaTitle ?? null);
         $metaDescription = $attributes->get('meta-description') ?? ($metaDescription ?? null) ?? $defaultDescription;
-        $metaImage = $attributes->get('meta-image') ?? ($metaImage ?? null) ?? asset('icons/logo_black.svg');
+        $metaImage = $attributes->get('meta-image')
+            ?? ($metaImage ?? null)
+            ?? asset($seasonalLogoAssets['meta'] ?? 'icons/logo_black.svg');
         $fullTitle = $metaTitle ? $metaTitle.' | '.$appName : $appName;
         $currentUrl = url()->current();
     @endphp
@@ -34,8 +36,8 @@
     <meta name="twitter:image" content="{{ $metaImage }}">
     @stack('meta')
 
-    <link rel="icon" type="image/svg+xml" href="{{ asset('icons/logo_white.svg') }}">
-    <link rel="shortcut icon" href="{{ asset('icons/logo_white.svg') }}">
+    <link rel="icon" type="image/svg+xml" href="{{ asset($seasonalLogoAssets['favicon'] ?? 'icons/logo_white.svg') }}">
+    <link rel="shortcut icon" href="{{ asset($seasonalLogoAssets['favicon'] ?? 'icons/logo_white.svg') }}">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

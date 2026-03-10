@@ -625,12 +625,20 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
 
                     let filterEmpty = body.querySelector('[data-queue-filter-empty]');
                     if (!filterEmpty) {
-                        filterEmpty = document.createElement('p');
+                        filterEmpty = document.createElement('div');
                         filterEmpty.className = 'empty-state queue-filter-empty';
                         filterEmpty.dataset.queueFilterEmpty = '1';
                         filterEmpty.hidden = true;
-                        filterEmpty.textContent = 'No questions in this filter.';
+                        filterEmpty.innerHTML = `
+                            <div class="empty-state-icon">
+                                <i data-lucide="list-ordered"></i>
+                            </div>
+                            <div class="empty-state-text">No questions in this filter.</div>
+                        `;
                         body.appendChild(filterEmpty);
+                        if (window.refreshLucideIcons) {
+                            window.refreshLucideIcons(filterEmpty);
+                        }
                     }
 
                     let pagination = body.querySelector('.queue-pagination');
@@ -884,7 +892,12 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                     });
                     const badge = document.querySelector('.queue-count-badge');
                     if (badge) {
-                        badge.textContent = `${counts.all} questions`;
+                        badge.textContent = String(counts.all);
+                        badge.dataset.queueCount = String(counts.all);
+                    }
+                    const queuePanelEl = document.getElementById('queuePanel');
+                    if (queuePanelEl && typeof window.setupQueueNewHandlers === 'function') {
+                        window.setupQueueNewHandlers(queuePanelEl);
                     }
                 };
 
@@ -1016,9 +1029,21 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                     : (chatMessagesList?.dataset?.hasMore === '1');
                 let messagesOldestKnownId = normalizeId(messagesOldestId) || normalizeId(chatMessagesList?.dataset?.oldestId);
                 let messagesLoading = false;
+                const forceChatToBottom = (framesLeft = 2) => {
+                    if (!chatContainer) return;
+                    const target = Math.max(chatContainer.scrollHeight - chatContainer.clientHeight, 0);
+                    if (Math.abs(chatContainer.scrollTop - target) > 1) {
+                        chatContainer.scrollTop = target;
+                    }
+                    if (framesLeft > 0) {
+                        window.requestAnimationFrame(() => forceChatToBottom(framesLeft - 1));
+                    }
+                };
                 const scrollChatToBottom = () => {
                     if (!chatContainer) return;
-                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                    const target = Math.max(chatContainer.scrollHeight - chatContainer.clientHeight, 0);
+                    chatContainer.scrollTo({ top: target, behavior: 'auto' });
+                    forceChatToBottom();
                 };
                 const updateMessagesStateAttributes = () => {
                     if (!chatMessagesList) return;
@@ -1034,6 +1059,84 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                             ? 'Fetching previous messages...'
                             : 'More messages available';
                     }
+                };
+                const isGroupableMessage = (messageEl) => {
+                    if (!messageEl || !messageEl.classList.contains('message')) return false;
+                    if (messageEl.classList.contains('message-loader') || messageEl.classList.contains('message-empty')) return false;
+                    if (messageEl.hasAttribute('data-messages-loader')) return false;
+                    return true;
+                };
+                const getMessageAuthorKey = (messageEl) => {
+                    const userId = normalizeId(messageEl?.dataset?.userId);
+                    if (userId) return `u:${userId}`;
+                    const participantId = normalizeId(messageEl?.dataset?.participantId);
+                    if (participantId) return `p:${participantId}`;
+                    const author = String(messageEl?.dataset?.author || '').trim();
+                    if (author) return `n:${author.toLowerCase()}`;
+                    const fallback = messageEl?.dataset?.messageId ? String(messageEl.dataset.messageId) : '';
+                    return `m:${fallback}`;
+                };
+                const getMessageGroupKey = (messageEl) => {
+                    const direction = messageEl?.classList?.contains('message--outgoing') ? 'out' : 'in';
+                    return `${getMessageAuthorKey(messageEl)}|${direction}`;
+                };
+                const unwrapMessageGroups = () => {
+                    if (!chatContainer) return;
+                    const groups = Array.from(chatContainer.querySelectorAll('.message-group'));
+                    groups.forEach((group) => {
+                        const itemsWrap = group.querySelector('.message-group-items');
+                        const messages = itemsWrap
+                            ? Array.from(itemsWrap.children)
+                            : Array.from(group.querySelectorAll('.message'));
+                        const avatar = group.querySelector('.message-group-avatar .message-avatar');
+                        const firstMessage = messages.find((message) => message instanceof HTMLElement) || null;
+                        if (avatar && firstMessage && !firstMessage.querySelector('.message-avatar')) {
+                            firstMessage.insertBefore(avatar, firstMessage.firstChild);
+                        }
+                        messages.forEach((message) => {
+                            if (message instanceof HTMLElement) {
+                                chatContainer.insertBefore(message, group);
+                            }
+                        });
+                        group.remove();
+                    });
+                };
+                const rebuildMessageGroups = () => {
+                    if (!chatContainer) return;
+                    unwrapMessageGroups();
+                    const messages = Array.from(chatContainer.querySelectorAll('.message')).filter(isGroupableMessage);
+                    if (!messages.length) return;
+                    let currentGroup = null;
+                    let currentKey = null;
+                    messages.forEach((message) => {
+                        const key = getMessageGroupKey(message);
+                        const isOutgoing = message.classList.contains('message--outgoing');
+                        if (!currentGroup || currentKey !== key) {
+                            currentGroup = document.createElement('div');
+                            currentGroup.className = `message-group${isOutgoing ? ' message-group--outgoing' : ''}`;
+                            const avatarWrap = document.createElement('div');
+                            avatarWrap.className = 'message-group-avatar';
+                            const itemsWrap = document.createElement('div');
+                            itemsWrap.className = 'message-group-items';
+                            currentGroup.appendChild(avatarWrap);
+                            currentGroup.appendChild(itemsWrap);
+                            chatContainer.insertBefore(currentGroup, message);
+                            currentKey = key;
+                        }
+                        const avatar = message.querySelector('.message-avatar');
+                        if (avatar) {
+                            const slot = currentGroup.querySelector('.message-group-avatar');
+                            if (slot && !slot.firstElementChild) {
+                                slot.appendChild(avatar);
+                            } else {
+                                avatar.remove();
+                            }
+                        }
+                        const itemsWrap = currentGroup.querySelector('.message-group-items');
+                        if (itemsWrap) {
+                            itemsWrap.appendChild(message);
+                        }
+                    });
                 };
                 const updateMessagesLoadMoreVisibility = () => {};
                 const loadOlderMessages = async () => {
@@ -1094,6 +1197,7 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                             window.refreshLucideIcons(chatContainer);
                         }
                         removeEmptyMessageState();
+                        rebuildMessageGroups();
                         const newHeight = chatContainer.scrollHeight;
                         chatContainer.scrollTop = newHeight - (prevHeight - prevTop);
                         messagesOldestKnownId = normalizeId(items[0]?.id) || messagesOldestKnownId;
@@ -1119,6 +1223,7 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                 };
                 const chatInputWrapper = document.querySelector('[data-chat-panel=\"chat\"] .chat-input');
                 const chatInput = document.getElementById('chatInput');
+                const chatComposer = document.querySelector('[data-chat-composer]');
                 const chatCharCounter = document.querySelector('[data-char-counter="chat"]');
                 const sendButton = document.getElementById('sendButton');
                 const chatEmojiToggle = document.getElementById('chatEmojiToggle');
@@ -1601,6 +1706,14 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                     }
                     console.error(text);
                 };
+                const showDeleteError = (message) => {
+                    const text = message || 'Message delete failed. Please try again.';
+                    if (typeof window.showFlashNotification === 'function') {
+                        window.showFlashNotification(text, { type: 'danger', source: 'message-delete', duration: 4800 });
+                        return;
+                    }
+                    console.error(text);
+                };
                 const removeEmptyMessageState = () => {
                     if (!chatContainer) return;
                     const empty = chatContainer.querySelector('.message-empty');
@@ -1895,6 +2008,7 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                         asQuestion ? 'q1' : 'q0',
                     ].join('|');
                 };
+                const MESSAGE_ANIMATE_MS = 180;
                 const buildMessageElement = (payload, options = {}) => {
                     const {
                         id,
@@ -1910,8 +2024,9 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                     const {
                         pending = false,
                         allowBan = true,
+                        animate = false,
                     } = options;
-                    const container = document.createElement('li');
+                    const container = document.createElement('div');
                     const messageId = id ?? `temp-${Date.now()}`;
                     const isTempMessage = String(messageId).startsWith('temp-');
                     const authorUserId = normalizeId(author?.user_id);
@@ -1920,9 +2035,19 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                 const isJebMessage = isJebTrigger(content);
                 const isGlitchMessage = isGlitchTrigger(content);
                 container.classList.add('message');
+                container.setAttribute('role', 'listitem');
                 if (isJebMessage) container.classList.add('message--jeb');
                 if (isGlitchMessage) container.classList.add('message--glitch');
                     container.dataset.messageId = messageId;
+                    if (animate) {
+                        container.dataset.animate = '1';
+                        window.setTimeout(() => {
+                            if (!container.isConnected) return;
+                            if (container.dataset.animate === '1') {
+                                container.removeAttribute('data-animate');
+                            }
+                        }, MESSAGE_ANIMATE_MS);
+                    }
                     container.dataset.reactionsUrl = reactionUrlTemplate && messageId ? reactionUrlTemplate.replace('__MESSAGE__', messageId) : '';
                     container.dataset.reactions = JSON.stringify(reactions || []);
                     container.dataset.myReactions = JSON.stringify(myReactions || []);
@@ -1967,72 +2092,70 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                     container.dataset.time = time;
                     container.dataset.poll = JSON.stringify(poll || null);
                     const canBan = allowBan && isOwnerUser && !isOwnerAuthor && author.participant_id;
-                    const canAdminDelete = isOwnerUser && !isOwnerAuthor;
                     const canSelfDelete = (currentUserId && authorUserId && Number(currentUserId) === Number(authorUserId))
-                        || (currentParticipantId && authorParticipantId && Number(currentParticipantId) === Number(authorParticipantId));
-                    const canInlineDelete = (canSelfDelete || (isOwnerUser && isOwnerAuthor)) && (Boolean(deleteUrl) || pending);
+                        || (currentParticipantId && authorParticipantId && Number(currentParticipantId) === Number(authorParticipantId))
+                        || (currentParticipantId && author?.participant_id && String(currentParticipantId) === String(author.participant_id));
+                    const canInlineDelete = (canSelfDelete || isOwnerUser) && (Boolean(deleteUrl) || pending);
                     if (hasPoll) {
                         container.classList.add('message--poll');
                     }
-                    const adminActionsHtml = (canBan || canAdminDelete) && deleteUrl ? `
-                        <div class="message-admin-actions">
-                            ${canBan ? `
-                                <form method="POST" action="${banStoreUrl}" class="message-ban-form" data-ban-confirm="1">
-                                    <input type="hidden" name="_token" value="${csrfToken}">
-                                    <input type="hidden" name="participant_id" value="${author.participant_id}">
-                                    <button type="submit" class="message-ban-btn" title="Ban participant">
-                                        <i data-lucide="gavel"></i>
-                                    </button>
-                                </form>` : ''}
-                            ${canAdminDelete ? `
-                                <form method="POST" action="${deleteUrl}" class="message-delete-form" data-message-delete>
-                                    <input type="hidden" name="_token" value="${csrfToken}">
-                                    <input type="hidden" name="_method" value="DELETE">
-                                    <button type="submit" class="message-delete-btn" title="Delete message">
-                                        <i data-lucide="trash-2"></i>
-                                    </button>
-                                </form>` : ''}
-                        </div>
+                    const banActionHtml = canBan && banStoreUrl ? `
+                        <form method="POST" action="${banStoreUrl}" class="msg-action-form" data-ban-confirm="1">
+                            <input type="hidden" name="_token" value="${csrfToken}">
+                            <input type="hidden" name="participant_id" value="${author.participant_id}">
+                            <button type="submit" class="msg-action msg-action-ban">
+                                <i data-lucide="gavel"></i>
+                                <span>Ban participant</span>
+                            </button>
+                        </form>
+                    ` : '';
+                    const deleteActionHtml = canInlineDelete ? `
+                        <button type="button" class="msg-action msg-action-delete" data-message-delete-trigger data-message-id="${escapeHtml(String(messageId || ''))}" data-delete-url="${escapeHtml(deleteUrl)}">
+                            <i data-lucide="trash-2"></i>
+                            <span>Delete</span>
+                        </button>
                     ` : '';
                     container.innerHTML = `
                         <div class="message-avatar colorized" style="background:${avatarColor}; color:#fff; border-color:transparent;">${initials}</div>
-                        <div class="message-body">
-                            ${adminActionsHtml}
-                            <div class="message-header">
-                                <span class="message-author">${authorName}${devBadge}</span>
-                                <div class="message-meta">
-                                    <span>${time}</span>
-                                    ${isOwnerAuthor ? '<span class="message-badge message-badge-teacher">Host</span>' : ''}
-                                    ${asQuestion ? '<span class="message-badge message-badge-question">To host</span>' : ''}
-                                    ${replyHtml ? '<span class="message-badge">Reply</span>' : ''}
+                        <div class="message-content">
+                            <div class="message-body">
+                                <button type="button" class="message-menu-trigger" data-message-menu-trigger aria-label="Message actions" aria-expanded="false">
+                                    <i data-lucide="more-horizontal"></i>
+                                </button>
+                                <div class="message-header">
+                                    <span class="message-author">${authorName}${devBadge}</span>
+                                    <div class="message-meta">
+                                        <span>${time}</span>
+                                        ${isOwnerAuthor ? '<span class="message-badge message-badge-teacher">Host</span>' : ''}
+                                        ${asQuestion ? '<span class="message-badge message-badge-question">To host</span>' : ''}
+                                        ${replyHtml ? '<span class="message-badge">Reply</span>' : ''}
+                                    </div>
+                                </div>
+                                ${replyHtml}
+                                ${pollHtml || messageTextHtml}
+                                <div class="message-actions" data-message-menu hidden>
+                                    <button
+                                        type="button"
+                                        class="msg-action"
+                                        data-reply-id="${escapeHtml(String(messageId || ''))}"
+                                        data-reply-author="${escapeHtml(authorNameRaw || 'Guest')}"
+                                        data-reply-text="${escapeHtml(content || '')}"
+                                    >
+                                        <i data-lucide="corner-up-right"></i>
+                                        <span>Reply</span>
+                                    </button>
+                                    <button type="button" class="msg-action msg-action-react" data-reaction-trigger>
+                                        <i data-lucide="smile-plus"></i>
+                                        <span>Add reaction</span>
+                                    </button>
+                                    ${banActionHtml}
+                                    ${deleteActionHtml}
                                 </div>
                             </div>
-                            ${replyHtml}
-                            ${pollHtml || messageTextHtml}
                             <div class="message-reactions" data-message-reactions>
                                 <div class="reactions-list" data-reactions-list></div>
                             </div>
-                            <div class="message-actions">
-                                <button type="button" class="msg-action">
-                                    <i data-lucide="corner-up-right"></i>
-                                    <span>Reply</span>
-                                </button>
-                                <button type="button" class="msg-action msg-action-react" data-reaction-trigger>
-                                    <i data-lucide="smile-plus"></i>
-                                </button>
-                                ${canInlineDelete ? `
-                                    <button type="button" class="msg-action msg-action-delete" data-message-delete-trigger data-message-id="${messageId}" data-delete-url="${deleteUrl}">
-                                        <i data-lucide="trash-2"></i>
-                                        <span>Delete</span>
-                                    </button>` : ''}
-                            </div>
                         </div>`;
-                        const replyBtn = container.querySelector('.msg-action');
-                        if (replyBtn) {
-                            replyBtn.dataset.replyId = messageId;
-                            replyBtn.dataset.replyAuthor = authorNameRaw || 'Guest';
-                            replyBtn.dataset.replyText = content || '';
-                    }
                     renderReactions(container, reactions || [], myReactions || []);
                     return container;
                 };
@@ -2221,8 +2344,11 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                     reactionMenu.hidden = false;
                     reactionMenu.removeAttribute('hidden');
                     const menuRect = reactionMenu.getBoundingClientRect();
+                    const isTriggerVisible = Boolean(triggerEl && triggerEl.getClientRects().length > 0 && !triggerEl.closest('.floating-menu'));
+                    const fallbackTarget = activeReactionMessage?.querySelector('.message-body') || activeReactionMessage;
+                    const fallbackRect = fallbackTarget?.getBoundingClientRect();
                     const fallback = { top: window.innerHeight / 2, left: window.innerWidth / 2, width: 0, height: 0 };
-                    const rect = triggerRect || fallback;
+                    const rect = (isTriggerVisible && triggerRect) ? triggerRect : (fallbackRect || fallback);
                     const isOutgoing = activeReactionMessage?.classList?.contains('message--outgoing');
 
                     const spaceAbove = rect.top - viewportPadding;
@@ -2250,6 +2376,33 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                     reactionMenu.style.top = `${Math.round(top)}px`;
                     reactionMenu.style.visibility = 'visible';
                 };
+                const clampReactionMenuToViewport = () => {
+                    if (!reactionMenu || reactionMenu.hidden) return;
+                    const padding = 12;
+                    const rect = reactionMenu.getBoundingClientRect();
+                    let nextLeft = rect.left;
+                    let nextTop = rect.top;
+
+                    if (rect.right > window.innerWidth - padding) {
+                        nextLeft -= rect.right - (window.innerWidth - padding);
+                    }
+                    if (rect.left < padding) {
+                        nextLeft += padding - rect.left;
+                    }
+                    if (rect.bottom > window.innerHeight - padding) {
+                        nextTop -= rect.bottom - (window.innerHeight - padding);
+                    }
+                    if (rect.top < padding) {
+                        nextTop += padding - rect.top;
+                    }
+
+                    if (nextLeft !== rect.left) {
+                        reactionMenu.style.left = `${Math.round(nextLeft)}px`;
+                    }
+                    if (nextTop !== rect.top) {
+                        reactionMenu.style.top = `${Math.round(nextTop)}px`;
+                    }
+                };
                 const repositionReactionMenu = () => {
                     if (!reactionMenu || reactionMenu.hidden || !activeReactionMessage) return;
                     positionReactionMenu(activeReactionTrigger || activeReactionMessage);
@@ -2266,9 +2419,202 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                     reactionMenu.removeAttribute('hidden');
                     reactionMenu.hidden = false;
                     positionReactionMenu(activeReactionTrigger);
+                    requestAnimationFrame(clampReactionMenuToViewport);
                     messageEl.classList.add('reaction-menu-open');
                     setReactionMenuActive(messageEl);
                     syncEmojiPickerTheme();
+                };
+                let floatingMenu = null;
+                let floatingMenuPanel = null;
+                let floatingMenuType = null;
+                let floatingMenuMessage = null;
+                let floatingMenuQuestion = null;
+                let floatingMenuTrigger = null;
+
+                const ensureFloatingMenu = () => {
+                    if (floatingMenu) return;
+                    floatingMenu = document.createElement('div');
+                    floatingMenu.className = 'floating-menu';
+                    floatingMenu.hidden = true;
+                    floatingMenu.innerHTML = '<div class="floating-menu-panel" role="menu"></div>';
+                    document.body.appendChild(floatingMenu);
+                    floatingMenuPanel = floatingMenu.querySelector('.floating-menu-panel');
+
+                    floatingMenu.addEventListener('click', (event) => {
+                        const replyBtn = event.target.closest('[data-reply-id]');
+                        if (replyBtn) {
+                            event.preventDefault();
+                            setReplyContext(replyBtn.dataset.replyAuthor, replyBtn.dataset.replyText, replyBtn.dataset.replyId);
+                            closeFloatingMenu();
+                            scrollChatToBottom();
+                            return;
+                        }
+                        const reactionBtn = event.target.closest('[data-reaction-trigger]');
+                        if (reactionBtn) {
+                            if (floatingMenuMessage) {
+                                openReactionMenu(floatingMenuMessage, reactionBtn);
+                            }
+                            closeFloatingMenu();
+                            return;
+                        }
+                        const formButton = event.target.closest('.msg-action-form button');
+                        if (formButton) {
+                            return;
+                        }
+                        const actionBtn = event.target.closest('.msg-action');
+                        if (actionBtn) {
+                            closeFloatingMenu();
+                        }
+                    });
+
+                    floatingMenu.addEventListener('submit', async (event) => {
+                        const form = event.target;
+                        if (!(form instanceof HTMLFormElement)) return;
+                        if (form.dataset.remote === 'questions-panel') {
+                            event.preventDefault();
+                            await handleQueueFormSubmit(form, floatingMenuQuestion);
+                            closeFloatingMenu();
+                            return;
+                        }
+                        closeFloatingMenu();
+                    });
+                };
+
+                const closeFloatingMenu = () => {
+                    if (!floatingMenu) return;
+                    floatingMenu.classList.remove('is-open');
+                    floatingMenu.hidden = true;
+                    floatingMenu.style.removeProperty('left');
+                    floatingMenu.style.removeProperty('top');
+                    floatingMenu.style.removeProperty('visibility');
+                    if (floatingMenuTrigger) {
+                        floatingMenuTrigger.setAttribute('aria-expanded', 'false');
+                    }
+                    floatingMenuType = null;
+                    floatingMenuMessage = null;
+                    floatingMenuQuestion = null;
+                    floatingMenuTrigger = null;
+                };
+
+                const positionFloatingMenu = (anchorX, anchorY) => {
+                    if (!floatingMenu || !floatingMenuPanel) return;
+                    const menuRect = floatingMenuPanel.getBoundingClientRect();
+                    const padding = 8;
+                    const offset = 8;
+                    let left = anchorX + offset;
+                    let top = anchorY + offset;
+                    if (left + menuRect.width > window.innerWidth - padding) {
+                        left = Math.max(padding, anchorX - menuRect.width - offset);
+                    }
+                    if (top + menuRect.height > window.innerHeight - padding) {
+                        top = Math.max(padding, anchorY - menuRect.height - offset);
+                    }
+                    floatingMenu.style.left = `${Math.round(left)}px`;
+                    floatingMenu.style.top = `${Math.round(top)}px`;
+                };
+
+                const clearBoundFlags = (node) => {
+                    if (!node || !(node instanceof HTMLElement)) return;
+                    node.removeAttribute('data-ban-bound');
+                    node.removeAttribute('data-delete-bound');
+                    node.removeAttribute('data-delete-trigger-bound');
+                    node.removeAttribute('data-unban-bound');
+                    node
+                        .querySelectorAll('[data-ban-bound],[data-delete-bound],[data-delete-trigger-bound],[data-unban-bound]')
+                        .forEach((el) => {
+                            el.removeAttribute('data-ban-bound');
+                            el.removeAttribute('data-delete-bound');
+                            el.removeAttribute('data-delete-trigger-bound');
+                            el.removeAttribute('data-unban-bound');
+                        });
+                };
+
+                const openFloatingMenu = ({ type, sourceMenu, trigger, coords, messageEl = null, questionItem = null }) => {
+                    if (!sourceMenu || !trigger) return;
+                    ensureFloatingMenu();
+                    if (!floatingMenu || !floatingMenuPanel) return;
+                    const isSameTarget = floatingMenu
+                        && !floatingMenu.hidden
+                        && floatingMenuType === type
+                        && ((type === 'message' && floatingMenuMessage === messageEl)
+                            || (type === 'question' && floatingMenuQuestion === questionItem));
+                    if (isSameTarget) {
+                        closeFloatingMenu();
+                        return;
+                    }
+                    closeFloatingMenu();
+                    closeReactionMenus();
+
+                    floatingMenuType = type;
+                    floatingMenuMessage = messageEl;
+                    floatingMenuQuestion = questionItem;
+                    floatingMenuTrigger = trigger;
+                    trigger.setAttribute('aria-expanded', 'true');
+
+                    floatingMenuPanel.innerHTML = '';
+                    Array.from(sourceMenu.children).forEach((child) => {
+                        const clone = child.cloneNode(true);
+                        clearBoundFlags(clone);
+                        floatingMenuPanel.appendChild(clone);
+                    });
+                    bindBanForms(floatingMenuPanel);
+                    bindDeleteForms(floatingMenuPanel);
+                    bindDeleteTriggers(floatingMenuPanel);
+                    if (window.refreshLucideIcons) {
+                        window.refreshLucideIcons(floatingMenuPanel);
+                    }
+
+                    floatingMenu.hidden = false;
+                    floatingMenu.removeAttribute('hidden');
+                    floatingMenu.style.visibility = 'hidden';
+                    floatingMenu.classList.remove('is-open');
+
+                    const triggerRect = trigger.getBoundingClientRect();
+                    const anchorX = Number.isFinite(coords?.x) ? coords.x : (triggerRect.left + triggerRect.width / 2);
+                    const anchorY = Number.isFinite(coords?.y) ? coords.y : triggerRect.bottom;
+                    positionFloatingMenu(anchorX, anchorY);
+
+                    floatingMenu.style.visibility = 'visible';
+                    requestAnimationFrame(() => floatingMenu.classList.add('is-open'));
+                };
+
+                const closeMessageMenus = () => closeFloatingMenu();
+                const closeQuestionMenus = () => closeFloatingMenu();
+
+                const toggleMessageMenu = (trigger, event) => {
+                    if (!trigger) return;
+                    const messageEl = trigger.closest('.message');
+                    if (!messageEl) return;
+                    const sourceMenu = messageEl.querySelector('[data-message-menu]');
+                    if (!sourceMenu) return;
+                    const coords = (event && typeof event.clientX === 'number' && typeof event.clientY === 'number')
+                        ? { x: event.clientX, y: event.clientY }
+                        : null;
+                    openFloatingMenu({
+                        type: 'message',
+                        sourceMenu,
+                        trigger,
+                        coords,
+                        messageEl,
+                    });
+                };
+
+                const toggleQuestionMenu = (trigger, event) => {
+                    if (!trigger) return;
+                    const item = trigger.closest('.queue-item');
+                    if (!item) return;
+                    const sourceMenu = item.querySelector('[data-question-menu]');
+                    if (!sourceMenu) return;
+                    const coords = (event && typeof event.clientX === 'number' && typeof event.clientY === 'number')
+                        ? { x: event.clientX, y: event.clientY }
+                        : null;
+                    openFloatingMenu({
+                        type: 'question',
+                        sourceMenu,
+                        trigger,
+                        coords,
+                        questionItem: item,
+                    });
                 };
                 const handleReactionMenuClick = (event) => {
                     const option = event.target.closest('[data-reaction-option]');
@@ -2284,7 +2630,7 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                         const isOpen = !reactionMenuMorePanel.hidden;
                         reactionMenuMorePanel.hidden = isOpen;
                         reactionMenuMorePanel.classList.toggle('open', !isOpen);
-                        requestAnimationFrame(repositionReactionMenu);
+                        requestAnimationFrame(clampReactionMenuToViewport);
                     }
                 };
 
@@ -2452,6 +2798,25 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                     const maxHeight = Number.isFinite(maxHeightValue) ? maxHeightValue : 220;
                     const minHeight = Number.isFinite(minHeightValue) ? minHeightValue : 0;
                     const nextHeight = Math.min(chatInput.scrollHeight, maxHeight);
+                    if (chatComposer) {
+                        if (chatInput.hidden || chatComposer.classList.contains('is-poll-mode')) {
+                            chatComposer.classList.remove('is-single-line');
+                        } else {
+                            const lineHeightValue = parseFloat(computed.lineHeight);
+                            const fontSizeValue = parseFloat(computed.fontSize);
+                            const lineHeight = Number.isFinite(lineHeightValue)
+                                ? lineHeightValue
+                                : (Number.isFinite(fontSizeValue) ? fontSizeValue * 1.4 : 20);
+                            const paddingTop = parseFloat(computed.paddingTop);
+                            const paddingBottom = parseFloat(computed.paddingBottom);
+                            const singleLineLimit = lineHeight
+                                + (Number.isFinite(paddingTop) ? paddingTop : 0)
+                                + (Number.isFinite(paddingBottom) ? paddingBottom : 0)
+                                + 1;
+                            const isSingleLine = chatInput.scrollHeight <= singleLineLimit;
+                            chatComposer.classList.toggle('is-single-line', isSingleLine);
+                        }
+                    }
                     if (minHeight > 0 && nextHeight <= minHeight + 1) {
                         chatInput.style.height = '';
                         return;
@@ -2504,8 +2869,16 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                 const getBanEmpty = () => bansPanel?.querySelector('[data-ban-empty]') || null;
                 const updateBanCounts = (count) => {
                     if (count === null || count === undefined) return;
+                    const safeCount = Math.max(0, Number(count) || 0);
                     document.querySelectorAll('[data-ban-count]').forEach((el) => {
-                        el.textContent = String(count);
+                        el.textContent = String(safeCount);
+                        if (safeCount > 0) {
+                            el.hidden = false;
+                            el.removeAttribute('hidden');
+                        } else {
+                            el.hidden = true;
+                            el.setAttribute('hidden', 'true');
+                        }
                     });
                 };
                 const ensureBanList = () => {
@@ -2598,8 +2971,10 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                     if (currentParticipantId && Number(currentParticipantId) === normalizedId) return;
                     const messages = Array.from(chatContainer.querySelectorAll(`.message[data-participant-id="${normalizedId}"]`));
                     messages.forEach((message) => {
-                        handleMessageDeleted(message?.dataset?.messageId);
+                        handleMessageDeleted(message?.dataset?.messageId, { skipGrouping: true, skipEmptyState: true });
                     });
+                    rebuildMessageGroups();
+                    ensureEmptyMessageState();
                 };
                 const normalizeBanPayload = (payload) => {
                     if (!payload) return null;
@@ -3012,18 +3387,22 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                             event.preventDefault();
                             const confirmed = await deleteModal.open();
                             if (!confirmed) return;
-                            const url = form.getAttribute('action');
+                            const url = form.getAttribute('action') || form.dataset.deleteUrl || '';
+                            const messageId = form.dataset.messageId || form.closest('.message')?.dataset.messageId || null;
+                            if (!url) {
+                                handleMessageDeleted(messageId);
+                                return;
+                            }
                             const { ok, status, message } = await requestDeleteMessage(url);
                             if (status === 429) {
                                 showThrottleNotice(message || 'You are deleting messages too quickly. Please wait a moment.');
                                 return;
                             }
                             if (ok) {
-                                const messageEl = form.closest('.message');
-                                handleMessageDeleted(messageEl?.dataset?.messageId || null);
+                                handleMessageDeleted(messageId);
                                 return;
                             }
-                            form.submit();
+                            showDeleteError(message || 'Unable to delete the message. Please try again.');
                         });
                     });
                 };
@@ -3036,18 +3415,23 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                         btn.addEventListener('click', async (event) => {
                             event.preventDefault();
                             const url = btn.dataset.deleteUrl || btn.closest('.message')?.dataset.deleteUrl || '';
-                            if (!url) return;
                             const confirmed = await deleteModal.open();
                             if (!confirmed) return;
+                            const messageId = btn.dataset.messageId || btn.closest('.message')?.dataset.messageId;
+                            if (!url) {
+                                handleMessageDeleted(messageId);
+                                return;
+                            }
                             const { ok, status, message } = await requestDeleteMessage(url);
                             if (status === 429) {
                                 showThrottleNotice(message || 'You are deleting messages too quickly. Please wait a moment.');
                                 return;
                             }
-                            const messageId = btn.dataset.messageId || btn.closest('.message')?.dataset.messageId;
                             if (ok) {
                                 handleMessageDeleted(messageId);
+                                return;
                             }
+                            showDeleteError(message || 'Unable to delete the message. Please try again.');
                         });
                     });
                 };
@@ -3521,15 +3905,20 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                     if (hasMessages) return;
                     let empty = chatContainer.querySelector('.message-empty');
                     if (!empty) {
-                        empty = document.createElement('li');
+                        empty = document.createElement('div');
                         empty.className = 'message message-empty';
-                        empty.innerHTML = '<div class="message-body"><div class="message-text">No messages yet.</div></div>';
+                        empty.setAttribute('role', 'listitem');
+                        empty.innerHTML = '<div class="message-content"><div class="message-body empty-state"><div class="empty-state-icon"><i data-lucide="message-circle"></i></div><div class="empty-state-text">No messages yet.</div></div></div>';
                         chatContainer.appendChild(empty);
+                        if (window.refreshLucideIcons) {
+                            window.refreshLucideIcons(empty);
+                        }
                     }
                     empty.hidden = false;
                 };
 
-                const handleMessageDeleted = (messageId) => {
+                const handleMessageDeleted = (messageId, options = {}) => {
+                    const { skipGrouping = false, skipEmptyState = false } = options;
                     const targetId = normalizeId(messageId) ?? messageId;
                     if (!targetId) return;
                     const target = String(targetId);
@@ -3548,7 +3937,12 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                     }
                     markRepliesDeleted(target);
                     pruneReplyThreadsForDeletion(target);
-                    ensureEmptyMessageState();
+                    if (!skipGrouping) {
+                        rebuildMessageGroups();
+                    }
+                    if (!skipEmptyState) {
+                        ensureEmptyMessageState();
+                    }
                 };
 
                 function setupRepliesPane() {
@@ -3611,6 +4005,7 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                 renderReactionMenuOptions();
                 updateMessagesStateAttributes();
                 updateMessagesLoadMoreVisibility();
+                rebuildMessageGroups();
                 autosizeComposer();
                 updateSendButtonState();
                 scrollChatToBottom();
@@ -3983,6 +4378,7 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                     if (typeof window.rebindQueuePanels === 'function') {
                         window.rebindQueuePanels(scope);
                     }
+                    bindBanForms(scope);
                     attachQueuePipButton();
                 }
                 setupLayoutResizer();
@@ -3994,6 +4390,15 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                             initial: Boolean(event.detail?.initial),
                             preserveExisting: Boolean(event.detail?.initial),
                         });
+                    });
+                    questionsPanel.addEventListener('click', (event) => {
+                        const trigger = event.target.closest('[data-question-menu-trigger]');
+                        if (trigger) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            toggleQuestionMenu(trigger, event);
+                            return;
+                        }
                     });
                     bindQueueInteractions();
                     const body = getQueueBody();
@@ -4060,6 +4465,109 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                     }
                 };
 
+                const getQueueFormAction = (form) => {
+                    const rawAction = (form.getAttribute('action') || '').trim();
+                    const actionUrl = rawAction ? new URL(rawAction, window.location.href) : null;
+                    if (!actionUrl || actionUrl.pathname === window.location.pathname || /\/r\/[^/]+/.test(actionUrl.pathname)) {
+                        return null;
+                    }
+                    return actionUrl;
+                };
+
+                const handleQueueFormSubmit = async (target, itemOverride = null) => {
+                    if (!getQueueFormAction(target)) {
+                        return false;
+                    }
+                    const statusInput = target.querySelector('input[name="status"]');
+                    const desiredStatus = (statusInput?.value || '').toLowerCase();
+                    const methodAttr = (target.getAttribute('method') || 'POST').toUpperCase();
+                    const methodOverride = (target.querySelector('input[name="_method"]')?.value || '').toUpperCase();
+                    const effectiveMethod = methodOverride || methodAttr;
+                    const isDeleteAction = effectiveMethod === 'DELETE';
+                    const isQuestionDelete = isDeleteAction || target.dataset.questionDelete === '1';
+                    if (isQuestionDelete) {
+                        const confirmed = await questionDeleteModal.open();
+                        if (!confirmed) return true;
+                    }
+                    const item = itemOverride || target.closest('.queue-item');
+                    const qId = normalizeId(item?.dataset.questionId);
+                    const shouldBlockActions = Boolean(qId && (desiredStatus || isDeleteAction));
+                    if (shouldBlockActions && queueActionInflight.has(qId)) {
+                        return true;
+                    }
+                    const pill = item?.querySelector('.status-pill') || null;
+                    const prev = item
+                        ? {
+                            status: item.dataset.status || 'new',
+                            pillClass: pill?.className || '',
+                            pillText: pill?.textContent || '',
+                            hadPill: !!pill,
+                            wasNew: item.classList.contains('queue-item-new'),
+                        }
+                        : null;
+
+                    if (item && (desiredStatus || isDeleteAction)) {
+                        if (shouldBlockActions && qId) {
+                            queueActionInflight.add(qId);
+                        }
+                        setQueueItemBusy(item, true);
+                        if (desiredStatus) {
+                            applyQuestionStatus(item, desiredStatus);
+                            if (desiredStatus === 'answered') {
+                                if (qId) {
+                                    markMainQueueItemSeen(qId);
+                                }
+                            }
+                        }
+                        window.setupQueueFilter?.(item.closest('#queuePanel') || document);
+                    }
+
+                    submitRemoteForm(target, () => {
+                        if (qId) {
+                            if (isDeleteAction) {
+                                removeQueueItem(qId);
+                            } else {
+                                upsertQueueItem(qId);
+                            }
+                        } else {
+                            scheduleReloadQuestionsPanel();
+                        }
+                        renderQueuePipContent();
+                    }).then((ok) => {
+                        if (ok) return;
+                        if (prev && item) {
+                            applyQuestionStatus(item, prev.status);
+                            const updatedPill = item.querySelector('.status-pill');
+                            if (!prev.hadPill && updatedPill) {
+                                updatedPill.remove();
+                            } else if (updatedPill) {
+                                updatedPill.className = prev.pillClass;
+                                updatedPill.textContent = prev.pillText;
+                            }
+                            if (prev.wasNew) {
+                                item.classList.add('queue-item-new');
+                            }
+                            window.setupQueueFilter?.(item.closest('#queuePanel') || document);
+                        }
+                        if (typeof window.showFlashNotification === 'function') {
+                            window.showFlashNotification('Unexpected error while updating the question.', {
+                                type: 'danger',
+                                source: 'queue-update',
+                            });
+                        } else {
+                            alert('Unexpected error while updating the question.');
+                        }
+                    }).finally(() => {
+                        if (qId) {
+                            queueActionInflight.delete(qId);
+                        }
+                        if (item) {
+                            setQueueItemBusy(item, false);
+                        }
+                    });
+                    return true;
+                };
+
                 const applyQuestionStatus = (item, status) => {
                     if (!item) return;
                     const normalized = (status || '').toLowerCase();
@@ -4080,7 +4588,10 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                         badge.className = `status-pill status-${normalized}`;
                         badge.textContent = text;
                         const header = item.querySelector('.question-header');
-                        if (header) {
+                        const headerActions = item.querySelector('.question-header-actions');
+                        if (headerActions) {
+                            headerActions.prepend(badge);
+                        } else if (header) {
                             header.appendChild(badge);
                         } else {
                             item.appendChild(badge);
@@ -4340,98 +4851,11 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                         const target = event.target;
                         if (!(target instanceof HTMLFormElement)) return;
                         if (target.dataset.remote !== 'questions-panel') return;
-                        const rawAction = (target.getAttribute('action') || '').trim();
-                        const actionUrl = rawAction ? new URL(rawAction, window.location.href) : null;
-                        if (!actionUrl || actionUrl.pathname === window.location.pathname || /\/r\/[^/]+/.test(actionUrl.pathname)) {
-                            // Let the browser submit normally if action is missing or points to the room page.
-                            return;
-                        }
                         event.preventDefault();
-                        const statusInput = target.querySelector('input[name="status"]');
-                        const desiredStatus = (statusInput?.value || '').toLowerCase();
-                        const methodAttr = (target.getAttribute('method') || 'POST').toUpperCase();
-                        const methodOverride = (target.querySelector('input[name="_method"]')?.value || '').toUpperCase();
-                        const effectiveMethod = methodOverride || methodAttr;
-                        const isDeleteAction = effectiveMethod === 'DELETE';
-                        const isQuestionDelete = isDeleteAction || target.dataset.questionDelete === '1';
-                        if (isQuestionDelete) {
-                            const confirmed = await questionDeleteModal.open();
-                            if (!confirmed) return;
-                        }
-                        const item = target.closest('.queue-item');
-                        const qId = normalizeId(item?.dataset.questionId);
-                        const shouldBlockActions = Boolean(qId && (desiredStatus || isDeleteAction));
-                        if (shouldBlockActions && queueActionInflight.has(qId)) {
+                        if (!getQueueFormAction(target)) {
                             return;
                         }
-                        const pill = item?.querySelector('.status-pill') || null;
-                        const prev = item
-                            ? {
-                                status: item.dataset.status || 'new',
-                                pillClass: pill?.className || '',
-                                pillText: pill?.textContent || '',
-                                hadPill: !!pill,
-                                wasNew: item.classList.contains('queue-item-new'),
-                            }
-                            : null;
-
-                        if (item && (desiredStatus || isDeleteAction)) {
-                            if (shouldBlockActions && qId) {
-                                queueActionInflight.add(qId);
-                            }
-                            setQueueItemBusy(item, true);
-                            if (desiredStatus) {
-                                applyQuestionStatus(item, desiredStatus);
-                                if (desiredStatus === 'answered') {
-                                    if (qId) {
-                                        markMainQueueItemSeen(qId);
-                                    }
-                                }
-                            }
-                            window.setupQueueFilter?.(item.closest('#queuePanel') || document);
-                        }
-
-                        submitRemoteForm(target, () => {
-                            if (qId) {
-                                if (isDeleteAction) {
-                                    removeQueueItem(qId);
-                                } else {
-                                    upsertQueueItem(qId);
-                                }
-                            } else {
-                                scheduleReloadQuestionsPanel();
-                            }
-                            renderQueuePipContent();
-                        }).then((ok) => {
-                            if (ok) return;
-                            if (prev && item) {
-                                applyQuestionStatus(item, prev.status);
-                                const updatedPill = item.querySelector('.status-pill');
-                                if (!prev.hadPill && updatedPill) {
-                                    updatedPill.remove();
-                                } else if (updatedPill) {
-                                    updatedPill.className = prev.pillClass;
-                                    updatedPill.textContent = prev.pillText;
-                                }
-                                if (prev.wasNew) {
-                                    item.classList.add('queue-item-new');
-                                }
-                                window.setupQueueFilter?.(item.closest('#queuePanel') || document);
-                            }
-                            if (typeof window.showFlashNotification === 'function') {
-                                window.showFlashNotification('Unexpected error while updating the question.', {
-                                    type: 'danger',
-                                    source: 'queue-update',
-                                });
-                            } else {
-                                alert('Unexpected error while updating the question.');
-                            }
-                        }).finally(() => {
-                            if (qId) {
-                                queueActionInflight.delete(qId);
-                            }
-                            setQueueItemBusy(item, false);
-                        });
+                        await handleQueueFormSubmit(target);
                     });
                 }
 
@@ -4487,12 +4911,21 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
 
                 if (chatContainer) {
                     chatContainer.addEventListener('click', (event) => {
+                        const menuTrigger = event.target.closest('[data-message-menu-trigger]');
+                        if (menuTrigger) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            toggleMessageMenu(menuTrigger, event);
+                            return;
+                        }
+
                         const reactionTrigger = event.target.closest('[data-reaction-trigger]');
                         if (reactionTrigger) {
                             const messageEl = reactionTrigger.closest('.message');
                             if (messageEl) {
                                 openReactionMenu(messageEl, reactionTrigger);
                             }
+                            closeMessageMenus();
                             return;
                         }
 
@@ -4504,10 +4937,13 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                         }
 
                         const btn = event.target.closest('[data-reply-id]');
-                        if (!btn) return;
-                        event.preventDefault();
-                        setReplyContext(btn.dataset.replyAuthor, btn.dataset.replyText, btn.dataset.replyId);
-                        scrollChatToBottom();
+                        if (btn) {
+                            event.preventDefault();
+                            setReplyContext(btn.dataset.replyAuthor, btn.dataset.replyText, btn.dataset.replyId);
+                            closeMessageMenus();
+                            scrollChatToBottom();
+                            return;
+                        }
                     });
 
                     chatContainer.addEventListener('dblclick', (event) => {
@@ -4527,6 +4963,11 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                     if (!reactionMenuEl && !reactionTrigger) {
                         closeReactionMenus();
                     }
+                    const floatingMenuEl = event.target.closest('.floating-menu');
+                    const floatingMenuTrigger = event.target.closest('[data-message-menu-trigger], [data-question-menu-trigger]');
+                    if (!floatingMenuEl && !floatingMenuTrigger) {
+                        closeMessageMenus();
+                    }
                     if (!chatEmojiPanel || chatEmojiPanel.hidden) return;
                     const insidePicker = event.target.closest('.emoji-picker-panel');
                     if (insidePicker) return;
@@ -4540,6 +4981,7 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                 });
                 window.addEventListener('resize', () => {
                     requestAnimationFrame(repositionReactionMenu);
+                    closeMessageMenus();
                 });
 
                 const MAX_RENDERED_MESSAGES = Math.max(messagePageLimit * 6, 200);
@@ -4548,7 +4990,9 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
 
                 const isChatNearBottom = () => {
                     if (!chatContainer) return false;
-                    return chatContainer.scrollTop + chatContainer.clientHeight >= chatContainer.scrollHeight - 28;
+                    const distance = chatContainer.scrollHeight - chatContainer.clientHeight - chatContainer.scrollTop;
+                    const threshold = Math.max(84, chatContainer.clientHeight * 0.12);
+                    return distance <= threshold;
                 };
 
                 const trimRenderedMessages = (maxCount = MAX_RENDERED_MESSAGES) => {
@@ -4568,10 +5012,10 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                 };
 
                 const applyIncomingMessagePayload = (payload, newNodes) => {
-                    if (!chatContainer || !payload) return { needsIcons: false, added: false };
+                    if (!chatContainer || !payload) return { needsIcons: false, added: false, needsGrouping: false };
                     const incomingParticipantId = normalizeId(payload.author?.participant_id);
                     if (incomingParticipantId && bannedParticipantIds.has(incomingParticipantId) && !isMineMessageData(payload.author)) {
-                        return { needsIcons: false, added: false };
+                        return { needsIcons: false, added: false, needsGrouping: false };
                     }
                     const existing = chatContainer.querySelector(`.message[data-message-id="${payload.id}"]`);
                     if (existing) {
@@ -4583,7 +5027,7 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                         bindDeleteForms(existing);
                         bindDeleteTriggers(existing);
                         handleIncomingReplyThread(payload);
-                        return { needsIcons: true, added: false };
+                        return { needsIcons: true, added: false, needsGrouping: true };
                     }
 
                     const authorUserId = normalizeId(payload.author?.user_id);
@@ -4596,16 +5040,16 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                         bindDeleteForms(pendingMatch);
                         bindDeleteTriggers(pendingMatch);
                         handleIncomingReplyThread(payload);
-                        return { needsIcons: true, added: false };
+                        return { needsIcons: true, added: false, needsGrouping: true };
                     }
 
-                    const wrapper = createMessageElement(payload, { pending: false });
+                    const wrapper = createMessageElement(payload, { pending: false, animate: true });
                     bindBanForms(wrapper);
                     bindDeleteForms(wrapper);
                     bindDeleteTriggers(wrapper);
                     newNodes.push(wrapper);
                     handleIncomingReplyThread(payload);
-                    return { needsIcons: true, added: true };
+                    return { needsIcons: true, added: true, needsGrouping: true };
                 };
 
                 const flushIncomingMessages = () => {
@@ -4620,11 +5064,13 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                     const newNodes = [];
                     let needsIcons = false;
                     let added = false;
+                    let needsGrouping = false;
 
                     payloads.forEach((payload) => {
                         const result = applyIncomingMessagePayload(payload, newNodes);
                         needsIcons = needsIcons || result.needsIcons;
                         added = added || result.added;
+                        needsGrouping = needsGrouping || result.needsGrouping;
                     });
 
                     if (newNodes.length) {
@@ -4639,6 +5085,9 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                     }
 
                     trimRenderedMessages();
+                    if (needsGrouping || added) {
+                        rebuildMessageGroups();
+                    }
 
                     if (needsIcons && window.refreshLucideIcons) {
                         window.refreshLucideIcons(chatContainer);
@@ -4795,9 +5244,10 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                         let optimisticEl = null;
                             if (container) {
                                 removeEmptyMessageState();
-                                optimisticEl = createMessageElement(optimisticPayload, { pending: true, allowBan: true });
+                                optimisticEl = createMessageElement(optimisticPayload, { pending: true, allowBan: true, animate: true });
                                 container.appendChild(optimisticEl);
                                 applyGlitchToMessage(optimisticEl);
+                                rebuildMessageGroups();
                                 scrollChatToBottom();
                             if (window.refreshLucideIcons) {
                                 window.refreshLucideIcons();
@@ -4866,7 +5316,8 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                                     bindBanForms(optimisticEl);
                                     bindDeleteForms(optimisticEl);
                                     bindDeleteTriggers(optimisticEl);
-                                    containerEl?.scrollTo?.(0, containerEl.scrollHeight);
+                                    rebuildMessageGroups();
+                                    scrollChatToBottom();
                                 }
                             }
                         } catch (e) {

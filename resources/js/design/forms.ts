@@ -114,6 +114,7 @@ function fallbackCopy(value: string, notify: (success: boolean) => void): void {
 }
 
 export function setupChatEnterSubmit(): void {
+  if (document.body?.dataset.routeName === 'rooms.show') return;
   const form = document.getElementById('chat-form') as HTMLFormElement | null;
   const textarea = document.getElementById('chatInput') as HTMLTextAreaElement | null;
   if (!form || !textarea) return;

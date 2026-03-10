@@ -14,8 +14,17 @@ export function applyTheme(theme: string): void {
   } catch (e) {
     /* ignore */
   }
+  const nextIcon = normalized === 'dark' ? 'sun' : 'moon';
   document.querySelectorAll<HTMLElement>('[data-theme-toggle]').forEach((btn) => {
     btn.setAttribute('aria-pressed', normalized === 'dark' ? 'true' : 'false');
+    const currentIcon = btn.querySelector('svg, i');
+    const nextIconEl = document.createElement('i');
+    nextIconEl.setAttribute('data-lucide', nextIcon);
+    if (currentIcon) {
+      currentIcon.replaceWith(nextIconEl);
+    } else {
+      btn.prepend(nextIconEl);
+    }
   });
   refreshLucideIcons();
 }

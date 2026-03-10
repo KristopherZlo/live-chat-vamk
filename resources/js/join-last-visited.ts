@@ -4,6 +4,12 @@ const STORAGE_KEY = 'gr:lastVisitedRooms';
 const MAX_ROOMS = 9;
 
 const sanitize = (value: unknown): string => String(value ?? '').trim();
+const truncate = (value: string, maxLength = 128): string => {
+    if (value.length <= maxLength) {
+        return value;
+    }
+    return `${value.slice(0, maxLength).trimEnd()}...`;
+};
 const toRoomMeta = (value: StoredRoom): RoomMeta => ({
     slug: sanitize(value?.slug),
     title: sanitize(value?.title),
@@ -56,48 +62,42 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const renderCard = (room: RoomMeta) => {
-        const card = document.createElement('article');
-        card.className = 'room-card panel visited-room-card';
+        const card = document.createElement('a');
+        card.className = 'visited-room-card';
+        card.href = buildUrl(`/r/${encodeURIComponent(room.slug)}`);
+        card.setAttribute('aria-label', `Open ${room.title || 'meeting'}`);
+
+        const icon = document.createElement('div');
+        icon.className = 'visited-room-icon';
+        icon.textContent = '#';
+
+        const body = document.createElement('div');
+        body.className = 'visited-room-body';
+
+        const title = document.createElement('div');
+        title.className = 'visited-room-title';
+        title.textContent = room.title || 'Unknown';
+
+        const description = document.createElement('div');
+        description.className = 'visited-room-description';
+        const descriptionText = room.description || 'Instant Meeting';
+        description.textContent = truncate(descriptionText);
 
         const meta = document.createElement('div');
-        meta.className = 'room-card-meta';
-        const code = document.createElement('span');
-        code.className = 'room-code';
-        code.textContent = `Code: ${room.slug}`;
-        const owner = document.createElement('span');
-        owner.className = 'room-owner';
-        owner.textContent = `Owner: ${room.owner || 'Unknown'}`;
-        const separator = document.createElement('span');
-        separator.className = 'dot-separator';
-        separator.textContent = '•';
-        meta.appendChild(code);
-        meta.appendChild(separator);
-        meta.appendChild(owner);
+        meta.className = 'visited-room-meta';
+        meta.textContent = `Host: ${room.owner || 'Guest User'}`;
 
-        const titleRow = document.createElement('div');
-        titleRow.className = 'room-card-title';
-        const title = document.createElement('div');
-        title.className = 'inline-edit-display room-card-title-text visited-room-title';
-        title.textContent = room.title || 'Untitled room';
-        titleRow.appendChild(title);
+        body.appendChild(title);
+        body.appendChild(description);
+        body.appendChild(meta);
 
-        const description = document.createElement('p');
-        description.className = 'inline-edit-display room-card-desc visited-room-description';
-        description.textContent = room.description || 'No description yet.';
+        const action = document.createElement('span');
+        action.className = 'visited-room-action';
+        action.innerHTML = '<i data-lucide="arrow-right"></i>';
 
-        const actions = document.createElement('div');
-        actions.className = 'room-card-actions visited-room-actions';
-        const enterButton = document.createElement('a');
-        enterButton.className = 'btn btn-sm btn-primary';
-        enterButton.href = buildUrl(`/r/${encodeURIComponent(room.slug)}`);
-        enterButton.setAttribute('aria-label', `Enter ${room.title || 'room'}`);
-        enterButton.innerHTML = '<i data-lucide="log-in"></i><span>Enter</span>';
-        actions.appendChild(enterButton);
-
-        card.appendChild(meta);
-        card.appendChild(titleRow);
-        card.appendChild(description);
-        card.appendChild(actions);
+        card.appendChild(icon);
+        card.appendChild(body);
+        card.appendChild(action);
 
         return card;
     };

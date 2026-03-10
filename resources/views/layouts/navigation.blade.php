@@ -1,17 +1,22 @@
 <header class="app-header">
   <div class="app-title">
-    @php $logoRoute = Auth::check() ? route('dashboard') : route('rooms.join'); @endphp
+    @php
+      $logoRoute = Auth::check() ? route('dashboard') : route('rooms.join');
+      $themeIcon = 'moon';
+    @endphp
     <div class="app-logo">
       <a class="app-logo-link" href="{{ $logoRoute }}" aria-label="Ghost Room">
-        <img src="{{ asset('icons/logo_black_xmas.svg') }}" class="app-logo-img app-logo-img--light" alt="Ghost Room logo">
-        <img src="{{ asset('icons/logo_white_xmas.svg') }}" class="app-logo-img app-logo-img--dark" alt="Ghost Room logo">
+        <img src="{{ asset($seasonalLogoAssets['light'] ?? 'icons/logo_black.svg') }}" class="app-logo-img app-logo-img--light" alt="Ghost Room logo">
+        <img src="{{ asset($seasonalLogoAssets['dark'] ?? 'icons/logo_white.svg') }}" class="app-logo-img app-logo-img--dark" alt="Ghost Room logo">
       </a>
     </div>
     <div class="app-title-text">
-      <a href="{{ route('dashboard') }}" class="room-name">Ghost Room</a>
+      <div class="app-title-row">
+        <a href="{{ route('dashboard') }}" class="room-name">Ghost Room</a>
+        <span class="badge">beta</span>
+      </div>
       <div class="app-subtitle">Instant feedback</div>
     </div>
-    <span class="badge">beta</span>
   </div>
 
   <div class="app-controls">
@@ -37,7 +42,7 @@
     </nav>
 
     <button class="icon-btn" type="button" data-theme-toggle aria-label="Toggle theme">
-      <i data-lucide="moon"></i>
+      <i data-lucide="{{ $themeIcon }}"></i>
     </button>
 
     @auth
@@ -94,7 +99,7 @@
             </a>
           @endguest
           <button class="btn btn-sm btn-ghost" type="button" data-theme-toggle data-close-menu>
-            <i data-lucide="sun"></i>
+            <i data-lucide="moon"></i>
             <span>Toggle theme</span>
           </button>
         </div>

@@ -56,7 +56,10 @@
         </ul>
     @else
         <div class="empty-state">
-            You have not asked any questions yet.
+            <div class="empty-state-icon">
+                <i data-lucide="help-circle"></i>
+            </div>
+            <div class="empty-state-text">You have not asked any questions yet.</div>
         </div>
     @endif
 </div>

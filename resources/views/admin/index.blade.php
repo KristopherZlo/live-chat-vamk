@@ -1,4 +1,4 @@
-﻿@push('styles')
+@push('styles')
     @vite('resources/css/admin.css')
 @endpush
 
@@ -29,7 +29,7 @@
                 <div class="admin-avatar">ADM</div>
                 <div class="admin-brand-text">
                     <div class="admin-brand-title">Admin panel</div>
-                    <div class="admin-brand-subtitle">Visible only to developers</div>
+                    <div class="admin-brand-subtitle">Developer access required</div>
                 </div>
                 <button class="admin-icon-btn admin-sidebar__close" type="button" aria-label="Close navigation" data-sidebar-close>
                     <i data-lucide="x"></i>
@@ -120,12 +120,12 @@
                             <i data-lucide="menu"></i>
                         </button>
                         <div>
-                            <div class="admin-eyebrow">Admin panel</div>
-                            <div class="admin-topbar__title">Visible only to developers</div>
+                            <div class="admin-topbar__meta">Admin panel</div>
+                            <div class="admin-topbar__title">Developer tools</div>
                         </div>
                     </div>
                     <div class="admin-topbar__brand admin-topbar__brand--desktop">
-                        <span class="admin-eyebrow">Realtime admin overview</span>
+                        <span class="admin-topbar__meta">Admin panel</span>
                         <span class="admin-topbar__meta">
                             Users: <span class="admin-strong">{{ $stats['users'] }}</span> |
                             Active: <span class="admin-topbar__accent">{{ $stats['active_users'] }}</span> |
@@ -798,7 +798,7 @@
                             <div class="admin-card">
                                 <div class="admin-card__header">
                                     <div>
-                                        <h2 class="admin-card__title">{{ $editingRelease ? 'Edit “What\'s new” modal' : 'New “What\'s new” modal' }}</h2>
+                                        <h2 class="admin-card__title">{{ $editingRelease ? 'Edit "What\'s new" modal' : 'New "What\'s new" modal' }}</h2>
                                         <p class="admin-card__subtitle">Markdown supported. Publish to show in the modal.</p>
                                     </div>
                                     @if($editingRelease)
@@ -957,7 +957,7 @@
                                     <tbody>
                                         @forelse($whatsNewEntries as $release)
                                             <tr>
-                                                <td class="admin-mono">{{ $release->version ?? '—' }}</td>
+                                                <td class="admin-mono">{{ $release->version ?? '-' }}</td>
                                                 <td>{{ $release->title }}</td>
                                                 <td>
                                                     @if($release->is_live)
@@ -968,7 +968,7 @@
                                                         <span class="admin-chip admin-chip--muted">Draft</span>
                                                     @endif
                                                 </td>
-                                                <td class="admin-muted">{{ $release->published_at?->format('Y-m-d H:i') ?? '—' }}</td>
+                                                <td class="admin-muted">{{ $release->published_at?->format('Y-m-d H:i') ?? '-' }}</td>
                                                 <td class="text-right">
                                                     <div class="admin-inline-actions">
                                                         <a class="admin-link-btn" href="{{ route('admin.index', ['edit_release' => $release->id]) }}#updates">Edit</a>
@@ -1028,7 +1028,7 @@
                                                         <span class="admin-chip admin-chip--muted">Draft</span>
                                                     @endif
                                                 </td>
-                                                <td class="admin-muted">{{ $post->published_at?->format('Y-m-d H:i') ?? '—' }}</td>
+                                                <td class="admin-muted">{{ $post->published_at?->format('Y-m-d H:i') ?? '-' }}</td>
                                                 <td class="text-right">
                                                     <div class="admin-inline-actions">
                                                         <a class="admin-link-btn" href="{{ route('admin.index', ['edit_post' => $post->id]) }}#updates">Edit</a>

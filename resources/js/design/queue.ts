@@ -22,9 +22,21 @@ function getQueuePanel(root: QueueRoot = document): HTMLElement | null {
 
 function getQueueScrollContainer(queuePanel: HTMLElement | null = getQueuePanel()): HTMLElement | null {
   if (!queuePanel) return null;
-  return queuePanel.querySelector<HTMLElement>('.queue-list')
-    || queuePanel.querySelector<HTMLElement>('.questions-list')
-    || queuePanel.querySelector<HTMLElement>('.panel-body');
+  const candidates = [
+    queuePanel.querySelector<HTMLElement>('.queue-list'),
+    queuePanel.querySelector<HTMLElement>('.questions-list'),
+    queuePanel.querySelector<HTMLElement>('.panel-body'),
+  ].filter((candidate): candidate is HTMLElement => Boolean(candidate));
+  if (!candidates.length) return null;
+
+  const scrollable = candidates.find((candidate) => candidate.scrollHeight > candidate.clientHeight + 2);
+  return scrollable || candidates[candidates.length - 1];
+}
+
+function getOffsetTopWithinContainer(element: HTMLElement, container: HTMLElement): number {
+  const elementRect = element.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
+  return elementRect.top - containerRect.top + container.scrollTop;
 }
 
 function ensureQueueScrollIndicator(queuePanel: HTMLElement | null = getQueuePanel()): HTMLButtonElement | null {
@@ -55,7 +67,11 @@ function ensureQueueScrollIndicator(queuePanel: HTMLElement | null = getQueuePan
     if (!candidates.length) return;
     const target = candidates.find((item) => item.getBoundingClientRect().top >= listRect.bottom - QUEUE_SCROLL_MARGIN)
       || candidates[0];
-    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const targetTop = getOffsetTopWithinContainer(target, container);
+    const centeredTop = targetTop - (container.clientHeight / 2) + (target.offsetHeight / 2);
+    const maxTop = Math.max(0, container.scrollHeight - container.clientHeight);
+    const nextTop = Math.min(maxTop, Math.max(0, centeredTop));
+    container.scrollTo({ top: nextTop, behavior: 'smooth' });
   });
 
   return indicator;
@@ -173,6 +189,7 @@ export function setupQueueFilter(root: QueueRoot = document): void {
   if (!queuePanel) return;
   const filter = queuePanel.querySelector<HTMLSelectElement>('[data-queue-filter]');
   if (!filter) return;
+  const tabs = Array.from(queuePanel.querySelectorAll<HTMLButtonElement>('[data-queue-filter-tab]'));
   const list = queuePanel.querySelector<HTMLElement>('.queue-list');
   const isRemoteQueue = queuePanel.dataset.queueRemote === '1';
   if (!isRemoteQueue && !list) return;
@@ -207,7 +224,19 @@ export function setupQueueFilter(root: QueueRoot = document): void {
   };
 
   const applyFilter = (meta: Record<string, unknown> = {}) => {
-    const value = (filter.value || 'new').toLowerCase();
+    let value = (filter.value || 'new').toLowerCase();
+    if (tabs.length) {
+      const hasMatch = tabs.some((tab) => (tab.dataset.queueFilterTab || '').toLowerCase() === value);
+      if (!hasMatch) {
+        const fallback = (tabs[0]?.dataset.queueFilterTab || 'new').toLowerCase();
+        value = fallback;
+        filter.value = fallback;
+      }
+      tabs.forEach((tab) => {
+        const tabValue = (tab.dataset.queueFilterTab || '').toLowerCase();
+        tab.classList.toggle('is-active', tabValue === value);
+      });
+    }
     if (isRemoteQueue) {
       dispatchFilterChange(value, meta);
       return;
@@ -241,19 +270,29 @@ export function setupQueueFilter(root: QueueRoot = document): void {
       filter.value = option.value;
     }
   }
-  if (filter.dataset.queueFilterBound === '1') {
-    if (!isRemoteQueue) {
+  const filterBound = filter.dataset.queueFilterBound === '1';
+  if (!filterBound) {
+    filter.dataset.queueFilterBound = '1';
+    filter.addEventListener('change', () => {
+      persistFilter(filter.value || 'new');
       applyFilter({ initial: false });
-    }
-    return;
+    });
   }
 
-  filter.dataset.queueFilterBound = '1';
-  filter.addEventListener('change', () => {
-    persistFilter(filter.value || 'new');
-    applyFilter({ initial: false });
+  tabs.forEach((tab) => {
+    if (tab.dataset.queueFilterTabBound === '1') return;
+    tab.dataset.queueFilterTabBound = '1';
+    tab.addEventListener('click', () => {
+      const value = (tab.dataset.queueFilterTab || 'new').toLowerCase();
+      if (filter.value !== value) {
+        filter.value = value;
+      }
+      persistFilter(filter.value || 'new');
+      applyFilter({ initial: false });
+    });
   });
-  applyFilter({ initial: true });
+
+  applyFilter({ initial: !filterBound });
 }
 
 export function setupQueueNewHandlers(root: QueueRoot = document): void {
@@ -290,6 +329,8 @@ export function setupQueueNewHandlers(root: QueueRoot = document): void {
       item.classList.add('queue-item-new');
     }
 
+    if (item.dataset.queueNewBound === '1') return;
+    item.dataset.queueNewBound = '1';
     item.addEventListener('click', () => {
       if (!id || !item.classList.contains('queue-item-new')) return;
       item.classList.remove('queue-item-new');

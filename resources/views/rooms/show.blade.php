@@ -3,6 +3,7 @@
         $publicLink = route('rooms.public', $room->slug);
         $isClosed = $room->status !== 'active';
         $queueSoundUrl = asset('audio/new-question-sound.mp3');
+        $backUrl = auth()->check() ? route('dashboard') : route('rooms.join');
     @endphp
     @php
         $avatarPalette = ['#2563eb', '#0ea5e9', '#6366f1', '#8b5cf6', '#14b8a6', '#f97316', '#f59e0b', '#10b981', '#ef4444'];
@@ -75,16 +76,6 @@
         })->values();
     @endphp
 
-    @if($isOwner)
-        @push('room-header-actions')
-            <button class="btn btn-sm btn-ghost" type="button" data-copy="{{ $publicLink }}">Copy link</button>
-            <button class="btn btn-sm btn-ghost" type="button" id="qrButton">
-                <i data-lucide="qr-code"></i>
-                <span>Show QR-code</span>
-            </button>
-        @endpush
-    @endif
-
     <div
         class="{{ $isOwner ? 'role-teacher' : 'role-student' }} room-page"
         data-room-role="{{ $isOwner ? 'owner' : 'participant' }}"
@@ -96,20 +87,27 @@
     >
         <div class="panel room-header">
             @php
-                $hasLongDescription = $room->description && \Illuminate\Support\Str::length($room->description) > 255;
-                $roomDescription = $room->description ?: 'Add a description';
+                $descriptionLimit = 64;
+                $ellipsis = '...';
+                $roomDescriptionFull = $room->description ?: 'Add a description';
+                $hasLongDescription = \Illuminate\Support\Str::length($roomDescriptionFull) > $descriptionLimit;
+                $roomDescriptionShort = $hasLongDescription
+                    ? \Illuminate\Support\Str::limit($roomDescriptionFull, $descriptionLimit - strlen($ellipsis), $ellipsis)
+                    : $roomDescriptionFull;
             @endphp
-            <div class="panel-header room-header-bar">
-                <div class="room-header-main">
-                    <div class="panel-title">
-                        <i data-lucide="messages-square"></i>
-                        <div class="inline-editable inline-edit-inline" data-inline-edit>
-                            <div class="inline-edit-display room-name">{{ $room->title }}</div>
+            <section class="room-info-bar">
+                <div class="room-info-main">
+                    <div class="room-info-title-row">
+                        <a class="room-info-back" href="{{ $backUrl }}" aria-label="Back">
+                            <i data-lucide="chevron-left"></i>
+                        </a>
+                        <div class="room-info-title inline-editable" data-inline-edit>
+                            <div class="inline-edit-display room-info-title-text">{{ $room->title }}</div>
                             @if($isOwner)
-                                <button class="icon-btn inline-edit-trigger" type="button" aria-label="Edit title" data-inline-trigger>
+                                <button class="icon-btn room-info-edit-btn inline-edit-trigger" type="button" aria-label="Edit title" data-inline-trigger>
                                     <i data-lucide="pencil"></i>
                                 </button>
-                                <form class="inline-edit-form" method="POST" action="{{ route('rooms.update', $room) }}" hidden>
+                                <form class="inline-edit-form room-info-edit-form" method="POST" action="{{ route('rooms.update', $room) }}" hidden>
                                     @csrf
                                     @method('PATCH')
                                     <textarea
@@ -128,12 +126,14 @@
                         </div>
                     </div>
 
-                    <div class="inline-editable room-description-block" data-inline-edit>
-                        <div class="room-description-row">
+                    <div class="room-info-description-block inline-editable" data-inline-edit data-room-description-block>
+                        <div class="room-info-description-row">
                             <div
-                                class="inline-edit-display panel-subtitle room-description {{ $hasLongDescription ? 'is-collapsible is-collapsed' : '' }}"
+                                class="inline-edit-display room-info-description {{ $hasLongDescription ? 'is-collapsible is-collapsed' : '' }}"
                                 @if($hasLongDescription)
                                     data-room-description
+                                    data-room-description-short="{{ $roomDescriptionShort }}"
+                                    data-room-description-full="{{ $roomDescriptionFull }}"
                                     data-collapsed="true"
                                     tabindex="0"
                                     role="button"
@@ -141,18 +141,21 @@
                                     aria-label="Toggle room description"
                                 @endif
                             >
-                                {{ $roomDescription }}
+                                {{ $roomDescriptionShort }}
                             </div>
+                            @if($hasLongDescription)
+                                <button class="room-info-description-toggle" type="button" data-room-description-toggle>Show more</button>
+                            @endif
                             @if($isOwner)
-                                <div class="room-description-actions">
-                                    <button class="icon-btn inline-edit-trigger" type="button" aria-label="Edit description" data-inline-trigger>
+                                <div class="room-info-description-actions">
+                                    <button class="icon-btn room-info-edit-btn inline-edit-trigger" type="button" aria-label="Edit description" data-inline-trigger>
                                         <i data-lucide="pencil"></i>
                                     </button>
                                 </div>
                             @endif
                         </div>
                         @if($isOwner)
-                            <form class="inline-edit-form" method="POST" action="{{ route('rooms.update', $room) }}" hidden>
+                            <form class="inline-edit-form room-info-edit-form" method="POST" action="{{ route('rooms.update', $room) }}" hidden>
                                 @csrf
                                 @method('PATCH')
                                 <textarea
@@ -169,11 +172,19 @@
                         @endif
                     </div>
                 </div>
-                <div class="room-header-aside">
-                    <span class="room-code">Room code: <span class="room-code-value">{{ $room->slug }}</span></span>
-                    <span class="status-pill status-{{ $room->status }} room-status">{{ ucfirst($room->status) }}</span>
+                <div class="room-info-meta">
+                    @if($isOwner)
+                        <button class="room-info-qr" type="button" id="qrButton" aria-label="Show QR-code">
+                            <i data-lucide="qr-code"></i>
+                        </button>
+                    @endif
+                    <div class="room-info-code">
+                        <span class="room-info-code-label">Room code:</span>
+                        <span class="room-info-code-value">{{ $room->slug }}</span>
+                    </div>
+                    <span class="room-info-status status-{{ $room->status }}">{{ ucfirst($room->status) }}</span>
                 </div>
-            </div>
+            </section>
         </div>
 
         @if (session('status'))
@@ -239,23 +250,25 @@
                     @if($isOwner)
                         <button class="chat-tab-btn" type="button" data-chat-tab="bans" data-onboarding-target="bans-tab">
                             <span>Bans</span>
-                            <span class="pill-soft" data-ban-count>{{ $bannedParticipants->count() }}</span>
+                            <span class="pill-soft" data-ban-count @if($bannedParticipants->count() === 0) hidden @endif>{{ $bannedParticipants->count() }}</span>
                         </button>
                     @endif
                 </div>
 
                 <div class="chat-pane" data-chat-panel="chat" data-onboarding-target="chat-pane">
-                    <ol
+                    <div
                         class="chat-messages messages-container"
                         id="chatMessages"
+                        role="list"
                         data-history-url="{{ $messagesHistoryUrl ?? '' }}"
                         data-has-more="{{ !empty($messagesHasMore) ? '1' : '0' }}"
                         data-oldest-id="{{ $messagesOldestId ?? '' }}"
                         data-page-size="{{ $messagePageSize ?? 50 }}"
                     >
-                        <li
+                        <div
                             class="message message-loader"
                             data-messages-loader
+                            role="listitem"
                             hidden
                             style="text-align:center; padding:12px; color:var(--muted, #6b7280);"
                         >
@@ -265,7 +278,7 @@
                             >
                                 Fetching previous messages...
                             </div>
-                        </li>
+                        </div>
                         @forelse($messages as $message)
                             @php
                                 $isOwnerMessage = $message->user && $message->user_id === $room->user_id;
@@ -315,8 +328,9 @@
                                     $myReactions = $reactionsGrouped->where('reacted', true)->pluck('emoji')->values();
                                 }
                             @endphp
-                            <li
+                            <div
                                 class="message {{ $isOutgoing ? 'message--outgoing' : '' }} {{ $isQuestionMessage ? 'message--question' : '' }} {{ $isPollMessage ? 'message--poll' : '' }} {{ $isJebMessage ? 'message--jeb' : '' }} {{ $isGlitchMessage ? 'message--glitch' : '' }}"
+                                role="listitem"
                                 data-message-id="{{ $message->id }}"
                                 data-reactions-url="{{ route('rooms.messages.reactions.toggle', [$room, $message]) }}"
                                 data-reactions='@json($reactionsGrouped)'
@@ -333,154 +347,178 @@
                                 data-created="{{ $message->created_at?->toIso8601String() }}"
                             >
                                 <div class="message-avatar colorized" style="background: {{ $avatarBg }}; color: #fff; border-color: transparent;">{{ $initials }}</div>
-                                <div class="message-body">
-                                    @if($isOwner && $message->participant && !$isOwnerMessage)
-                                        <div class="message-admin-actions">
-                                            <form
-                                                method="POST"
-                                                action="{{ route('rooms.bans.store', $room) }}"
-                                                class="message-ban-form"
-                                                data-ban-confirm="1"
-                                            >
-                                                @csrf
-                                                <input type="hidden" name="participant_id" value="{{ $message->participant->id }}">
-                                                <button type="submit" class="message-ban-btn" title="Ban participant">
-                                                    <i data-lucide="gavel"></i>
-                                                </button>
-                                            </form>
-                                            <form
-                                                method="POST"
-                                                action="{{ $deleteUrl }}"
-                                                class="message-delete-form"
-                                                data-message-delete
-                                            >
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="message-delete-btn" title="Delete message">
-                                                    <i data-lucide="trash-2"></i>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    @endif
-                                    <div class="message-header">
-                                        <span class="message-author">
-                                            {{ $authorName }}
-                                            @if($message->user?->is_dev)
-                                                <span class="message-badge message-badge-dev">dev</span>
-                                            @endif
-                                        </span>
-                                        <div class="message-meta">
-                                            <span>{{ $message->created_at->format('H:i') }}</span>
-                                            @if($isOwnerMessage)
-                                                <span class="message-badge message-badge-teacher">Host</span>
-                                            @endif
-                                            @if($isQuestionMessage)
-                                                <span class="message-badge message-badge-question">To host</span>
-                                            @endif
-                                            @if($replyTo)
-                                                <span class="message-badge">Reply</span>
-                                            @endif
-                                        </div>
-                                    </div>
-                                    @if($replyTo)
-                                        @php
-                                            $replyAuthor = $replyTo->user?->name ?? $replyTo->participant?->display_name ?? 'Guest';
-                                            $replyText = $replyDeleted ? 'Message deleted' : \Illuminate\Support\Str::limit($replyTo->content, 120);
-                                        @endphp
-                                        <div class="message-reply" data-reply-target="{{ $replyTo->id }}" data-reply-deleted="{{ $replyDeleted ? '1' : '0' }}">
-                                            <span class="reply-author">{{ $replyAuthor }}</span>
-                                            <span class="reply-text">{{ $replyText }}</span>
-                                        </div>
-                                    @endif
-                                    @if($isPollMessage)
-                                        @php
-                                            $pollTotal = (int) ($pollPayload['total_votes'] ?? 0);
-                                            $pollMyVoteId = $pollPayload['my_vote_id'] ?? null;
-                                            $pollOptions = $pollPayload['options'] ?? [];
-                                            $pollIsClosed = (bool) ($pollPayload['is_closed'] ?? false);
-                                            $pollCanVote = !$pollIsClosed && !$isClosed && !$isBanned;
-                                            $normalizeStarWarsLabel = static function (string $label): string {
-                                                return (string) \Illuminate\Support\Str::of($label)
-                                                    ->lower()
-                                                    ->replaceMatches('/[^a-z0-9]+/', '');
-                                            };
-                                            $starWarsTriggers = ['starwar', 'starwars'];
-                                        @endphp
-                                        <div class="message-poll" data-poll-card data-poll-id="{{ $pollPayload['id'] ?? '' }}">
-                                            <div class="poll-question">{{ $pollPayload['question'] ?? $message->content }}</div>
-                                            <div class="poll-options" data-poll-options>
-                                                @foreach($pollOptions as $option)
-                                                    @php
-                                                        $optionVotes = (int) ($option['votes'] ?? 0);
-                                                        $optionPercent = (int) ($option['percent'] ?? 0);
-                                                        $optionId = $option['id'] ?? null;
-                                                        $isSelected = $pollMyVoteId && $optionId && (int) $pollMyVoteId === (int) $optionId;
-                                                        $optionLabel = (string) ($option['label'] ?? '');
-                                                        $normalizedLabel = $normalizeStarWarsLabel($optionLabel);
-                                                        $isStarWarsOption = false;
-                                                        foreach ($starWarsTriggers as $trigger) {
-                                                            if ($trigger !== '' && str_contains($normalizedLabel, $trigger)) {
-                                                                $isStarWarsOption = true;
-                                                                break;
-                                                            }
-                                                        }
-                                                    @endphp
-                                                    @if($isStarWarsOption)
-                                                        <button
-                                                            type="button"
-                                                            class="poll-option poll-option--saber saber-row {{ $isSelected ? 'is-selected' : '' }}"
-                                                            data-poll-option-id="{{ $optionId }}"
-                                                            aria-pressed="{{ $isSelected ? 'true' : 'false' }}"
-                                                            @unless($pollCanVote) disabled @endunless
-                                                        >
-                                                            <span class="yoda-hilt" aria-hidden="true">
-                                                                <span class="bottom">
-                                                                    <span class="grip"></span>
-                                                                </span>
-                                                                <span class="top">
-                                                                    <span class="on"></span>
-                                                                    <span class="power-adjust-off"></span>
-                                                                    <span class="length-adjust-off"></span>
-                                                                </span>
-                                                            </span>
-                                                            <span class="option yoda-blade {{ $isSelected ? 'selected' : '' }}">
-                                                                <span class="fill" style="width: {{ $optionPercent }}%;"></span>
-                                                                <span class="tip" aria-hidden="true"></span>
-                                                                <span class="label">{{ $optionLabel }}</span>
-                                                                <span class="right">
-                                                                    <span class="count">{{ $optionVotes }}</span>
-                                                                    <span>{{ $optionPercent }}%</span>
-                                                                </span>
-                                                            </span>
-                                                        </button>
-                                                    @else
-                                                        <button
-                                                            type="button"
-                                                            class="poll-option {{ $isSelected ? 'is-selected' : '' }}"
-                                                            data-poll-option-id="{{ $optionId }}"
-                                                            aria-pressed="{{ $isSelected ? 'true' : 'false' }}"
-                                                            @unless($pollCanVote) disabled @endunless
-                                                        >
-                                                            <span class="poll-option-label">{{ $optionLabel }}</span>
-                                                            <span class="poll-option-stats">
-                                                                <span class="poll-option-count">{{ $optionVotes }}</span>
-                                                                <span class="poll-option-percent">{{ $optionPercent }}%</span>
-                                                            </span>
-                                                            <span class="poll-option-bar" style="width: {{ $optionPercent }}%;"></span>
-                                                        </button>
-                                                    @endif
-                                                @endforeach
-                                            </div>
-                                            <div class="poll-footer">
-                                                <span class="poll-total">{{ $pollTotal }} votes</span>
-                                                @if($pollMyVoteId)
-                                                    <span class="poll-status">Your vote is saved</span>
+                                <div class="message-content">
+                                    <div class="message-body">
+                                        <button type="button" class="message-menu-trigger" data-message-menu-trigger aria-label="Message actions" aria-expanded="false">
+                                            <i data-lucide="more-horizontal"></i>
+                                        </button>
+                                        <div class="message-header">
+                                            <span class="message-author">
+                                                {{ $authorName }}
+                                                @if($message->user?->is_dev)
+                                                    <span class="message-badge message-badge-dev">dev</span>
+                                                @endif
+                                            </span>
+                                            <div class="message-meta">
+                                                <span>{{ $message->created_at->format('H:i') }}</span>
+                                                @if($isOwnerMessage)
+                                                    <span class="message-badge message-badge-teacher">Host</span>
+                                                @endif
+                                                @if($isQuestionMessage)
+                                                    <span class="message-badge message-badge-question">To host</span>
+                                                @endif
+                                                @if($replyTo)
+                                                    <span class="message-badge">Reply</span>
                                                 @endif
                                             </div>
                                         </div>
-                                    @else
-                                        <div class="message-text">{{ $message->content }}</div>
-                                    @endif
+                                        @if($replyTo)
+                                            @php
+                                                $replyAuthor = $replyTo->user?->name ?? $replyTo->participant?->display_name ?? 'Guest';
+                                                $replyText = $replyDeleted ? 'Message deleted' : \Illuminate\Support\Str::limit($replyTo->content, 120);
+                                            @endphp
+                                            <div class="message-reply" data-reply-target="{{ $replyTo->id }}" data-reply-deleted="{{ $replyDeleted ? '1' : '0' }}">
+                                                <span class="reply-author">{{ $replyAuthor }}</span>
+                                                <span class="reply-text">{{ $replyText }}</span>
+                                            </div>
+                                        @endif
+                                        @if($isPollMessage)
+                                            @php
+                                                $pollTotal = (int) ($pollPayload['total_votes'] ?? 0);
+                                                $pollMyVoteId = $pollPayload['my_vote_id'] ?? null;
+                                                $pollOptions = $pollPayload['options'] ?? [];
+                                                $pollIsClosed = (bool) ($pollPayload['is_closed'] ?? false);
+                                                $pollCanVote = !$pollIsClosed && !$isClosed && !$isBanned;
+                                                $normalizeStarWarsLabel = static function (string $label): string {
+                                                    return (string) \Illuminate\Support\Str::of($label)
+                                                        ->lower()
+                                                        ->replaceMatches('/[^a-z0-9]+/', '');
+                                                };
+                                                $starWarsTriggers = ['starwar', 'starwars'];
+                                            @endphp
+                                            <div class="message-poll" data-poll-card data-poll-id="{{ $pollPayload['id'] ?? '' }}">
+                                                <div class="poll-question">{{ $pollPayload['question'] ?? $message->content }}</div>
+                                                <div class="poll-options" data-poll-options>
+                                                    @foreach($pollOptions as $option)
+                                                        @php
+                                                            $optionVotes = (int) ($option['votes'] ?? 0);
+                                                            $optionPercent = (int) ($option['percent'] ?? 0);
+                                                            $optionId = $option['id'] ?? null;
+                                                            $isSelected = $pollMyVoteId && $optionId && (int) $pollMyVoteId === (int) $optionId;
+                                                            $optionLabel = (string) ($option['label'] ?? '');
+                                                            $normalizedLabel = $normalizeStarWarsLabel($optionLabel);
+                                                            $isStarWarsOption = false;
+                                                            foreach ($starWarsTriggers as $trigger) {
+                                                                if ($trigger !== '' && str_contains($normalizedLabel, $trigger)) {
+                                                                    $isStarWarsOption = true;
+                                                                    break;
+                                                                }
+                                                            }
+                                                        @endphp
+                                                        @if($isStarWarsOption)
+                                                            <button
+                                                                type="button"
+                                                                class="poll-option poll-option--saber saber-row {{ $isSelected ? 'is-selected' : '' }}"
+                                                                data-poll-option-id="{{ $optionId }}"
+                                                                aria-pressed="{{ $isSelected ? 'true' : 'false' }}"
+                                                                @unless($pollCanVote) disabled @endunless
+                                                            >
+                                                                <span class="yoda-hilt" aria-hidden="true">
+                                                                    <span class="bottom">
+                                                                        <span class="grip"></span>
+                                                                    </span>
+                                                                    <span class="top">
+                                                                        <span class="on"></span>
+                                                                        <span class="power-adjust-off"></span>
+                                                                        <span class="length-adjust-off"></span>
+                                                                    </span>
+                                                                </span>
+                                                                <span class="option yoda-blade {{ $isSelected ? 'selected' : '' }}">
+                                                                    <span class="fill" style="width: {{ $optionPercent }}%;"></span>
+                                                                    <span class="tip" aria-hidden="true"></span>
+                                                                    <span class="label">{{ $optionLabel }}</span>
+                                                                    <span class="right">
+                                                                        <span class="count">{{ $optionVotes }}</span>
+                                                                        <span>{{ $optionPercent }}%</span>
+                                                                    </span>
+                                                                </span>
+                                                            </button>
+                                                        @else
+                                                            <button
+                                                                type="button"
+                                                                class="poll-option {{ $isSelected ? 'is-selected' : '' }}"
+                                                                data-poll-option-id="{{ $optionId }}"
+                                                                aria-pressed="{{ $isSelected ? 'true' : 'false' }}"
+                                                                @unless($pollCanVote) disabled @endunless
+                                                            >
+                                                                <span class="poll-option-label">{{ $optionLabel }}</span>
+                                                                <span class="poll-option-stats">
+                                                                    <span class="poll-option-count">{{ $optionVotes }}</span>
+                                                                    <span class="poll-option-percent">{{ $optionPercent }}%</span>
+                                                                </span>
+                                                                <span class="poll-option-bar" style="width: {{ $optionPercent }}%;"></span>
+                                                            </button>
+                                                        @endif
+                                                    @endforeach
+                                                </div>
+                                                <div class="poll-footer">
+                                                    <span class="poll-total">{{ $pollTotal }} votes</span>
+                                                    @if($pollMyVoteId)
+                                                        <span class="poll-status">Your vote is saved</span>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        @else
+                                            <div class="message-text">{{ $message->content }}</div>
+                                        @endif
+                                        <div class="message-actions" data-message-menu hidden>
+                                            <button
+                                                type="button"
+                                                class="msg-action"
+                                                data-reply-id="{{ $message->id }}"
+                                                data-reply-author="{{ e($authorName) }}"
+                                                data-reply-text="{{ e(\Illuminate\Support\Str::limit($message->content, 500)) }}"
+                                            >
+                                                <i data-lucide="corner-up-right"></i>
+                                                <span>Reply</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="msg-action msg-action-react"
+                                                data-reaction-trigger
+                                            >
+                                                <i data-lucide="smile-plus"></i>
+                                                <span>Add reaction</span>
+                                            </button>
+                                            @if($isOwner && $message->participant && !$isOwnerMessage)
+                                                <form
+                                                    method="POST"
+                                                    action="{{ route('rooms.bans.store', $room) }}"
+                                                    class="msg-action-form"
+                                                    data-ban-confirm="1"
+                                                >
+                                                    @csrf
+                                                    <input type="hidden" name="participant_id" value="{{ $message->participant->id }}">
+                                                    <button type="submit" class="msg-action msg-action-ban">
+                                                        <i data-lucide="gavel"></i>
+                                                        <span>Ban participant</span>
+                                                    </button>
+                                                </form>
+                                            @endif
+                                            @if($canDeleteOwn || $isOwner)
+                                                <button
+                                                    type="button"
+                                                    class="msg-action msg-action-delete"
+                                                    data-message-delete-trigger
+                                                    data-message-id="{{ $message->id }}"
+                                                    data-delete-url="{{ $deleteUrl }}"
+                                                >
+                                                    <i data-lucide="trash-2"></i>
+                                                    <span>Delete</span>
+                                                </button>
+                                            @endif
+                                        </div>
+                                    </div>
                                     <div class="message-reactions" data-message-reactions>
                                         <div class="reactions-list" data-reactions-list>
                                             @foreach($reactionsGrouped as $reaction)
@@ -496,47 +534,21 @@
                                             @endforeach
                                         </div>
                                     </div>
-                                    <div class="message-actions">
-                                        <button
-                                            type="button"
-                                            class="msg-action"
-                                            data-reply-id="{{ $message->id }}"
-                                            data-reply-author="{{ e($authorName) }}"
-                                            data-reply-text="{{ e(\Illuminate\Support\Str::limit($message->content, 500)) }}"
-                                        >
-                                            <i data-lucide="corner-up-right"></i>
-                                            <span>Reply</span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            class="msg-action msg-action-react"
-                                            data-reaction-trigger
-                                        >
-                                            <i data-lucide="smile-plus"></i>
-                                        </button>
-                                        @if($canDeleteOwn || ($isOwner && $isOwnerMessage))
-                                            <button
-                                                type="button"
-                                                class="msg-action msg-action-delete"
-                                                data-message-delete-trigger
-                                                data-message-id="{{ $message->id }}"
-                                                data-delete-url="{{ $deleteUrl }}"
-                                            >
-                                                <i data-lucide="trash-2"></i>
-                                                <span>Delete</span>
-                                            </button>
-                                        @endif
+                                </div>
+                            </div>
+                        @empty
+                            <div class="message message-empty" data-empty-message role="listitem">
+                                <div class="message-content">
+                                    <div class="message-body empty-state">
+                                        <div class="empty-state-icon">
+                                            <i data-lucide="message-circle"></i>
+                                        </div>
+                                        <div class="empty-state-text">No messages yet.</div>
                                     </div>
                                 </div>
-                            </li>
-                        @empty
-                            <li class="message message-empty" data-empty-message>
-                                <div class="message-body">
-                                    <div class="message-text">No messages yet.</div>
-                                </div>
-                            </li>
+                            </div>
                         @endforelse
-                    </ol>
+                    </div>
                     <div class="reaction-menu" id="reactionMenu" data-reaction-menu hidden>
                         <div class="reaction-menu-title">Quick reactions</div>
                         <div class="reaction-menu-current" data-reaction-current hidden>
@@ -737,19 +749,22 @@
                                         </div>
                                     </li>
                                 @empty
-                                    <li class="reply-inbox-empty">
-                                        <div class="message-text">No replies yet.</div>
+                                    <li class="reply-inbox-empty empty-state">
+                                        <div class="empty-state-icon">
+                                            <i data-lucide="message-circle"></i>
+                                        </div>
+                                        <div class="empty-state-text">No reply threads yet.</div>
                                     </li>
                                 @endforelse
                             </ol>
                         </div>
                         <div class="replies-detail" data-reply-detail hidden>
-                            <div class="reply-detail-empty" data-replies-empty>
-                                <div class="reply-detail-illustration">&#128172;</div>
-                                <div class="reply-detail-empty-text">
-                                    <div class="panel-title">Open a thread</div>
-                                    <div class="panel-subtitle">Select any message on the left to view every reply and nested conversations.</div>
+                            <div class="reply-detail-empty empty-state" data-replies-empty>
+                                <div class="empty-state-icon">
+                                    <i data-lucide="message-circle"></i>
                                 </div>
+                                <div class="empty-state-text">Open a thread</div>
+                                <div class="empty-state-subtext">Select any message on the left to view every reply and nested conversations.</div>
                             </div>
                             <div class="reply-detail-body" data-reply-thread-view hidden></div>
                         </div>
@@ -764,10 +779,15 @@
                                     <div class="moderation-title">Banned participants</div>
                                     <div class="panel-subtitle">Banned users cannot post messages or questions.</div>
                                 </div>
-                                <span class="pill-soft" data-ban-count>{{ $bannedParticipants->count() }}</span>
+                                <span class="pill-soft" data-ban-count @if($bannedParticipants->count() === 0) hidden @endif>{{ $bannedParticipants->count() }}</span>
                             </div>
                             @if($bannedParticipants->isEmpty())
-                                <div class="empty-state" data-ban-empty>No banned participants yet.</div>
+                                <div class="empty-state ban-empty" data-ban-empty>
+                                    <div class="empty-state-icon">
+                                        <i data-lucide="shield"></i>
+                                    </div>
+                                    <div class="empty-state-text">No banned participants yet.</div>
+                                </div>
                             @else
                                 <ul class="ban-list" data-ban-list>
                                     @foreach($bannedParticipants as $ban)
@@ -819,7 +839,7 @@
                 <div class="qr-box">
                     <canvas id="qrCanvas" role="img" aria-label="QR code"></canvas>
                     <div class="qr-logo">
-                        <img src="{{ asset('icons/logo_black.svg') }}" class="qr-logo-img" alt="Ghost Room logo">
+                        <img src="{{ asset($seasonalLogoAssets['meta'] ?? 'icons/logo_black.svg') }}" class="qr-logo-img" alt="Ghost Room logo">
                     </div>
                 </div>
                 <div class="qr-info">
