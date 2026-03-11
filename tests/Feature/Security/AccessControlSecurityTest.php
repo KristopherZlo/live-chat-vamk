@@ -84,17 +84,18 @@ test('banned identity cannot view room', function () {
     $response->assertStatus(403);
 });
 
-test('registration without invite code is rejected', function () {
+test('registration is rejected when honeypot field is filled', function () {
     $response = $this->post('/register', [
         'name' => 'No Invite',
         'email' => 'noinvite@example.com',
         'password' => 'password',
         'password_confirmation' => 'password',
-        'invite_code' => '',
+        'website' => 'https://spam.example',
+        'form_started_at' => now()->subSeconds(3)->timestamp,
     ]);
 
     $response->assertStatus(302);
-    $response->assertSessionHasErrors('invite_code');
+    $response->assertSessionHasErrors('website');
     $this->assertDatabaseMissing('users', ['email' => 'noinvite@example.com']);
 });
 

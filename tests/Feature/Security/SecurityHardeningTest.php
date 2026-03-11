@@ -50,6 +50,8 @@ test('login attempts are locked after repeated failures', function () {
             ->postJson('/login', [
                 'email' => $email,
                 'password' => 'wrong-password',
+                'website' => '',
+                'form_started_at' => now()->subSeconds(3)->timestamp,
             ]);
 
         $response->assertStatus(422)->assertJsonValidationErrors('email');
@@ -60,6 +62,8 @@ test('login attempts are locked after repeated failures', function () {
         ->postJson('/login', [
             'email' => $email,
             'password' => 'wrong-password',
+            'website' => '',
+            'form_started_at' => now()->subSeconds(3)->timestamp,
         ]);
 
     $lockoutResponse->assertStatus(422)->assertJsonValidationErrors('email');
@@ -79,6 +83,8 @@ test('registration is rate limited per IP', function () {
                 'email' => "user{$i}@example.com",
                 'password' => 'password',
                 'password_confirmation' => 'password',
+                'website' => '',
+                'form_started_at' => now()->subSeconds(3)->timestamp,
             ])
             ->assertStatus(302);
     }
@@ -90,6 +96,8 @@ test('registration is rate limited per IP', function () {
             'email' => 'user6@example.com',
             'password' => 'password',
             'password_confirmation' => 'password',
+            'website' => '',
+            'form_started_at' => now()->subSeconds(3)->timestamp,
         ]);
 
     $limited->assertStatus(429);
