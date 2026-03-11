@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\RedirectResponse;
@@ -14,13 +15,18 @@ class VerifyEmailController extends Controller
      */
     public function __invoke(EmailVerificationRequest $request): RedirectResponse
     {
-        if ($request->user()->hasVerifiedEmail()) {
+        $user = $request->user();
+        if (! $user instanceof User) {
+            abort(403);
+        }
+
+        if ($user->hasVerifiedEmail()) {
             return redirect()->to(route('home').'?verified=1');
         }
 
-        if ($request->user()->markEmailAsVerified()) {
-            $request->user()->emailVerificationCode()?->delete();
-            event(new Verified($request->user()));
+        if ($user->markEmailAsVerified()) {
+            $user->emailVerificationCode()->delete();
+            event(new Verified($user));
         }
 
         return redirect()->to(route('home').'?verified=1');

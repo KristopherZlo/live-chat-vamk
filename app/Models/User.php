@@ -5,6 +5,8 @@ namespace App\Models;
 use App\Services\Auth\EmailVerificationCodeService;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -49,12 +51,18 @@ class User extends Authenticatable implements MustVerifyEmail
         ];
     }
     
-    public function rooms()
+    /**
+     * @return HasMany<Room, $this>
+     */
+    public function rooms(): HasMany
     {
         return $this->hasMany(Room::class);
     }
 
-    public function emailVerificationCode()
+    /**
+     * @return HasOne<EmailVerificationCode, $this>
+     */
+    public function emailVerificationCode(): HasOne
     {
         return $this->hasOne(EmailVerificationCode::class);
     }

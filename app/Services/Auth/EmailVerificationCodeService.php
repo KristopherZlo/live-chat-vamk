@@ -71,7 +71,7 @@ class EmailVerificationCodeService
             return 0;
         }
 
-        return now()->diffInSeconds($nextSendAt);
+        return (int) now()->diffInSeconds($nextSendAt);
     }
 
     private function generateCode(): string

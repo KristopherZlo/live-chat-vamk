@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Services\Auth\EmailVerificationCodeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,11 +18,15 @@ class EmailVerificationPromptController extends Controller
     public function __invoke(Request $request, EmailVerificationCodeService $verificationCodes): RedirectResponse|View
     {
         $user = $request->user();
+        if (! $user instanceof User) {
+            abort(403);
+        }
+
         if ($user->hasVerifiedEmail()) {
             return redirect()->to(route('home'));
         }
 
-        $currentCode = $user->emailVerificationCode;
+        $currentCode = $user->emailVerificationCode()->first();
         if (! $currentCode || $currentCode->isExpired()) {
             $verificationCodes->send($user);
         }

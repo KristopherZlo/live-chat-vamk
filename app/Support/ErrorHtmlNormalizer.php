@@ -53,7 +53,7 @@ class ErrorHtmlNormalizer
             return false;
         }
 
-        if (method_exists($response, 'isRedirection') && $response->isRedirection()) {
+        if ($response->isRedirection()) {
             return false;
         }
 
@@ -89,7 +89,7 @@ class ErrorHtmlNormalizer
 
         $trimmed = substr($content, (int) $firstPos);
 
-        return $trimmed !== false && $trimmed !== '' ? $trimmed : null;
+        return $trimmed !== '' ? $trimmed : null;
     }
 
     private function keepFirstCompleteDocument(string $content): ?string
@@ -132,7 +132,7 @@ class ErrorHtmlNormalizer
             }
 
             $candidate = substr($content, $startPos, $closePos + 7 - $startPos);
-            if ($candidate !== false && $candidate !== '') {
+            if ($candidate !== '') {
                 return $candidate;
             }
         }
@@ -146,7 +146,7 @@ class ErrorHtmlNormalizer
 
         $fallback = substr($content, (int) $lastStartPos, $lastClosePos + 7 - (int) $lastStartPos);
 
-        return $fallback !== false && $fallback !== '' ? $fallback : null;
+        return $fallback !== '' ? $fallback : null;
     }
 
     private function normalizeDuplicatedErrorShell(string $content): ?string
@@ -169,10 +169,6 @@ class ErrorHtmlNormalizer
         }
 
         $bodyInner = substr($content, $bodyContentStart, $bodyClosePos - $bodyContentStart);
-        if ($bodyInner === false) {
-            return null;
-        }
-
         $normalizedBodyInner = $this->removeLeadingEmptyErrorShell($bodyInner);
         [$headLeak, $normalizedBodyInner] = $this->extractLeadingHeadTags($normalizedBodyInner);
 
@@ -203,7 +199,7 @@ class ErrorHtmlNormalizer
         }
 
         $tail = substr($bodyInner, strlen($match[0]));
-        if ($tail === false || $tail === '') {
+        if ($tail === '') {
             return $bodyInner;
         }
 

@@ -121,12 +121,6 @@ parameters:
 			path: app/Http/Controllers/AdminController.php
 
 		-
-			message: '#^Parameter \#1 \$user of class Illuminate\\Auth\\Events\\Verified constructor expects Illuminate\\Contracts\\Auth\\MustVerifyEmail, App\\Models\\User\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/Auth/VerifyEmailController.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\Message\:\:\$question\.$#'
 			identifier: property.notFound
 			count: 1
@@ -209,9 +203,3 @@ parameters:
 			identifier: deadCode.unreachable
 			count: 1
 			path: app/Models/UpdatePost.php
-
-		-
-			message: '#^Using nullsafe method call on non\-nullable type Illuminate\\Contracts\\Session\\Session\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Providers/AppServiceProvider.php

@@ -128,7 +128,7 @@ class AppServiceProvider extends ServiceProvider
             $room = $request->route('room');
             $roomId = is_object($room) && method_exists($room, 'getKey') ? $room->getKey() : $room;
             $userId = $request->user()?->getAuthIdentifier();
-            $sessionId = $request->session()?->getId();
+            $sessionId = $request->session()->getId();
             $fingerprint = $request->cookie('lc_fp');
             $ip = $request->ip();
             $isAuthenticated = (bool) $userId;
@@ -164,7 +164,7 @@ class AppServiceProvider extends ServiceProvider
             $room = $request->route('room');
             $roomId = is_object($room) && method_exists($room, 'getKey') ? $room->getKey() : $room;
             $userId = $request->user()?->getAuthIdentifier();
-            $sessionId = $request->session()?->getId();
+            $sessionId = $request->session()->getId();
             $fingerprint = $request->cookie('lc_fp');
             $ip = $request->ip();
             $isAuthenticated = (bool) $userId;

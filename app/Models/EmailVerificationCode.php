@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class EmailVerificationCode extends Model
 {
@@ -19,14 +20,16 @@ class EmailVerificationCode extends Model
         'expires_at' => 'datetime',
     ];
 
-    public function user()
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
     public function isExpired(): bool
     {
-        return ! $this->expires_at || $this->expires_at->isPast();
+        return $this->expires_at->isPast();
     }
 }
-
