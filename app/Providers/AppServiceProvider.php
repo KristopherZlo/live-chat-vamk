@@ -52,6 +52,29 @@ class AppServiceProvider extends ServiceProvider
         View::share('isHolidayLogoSeason', $isHolidayLogoSeason);
         View::share('seasonalLogoAssets', $seasonalLogoAssets);
 
+        $subnetKeyResolver = static function (?string $ip): string {
+            $ip = (string) $ip;
+            if ($ip === '' || ! filter_var($ip, FILTER_VALIDATE_IP)) {
+                return 'unknown';
+            }
+
+            if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+                $parts = explode('.', $ip);
+                if (count($parts) !== 4) {
+                    return 'unknown-v4';
+                }
+
+                return sprintf('%s.%s.%s.0/24', $parts[0], $parts[1], $parts[2]);
+            }
+
+            $packed = inet_pton($ip);
+            if ($packed === false) {
+                return 'unknown-v6';
+            }
+
+            return bin2hex(substr($packed, 0, 8)).'/64';
+        };
+
         RateLimiter::for('web', function (Request $request) {
             $userId = $request->user()?->getAuthIdentifier();
             $ip = $request->ip();
@@ -78,8 +101,18 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
-        RateLimiter::for('register', function (Request $request) {
-            return Limit::perMinute(5)->by($request->ip());
+        RateLimiter::for('register', function (Request $request) use ($subnetKeyResolver) {
+            $ip = (string) $request->ip();
+            $subnet = $subnetKeyResolver($ip);
+            $perMinuteIp = (int) config('ghostroom.limits.auth.register_per_minute_ip', 4);
+            $perHourIp = (int) config('ghostroom.limits.auth.register_per_hour_ip', 20);
+            $perHourSubnet = (int) config('ghostroom.limits.auth.register_per_hour_subnet', 60);
+
+            return [
+                Limit::perMinute($perMinuteIp)->by('register|ip-minute|'.$ip),
+                Limit::perHour($perHourIp)->by('register|ip-hour|'.$ip),
+                Limit::perHour($perHourSubnet)->by('register|subnet-hour|'.$subnet),
+            ];
         });
 
         RateLimiter::for('password-reset', function (Request $request) {
@@ -174,6 +207,38 @@ class AppServiceProvider extends ServiceProvider
             }
 
             return Limit::perMinute(20)->by($ip);
+        });
+
+        RateLimiter::for('verification-resend', function (Request $request) {
+            $ip = (string) $request->ip();
+            $userId = (string) ($request->user()?->getAuthIdentifier() ?? 'guest');
+            $perMinuteUser = (int) config('ghostroom.limits.auth.verification_resend_per_minute_user', 2);
+            $perHourUser = (int) config('ghostroom.limits.auth.verification_resend_per_hour_user', 12);
+            $perMinuteIp = (int) config('ghostroom.limits.auth.verification_resend_per_minute_ip', 6);
+            $perHourIp = (int) config('ghostroom.limits.auth.verification_resend_per_hour_ip', 30);
+
+            return [
+                Limit::perMinute($perMinuteUser)->by('verification-resend|user-minute|'.$userId),
+                Limit::perHour($perHourUser)->by('verification-resend|user-hour|'.$userId),
+                Limit::perMinute($perMinuteIp)->by('verification-resend|ip-minute|'.$ip),
+                Limit::perHour($perHourIp)->by('verification-resend|ip-hour|'.$ip),
+            ];
+        });
+
+        RateLimiter::for('verification-code', function (Request $request) {
+            $ip = (string) $request->ip();
+            $userId = (string) ($request->user()?->getAuthIdentifier() ?? 'guest');
+            $perMinuteUser = (int) config('ghostroom.limits.auth.verification_code_attempts_per_minute_user', 8);
+            $perHourUser = (int) config('ghostroom.limits.auth.verification_code_attempts_per_hour_user', 40);
+            $perMinuteIp = (int) config('ghostroom.limits.auth.verification_code_attempts_per_minute_ip', 20);
+            $perHourIp = (int) config('ghostroom.limits.auth.verification_code_attempts_per_hour_ip', 100);
+
+            return [
+                Limit::perMinute($perMinuteUser)->by('verification-code|user-minute|'.$userId),
+                Limit::perHour($perHourUser)->by('verification-code|user-hour|'.$userId),
+                Limit::perMinute($perMinuteIp)->by('verification-code|ip-minute|'.$ip),
+                Limit::perHour($perHourIp)->by('verification-code|ip-hour|'.$ip),
+            ];
         });
     }
 }

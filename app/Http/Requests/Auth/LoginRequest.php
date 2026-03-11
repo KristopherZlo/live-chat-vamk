@@ -44,6 +44,8 @@ class LoginRequest extends FormRequest
         return [
             'email' => ['required', 'string', 'email'],
             'password' => ['required', 'string'],
+            'website' => ['nullable', 'string', 'max:0'],
+            'form_started_at' => ['required', 'integer', 'min:1'],
         ];
     }
 
@@ -54,6 +56,7 @@ class LoginRequest extends FormRequest
      */
     public function authenticate(): void
     {
+        $this->ensureHoneypotIsValid();
         $this->ensureIsNotRateLimited();
 
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
@@ -112,5 +115,16 @@ class LoginRequest extends FormRequest
     public function ipThrottleKey(): string
     {
         return 'login-ip|'.$this->ip();
+    }
+
+    private function ensureHoneypotIsValid(): void
+    {
+        $elapsed = now()->timestamp - (int) $this->input('form_started_at');
+
+        if ($elapsed < 2) {
+            throw ValidationException::withMessages([
+                'email' => [trans('auth.failed')],
+            ]);
+        }
     }
 }

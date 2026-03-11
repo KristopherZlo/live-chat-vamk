@@ -34,13 +34,13 @@ Route::post('/client-errors', [ClientErrorReportController::class, 'store'])
     ->middleware('throttle:client-errors')
     ->name('client-errors.store');
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
     // Личный кабинет (список комнат)
     Route::get('/dashboard', [RoomController::class, 'dashboard'])
         ->name('dashboard');
@@ -87,7 +87,7 @@ Route::delete('/rooms/{room}/messages/{message}', [MessageController::class, 'de
         ->middleware('throttle:room-messages')
         ->name('rooms.polls.vote');
 
-    Route::middleware(['auth'])->group(function () {
+    Route::middleware(['auth', 'verified'])->group(function () {
     // ... тут уже есть dashboard / rooms.create / rooms.store
 
     // Изменить статус вопроса (только владелец комнаты)
@@ -118,12 +118,12 @@ Route::delete('/questions/{question}', [QuestionController::class, 'destroy'])
     ->name('questions.destroy');
 
 Route::get('/rooms/{room}/questions-panel', [RoomController::class, 'questionsPanel'])
-    ->middleware('auth')
+    ->middleware(['auth', 'verified'])
     ->name('rooms.questionsPanel');
 Route::get('/rooms/{room}/my-questions-panel', [RoomController::class, 'myQuestionsPanel'])
     ->name('rooms.myQuestionsPanel');
 
-Route::middleware(['auth', 'dev', 'admin.ip'])->group(function () {
+Route::middleware(['auth', 'verified', 'dev', 'admin.ip'])->group(function () {
     Route::get('/admin', [AdminController::class, 'index'])->name('admin.index');
     Route::post('/admin/invites', [AdminController::class, 'storeInvite'])->name('admin.invites.store');
     Route::delete('/admin/invites/{invite}', [AdminController::class, 'destroyInvite'])->name('admin.invites.destroy');

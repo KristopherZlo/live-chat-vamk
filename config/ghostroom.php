@@ -14,7 +14,26 @@ return [
             'dashboard', // Routes that auto-show the tutorial modal.
         ],
     ],
+    'auth' => [
+        'email_verification_code_ttl' => 15, // Minutes before a verification code expires.
+        'verification_resend_cooldown_seconds' => 60, // Seconds before user can request another code.
+        'max_pending_unverified_per_ip' => 3, // Max unverified accounts allowed from one IP.
+        'unverified_user_ttl_hours' => 24, // Auto-remove unverified accounts older than this.
+    ],
     'limits' => [
+        'auth' => [
+            'register_per_minute_ip' => 4, // Registration attempts per minute for one IP.
+            'register_per_hour_ip' => 20, // Registration attempts per hour for one IP.
+            'register_per_hour_subnet' => 60, // Registration attempts per hour for one subnet (/24 for IPv4, /64 for IPv6).
+            'verification_resend_per_minute_user' => 2, // Resend attempts per minute for one authenticated user.
+            'verification_resend_per_hour_user' => 12, // Resend attempts per hour for one authenticated user.
+            'verification_resend_per_minute_ip' => 6, // Resend attempts per minute for one IP.
+            'verification_resend_per_hour_ip' => 30, // Resend attempts per hour for one IP.
+            'verification_code_attempts_per_minute_user' => 8, // Code verification attempts per minute for one authenticated user.
+            'verification_code_attempts_per_hour_user' => 40, // Code verification attempts per hour for one authenticated user.
+            'verification_code_attempts_per_minute_ip' => 20, // Code verification attempts per minute for one IP.
+            'verification_code_attempts_per_hour_ip' => 100, // Code verification attempts per hour for one IP.
+        ],
         'user' => [
             'name_max' => 255, // Max user name length.
             'email_max' => 255, // Max user email length.

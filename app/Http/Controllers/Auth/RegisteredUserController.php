@@ -3,15 +3,13 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\InviteCode;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rules;
 use Illuminate\View\View;
@@ -31,8 +29,10 @@ class RegisteredUserController extends Controller
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): RedirectResponse|JsonResponse
     {
+        $this->pruneStaleUnverifiedUsers();
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:' . config('ghostroom.limits.user.name_max', 255)],
             'email' => [
@@ -44,38 +44,20 @@ class RegisteredUserController extends Controller
                 'unique:' . User::class,
             ],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'invite_code' => [
-                'required',
-                'string',
-                Rule::exists('invite_codes', 'code')->whereNull('used_at'),
-            ],
+            'website' => ['nullable', 'string', 'max:0'],
+            'form_started_at' => ['required', 'integer', 'min:1'],
         ]);
 
-        $user = null;
+        $this->ensureHoneypotIsValid((int) $validated['form_started_at']);
+        $registrationIp = $this->resolveClientIp($request);
+        $this->ensurePendingUnverifiedLimitNotReached($registrationIp);
 
-        DB::transaction(function () use (&$user, $validated) {
-            $invite = InviteCode::where('code', $validated['invite_code'])
-                ->whereNull('used_at')
-                ->lockForUpdate()
-                ->first();
-
-            if (! $invite) {
-                throw ValidationException::withMessages([
-                    'invite_code' => ['This invite code is invalid or has already been used.'],
-                ]);
-            }
-
-            $user = User::create([
-                'name' => $validated['name'],
-                'email' => $validated['email'],
-                'password' => Hash::make($validated['password']),
-            ]);
-
-            $invite->forceFill([
-                'used_by' => $user->id,
-                'used_at' => now(),
-            ])->save();
-        });
+        $user = User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+            'registration_ip' => $registrationIp,
+        ]);
 
         event(new Registered($user));
 
@@ -83,6 +65,59 @@ class RegisteredUserController extends Controller
 
         $request->session()->flash('onboarding_new_user', true);
 
-        return redirect(route('dashboard', absolute: false));
+        $redirectTo = route('verification.notice');
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'redirect' => $redirectTo,
+            ]);
+        }
+
+        return redirect($redirectTo);
+    }
+
+    private function ensureHoneypotIsValid(int $startedAt): void
+    {
+        $elapsed = now()->timestamp - $startedAt;
+
+        if ($elapsed < 2) {
+            throw ValidationException::withMessages([
+                'email' => ['Please try submitting the form again.'],
+            ]);
+        }
+    }
+
+    private function pruneStaleUnverifiedUsers(): void
+    {
+        $ttlHours = max(1, (int) config('ghostroom.auth.unverified_user_ttl_hours', 24));
+
+        User::query()
+            ->whereNull('email_verified_at')
+            ->where('created_at', '<', now()->subHours($ttlHours))
+            ->delete();
+    }
+
+    /**
+     * @throws \Illuminate\Validation\ValidationException
+     */
+    private function ensurePendingUnverifiedLimitNotReached(string $registrationIp): void
+    {
+        $maxPending = max(1, (int) config('ghostroom.auth.max_pending_unverified_per_ip', 3));
+
+        $pendingCount = User::query()
+            ->whereNull('email_verified_at')
+            ->where('registration_ip', $registrationIp)
+            ->count();
+
+        if ($pendingCount >= $maxPending) {
+            throw ValidationException::withMessages([
+                'email' => ['Too many unverified accounts were created from this network. Verify one of them before creating a new account.'],
+            ]);
+        }
+    }
+
+    private function resolveClientIp(Request $request): string
+    {
+        return (string) ($request->ip() ?: '0.0.0.0');
     }
 }
