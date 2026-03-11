@@ -43,22 +43,27 @@ return [
             'code_max' => 255, // Max room join code length.
             'messages_per_minute_guest' => 20, // Per-guest message limit (per identity and room).
             'messages_per_minute_auth' => 40, // Per-authenticated user message limit (per identity and room).
-            'messages_per_minute_ip_guest' => 6000, // Per-IP message limit for guests (room messages).
-            'messages_per_minute_ip_auth' => 6000, // Per-IP message limit for authenticated users (room messages).
-            'messages_per_minute_room' => 5000, // Aggregate per-room message limit.
+            'messages_per_minute_ip_guest' => 120, // Per-IP message limit for guests (room messages).
+            'messages_per_minute_ip_auth' => 480, // Per-IP message limit for authenticated users (room messages).
+            'messages_per_minute_room' => 1200, // Aggregate per-room message limit.
             'messages_per_minute_fingerprint' => 60, // Per-fingerprint guest message limit within a room.
+            'history_per_minute_guest' => 60, // Per-guest history fetch limit.
+            'history_per_minute_auth' => 240, // Per-authenticated user history fetch limit.
+            'history_per_minute_ip_guest' => 180, // Per-IP history fetch limit for guests.
+            'history_per_minute_ip_auth' => 600, // Per-IP history fetch limit for authenticated users.
+            'history_per_minute_room' => 1200, // Aggregate per-room history fetch limit.
             'participant_create_per_minute' => 12, // Per-fingerprint participant creation limit.
-            'participant_create_per_minute_ip' => 1200, // Per-IP participant creation limit.
-            'join_per_minute_ip' => 600, // Per-IP room join attempts.
-            'join_per_minute_code_ip' => 400, // Per-IP room join attempts per code.
+            'participant_create_per_minute_ip' => 240, // Per-IP participant creation limit.
+            'join_per_minute_ip' => 60, // Per-IP room join attempts.
+            'join_per_minute_code_ip' => 20, // Per-IP room join attempts per code.
             'reorder_per_minute_user' => 90, // Per-user room reorder requests.
             'reorder_per_minute_ip' => 240, // Per-IP room reorder requests.
             'reorder_batch_max' => 500, // Max room ids accepted in one reorder payload.
         ],
         'web' => [
-            'guest_ip_per_minute' => 6000, // Global per-IP limit for guest web routes.
-            'user_per_minute' => 8000, // Global per-user limit for authenticated routes.
-            'user_ip_per_minute' => 6000, // Global per-IP limit for authenticated routes.
+            'guest_ip_per_minute' => 1200, // Global per-IP limit for guest web routes.
+            'user_per_minute' => 3600, // Global per-user limit for authenticated routes.
+            'user_ip_per_minute' => 2400, // Global per-IP limit for authenticated routes.
         ],
         'message' => [
             'content_max' => 2048, // Max message content length.

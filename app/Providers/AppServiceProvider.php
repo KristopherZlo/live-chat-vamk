@@ -160,6 +160,46 @@ class AppServiceProvider extends ServiceProvider
             return $limits;
         });
 
+        RateLimiter::for('room-history', function (Request $request) {
+            $room = $request->route('room');
+            $roomId = is_object($room) && method_exists($room, 'getKey') ? $room->getKey() : $room;
+            $userId = $request->user()?->getAuthIdentifier();
+            $sessionId = $request->session()?->getId();
+            $fingerprint = $request->cookie('lc_fp');
+            $ip = $request->ip();
+            $isAuthenticated = (bool) $userId;
+
+            $perMinute = (int) config(
+                $isAuthenticated
+                    ? 'ghostroom.limits.room.history_per_minute_auth'
+                    : 'ghostroom.limits.room.history_per_minute_guest',
+                $isAuthenticated ? 240 : 60
+            );
+            $perMinuteIp = (int) config(
+                $isAuthenticated
+                    ? 'ghostroom.limits.room.history_per_minute_ip_auth'
+                    : 'ghostroom.limits.room.history_per_minute_ip_guest',
+                $isAuthenticated ? 600 : 180
+            );
+            $perMinuteRoom = (int) config('ghostroom.limits.room.history_per_minute_room', 1200);
+
+            $identityKey = $userId
+                ? implode('|', ['user', $userId, 'session', $sessionId])
+                : ($fingerprint ? 'fp|'.$fingerprint : ($sessionId ? 'session|'.$sessionId : 'ip|'.$ip));
+            $compositeKey = implode('|', array_filter([$roomId, $identityKey, $ip]));
+
+            $limits = [
+                Limit::perMinute($perMinute)->by('room-history|'.$compositeKey),
+                Limit::perMinute($perMinuteIp)->by('room-history|ip|'.$ip),
+            ];
+
+            if ($roomId) {
+                $limits[] = Limit::perMinute($perMinuteRoom)->by('room-history|room|'.$roomId);
+            }
+
+            return $limits;
+        });
+
         RateLimiter::for('room-joins', function (Request $request) {
             $ip = $request->ip();
             $codeKey = Str::lower((string) $request->input('code'));

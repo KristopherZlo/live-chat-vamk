@@ -76,6 +76,7 @@ Route::post('/rooms/{room}/messages', [MessageController::class, 'store'])
     ->middleware('throttle:room-messages')
     ->name('rooms.messages.store');
 Route::get('/rooms/{room}/messages', [RoomController::class, 'messagesHistory'])
+    ->middleware('throttle:room-history')
     ->name('rooms.messages.history');
 Route::delete('/rooms/{room}/messages/{message}', [MessageController::class, 'destroy'])
     ->middleware('throttle:room-messages')
