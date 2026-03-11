@@ -15,6 +15,9 @@ deploy_ghostroom.sh
 /.openai
 /.roo
 /.windsurf
+/SKILL.md
+/skills.md
+/Uncodixfy.md
 
 # Temp / backups
 /temp_view.txt
