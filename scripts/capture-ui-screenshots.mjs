@@ -3,7 +3,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { chromium } from 'playwright';
 
-const BASE_URL = process.env.SCREENSHOT_BASE_URL ?? 'http://127.0.0.1:8000';
+const BASE_URL = normalizeBaseUrl(process.env.SCREENSHOT_BASE_URL ?? 'http://127.0.0.1:8000');
 const OUTPUT_ROOT = process.env.SCREENSHOT_OUTPUT_DIR ?? 'interface-screenshots-auto';
 const VIEWPORT = parseViewport(process.env.SCREENSHOT_VIEWPORT ?? '1440x900');
 const WAIT_MS = parsePositiveInt(process.env.SCREENSHOT_WAIT_MS, 450);
@@ -11,6 +11,7 @@ const TIMEOUT_MS = parsePositiveInt(process.env.SCREENSHOT_TIMEOUT_MS, 30000);
 const INCLUDE_TEST_ROUTES = process.env.SCREENSHOT_INCLUDE_TEST_ROUTES === '1';
 const AUTH_EMAIL = process.env.SCREENSHOT_AUTH_EMAIL ?? '';
 const AUTH_PASSWORD = process.env.SCREENSHOT_AUTH_PASSWORD ?? '';
+const DISABLE_ONBOARDING_MODALS = process.env.SCREENSHOT_DISABLE_ONBOARDING_MODALS !== '0';
 
 const EXCLUDED_URIS = new Set([
   '_boost/browser-logs',
@@ -193,6 +194,17 @@ async function captureRouteGroup({
     localStorage.setItem('lc-theme', themeMode);
     document.documentElement.dataset.theme = themeMode;
   }, theme);
+  if (DISABLE_ONBOARDING_MODALS) {
+    await context.addInitScript(() => {
+      try {
+        localStorage.setItem('gr_welcome_seen', '1');
+        localStorage.setItem('lc-tutorial-dismissed', '1');
+        localStorage.setItem('lc-whats-new-version', '9999.9999.9999');
+      } catch (error) {
+        // ignore localStorage failures in restricted contexts
+      }
+    });
+  }
 
   const captured = [];
   const skipped = [];
@@ -211,7 +223,7 @@ async function captureRouteGroup({
       const screenshotPath = path.join(groupDir, `${fileName}.png`);
 
       try {
-        const response = await page.goto(route.uri, { waitUntil: 'domcontentloaded' });
+        const response = await page.goto(toNavigableRoute(route.uri), { waitUntil: 'domcontentloaded' });
         await page.waitForTimeout(WAIT_MS);
 
         if (!response) {
@@ -267,7 +279,7 @@ async function login(context, email, password) {
   const page = await context.newPage();
   page.setDefaultTimeout(TIMEOUT_MS);
 
-  await page.goto('/login', { waitUntil: 'domcontentloaded' });
+  await page.goto(toNavigableRoute('/login'), { waitUntil: 'domcontentloaded' });
 
   const emailInput = page.locator('input[name="email"]');
   if ((await emailInput.count()) === 0) {
@@ -280,12 +292,16 @@ async function login(context, email, password) {
   const startedAtInput = page.locator('input[name="form_started_at"]');
   if ((await startedAtInput.count()) > 0) {
     const startedAt = Math.floor(Date.now() / 1000) - 5;
-    await startedAtInput.fill(String(startedAt));
+    await startedAtInput.first().evaluate((element, value) => {
+      element.value = value;
+    }, String(startedAt));
   }
 
   const honeypotInput = page.locator('input[name="website"]');
   if ((await honeypotInput.count()) > 0) {
-    await honeypotInput.fill('');
+    await honeypotInput.first().evaluate((element) => {
+      element.value = '';
+    });
   }
 
   const submitButton = page.locator('form button[type="submit"], form input[type="submit"]').first();
@@ -294,7 +310,7 @@ async function login(context, email, password) {
     page.waitForLoadState('domcontentloaded'),
   ]);
 
-  if (new URL(page.url()).pathname === '/login') {
+  if (new URL(page.url()).pathname.endsWith('/login')) {
     throw new Error('Login failed: still on /login after submit');
   }
 
@@ -315,6 +331,13 @@ function sanitizeFileName(value) {
   return value.replace(/[^a-zA-Z0-9_.-]/g, '_');
 }
 
+function toNavigableRoute(uri) {
+  if (uri === '/' || uri === '') {
+    return '';
+  }
+  return String(uri).replace(/^\/+/, '');
+}
+
 function parseViewport(raw) {
   const match = /^(\d{3,5})x(\d{3,5})$/i.exec(raw.trim());
   if (!match) {
@@ -332,6 +355,14 @@ function parsePositiveInt(value, fallback) {
     return fallback;
   }
   return parsed;
+}
+
+function normalizeBaseUrl(url) {
+  const trimmed = String(url ?? '').trim();
+  if (trimmed === '') {
+    return 'http://127.0.0.1:8000/';
+  }
+  return trimmed.endsWith('/') ? trimmed : `${trimmed}/`;
 }
 
 main().catch((error) => {
