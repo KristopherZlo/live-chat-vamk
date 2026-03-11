@@ -34,7 +34,14 @@
             document.documentElement.style.backgroundColor = theme === 'dark' ? '#000000' : '#ffffff';
         })();
     </script>
-    @vite(['resources/css/app.css', 'resources/css/design.css', 'resources/js/lucide.ts', 'resources/js/app.ts', 'resources/js/design.ts'])
+    @vite(['resources/css/app.css', 'resources/css/design.css', 'resources/js/lucide.ts'])
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.lucide?.createIcons && window.lucide?.icons) {
+                window.lucide.createIcons({ icons: window.lucide.icons });
+            }
+        });
+    </script>
 </head>
 <body class="app error-page-shell">
 <div class="app-shell">
