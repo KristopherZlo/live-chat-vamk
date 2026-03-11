@@ -1,198 +1,168 @@
 @php
     $mode = ($mode ?? 'login') === 'register' ? 'register' : 'login';
     $isLogin = $mode === 'login';
+    $title = $isLogin ? 'Login to your Account' : 'Create your Account';
+    $subtitle = $isLogin
+        ? 'See what is going on with your rooms and audience.'
+        : 'Use your email and confirm your account after signup.';
 @endphp
 
 <x-guest-layout>
-    <div class="auth-shell" data-auth-shell data-auth-mode="{{ $mode }}">
-        <section class="auth-card" aria-label="Account access">
-            <aside class="auth-brand">
-                <a class="auth-brand-logo" href="{{ url('/') }}" aria-label="Ghost Room home">
-                    <img src="{{ asset('assets/ghostup_logo_white.svg') }}" alt="Ghost Room logo">
-                </a>
-                <p class="auth-brand-kicker">Ghost Room account</p>
-                <h1>Access your rooms and moderation tools.</h1>
-                <p class="auth-brand-copy">
-                    Sign in to continue or register with an invite code.
-                    Account access is limited to invited users.
-                </p>
-                <ul class="auth-brand-points">
-                    <li>Join and manage live Q&amp;A rooms</li>
-                    <li>Track moderation and queue activity</li>
-                    <li>Use invite-only registration</li>
-                </ul>
+    <div class="auth-page {{ $isLogin ? 'auth-page--login' : 'auth-page--register' }}">
+        <section class="auth-layout" aria-label="Account access">
+            <aside class="auth-visual">
+                <img
+                    src="{{ asset('assets/auth/ghostroom-login-page.webp') }}"
+                    alt="Illustration placeholder"
+                    loading="lazy"
+                >
             </aside>
 
             <main class="auth-panel">
-                <div class="auth-panel-head">
-                    <p class="auth-eyebrow">Authentication</p>
-                    <h2 data-auth-title>{{ $isLogin ? 'Sign in' : 'Create account' }}</h2>
-                    <p class="auth-subtitle" data-auth-subtitle>
-                        {{ $isLogin ? 'Use your existing account credentials.' : 'A valid invite code is required to create an account.' }}
-                    </p>
-                </div>
-
-                <nav class="auth-switch" aria-label="Authentication mode" role="tablist">
-                    <a
-                        href="{{ route('login') }}"
-                        class="auth-switch-tab {{ $isLogin ? 'is-active' : '' }}"
-                        data-auth-switch="login"
-                        role="tab"
-                        aria-selected="{{ $isLogin ? 'true' : 'false' }}"
-                    >
-                        Log in
+                <div class="auth-panel-inner">
+                    <a class="auth-logo" href="{{ url('/') }}" aria-label="Ghost Room home">
+                        <img src="{{ asset('assets/ghostup_logo.svg') }}" alt="Ghost Room logo">
                     </a>
-                    <a
-                        href="{{ route('register') }}"
-                        class="auth-switch-tab {{ $isLogin ? '' : 'is-active' }}"
-                        data-auth-switch="register"
-                        role="tab"
-                        aria-selected="{{ $isLogin ? 'false' : 'true' }}"
-                    >
-                        Register
-                    </a>
-                </nav>
 
-                <x-auth-session-status class="auth-status" :status="session('status')" />
+                    <h1 class="auth-title">{{ $title }}</h1>
+                    <p class="auth-subtitle">{{ $subtitle }}</p>
 
-                <div class="auth-forms" data-auth-forms>
-                    <form
-                        method="POST"
-                        action="{{ route('login') }}"
-                        class="auth-form {{ $isLogin ? 'is-active' : '' }}"
-                        data-auth-form="login"
-                        @if(!$isLogin) hidden @endif
-                    >
-                        @csrf
+                    @if($isLogin)
+                        <button class="auth-google" type="button" aria-disabled="true" disabled>
+                            <span class="auth-google-mark" aria-hidden="true">G</span>
+                            <span>Continue with Google</span>
+                        </button>
+                        <p class="auth-divider"><span>or sign in with email</span></p>
+                    @endif
 
-                        <label class="auth-field" for="login_email">
-                            <span>Email</span>
-                            <input
-                                id="login_email"
-                                type="email"
-                                name="email"
-                                value="{{ old('email') }}"
-                                required
-                                @if($isLogin) autofocus @endif
-                                autocomplete="username"
-                                placeholder="you@example.com"
-                            >
-                            <x-input-error :messages="$errors->get('email')" class="auth-input-error" />
-                        </label>
+                    <x-auth-session-status class="auth-status" :status="session('status')" />
 
-                        <label class="auth-field" for="login_password">
-                            <span>Password</span>
-                            <input
-                                id="login_password"
-                                type="password"
-                                name="password"
-                                required
-                                autocomplete="current-password"
-                                placeholder="Enter your password"
-                            >
-                            <x-input-error :messages="$errors->get('password')" class="auth-input-error" />
-                        </label>
+                    @if($isLogin)
+                        <form method="POST" action="{{ route('login') }}" class="auth-form">
+                            @csrf
+                            <div class="auth-honeypot" aria-hidden="true">
+                                <label for="login_website">Website</label>
+                                <input id="login_website" type="text" name="website" tabindex="-1" autocomplete="off">
+                            </div>
+                            <input type="hidden" name="form_started_at" value="{{ now()->timestamp }}">
 
-                        <div class="auth-meta">
-                            <label class="auth-remember" for="remember_me">
-                                <input id="remember_me" type="checkbox" name="remember" {{ old('remember') ? 'checked' : '' }}>
-                                <span>Keep me signed in</span>
+                            <label class="auth-field" for="login_email">
+                                <span>Email</span>
+                                <input
+                                    id="login_email"
+                                    type="email"
+                                    name="email"
+                                    value="{{ old('email') }}"
+                                    required
+                                    autofocus
+                                    autocomplete="username"
+                                    placeholder="mail@example.com"
+                                >
+                                <x-input-error :messages="$errors->get('email')" class="auth-input-error" />
                             </label>
-                            <a class="auth-link" href="{{ route('register') }}" data-auth-switch="register">Create account</a>
-                        </div>
 
-                        <button class="auth-submit" type="submit">
-                            Log in
-                        </button>
-                    </form>
+                            <label class="auth-field" for="login_password">
+                                <span>Password</span>
+                                <input
+                                    id="login_password"
+                                    type="password"
+                                    name="password"
+                                    required
+                                    autocomplete="current-password"
+                                    placeholder="Enter your password"
+                                >
+                                <x-input-error :messages="$errors->get('password')" class="auth-input-error" />
+                            </label>
 
-                    <form
-                        method="POST"
-                        action="{{ route('register') }}"
-                        class="auth-form {{ $isLogin ? '' : 'is-active' }}"
-                        data-auth-form="register"
-                        @if($isLogin) hidden @endif
-                    >
-                        @csrf
+                            <div class="auth-meta">
+                                <label class="auth-remember" for="remember_me">
+                                    <input id="remember_me" type="checkbox" name="remember" {{ old('remember') ? 'checked' : '' }}>
+                                    <span>Remember me</span>
+                                </label>
+                                @if (Route::has('password.request'))
+                                    <a class="auth-link" href="{{ route('password.request') }}">Forgot Password?</a>
+                                @endif
+                            </div>
 
-                        <label class="auth-field" for="register_name">
-                            <span>Name</span>
-                            <input
-                                id="register_name"
-                                type="text"
-                                name="name"
-                                value="{{ old('name') }}"
-                                required
-                                @if(!$isLogin) autofocus @endif
-                                autocomplete="name"
-                                placeholder="Your full name"
-                            >
-                            <x-input-error :messages="$errors->get('name')" class="auth-input-error" />
-                        </label>
+                            <button class="auth-submit" type="submit">Login</button>
+                        </form>
 
-                        <label class="auth-field" for="register_email">
-                            <span>Email</span>
-                            <input
-                                id="register_email"
-                                type="email"
-                                name="email"
-                                value="{{ old('email') }}"
-                                required
-                                autocomplete="username"
-                                placeholder="you@example.com"
-                            >
-                            <x-input-error :messages="$errors->get('email')" class="auth-input-error" />
-                        </label>
+                        <p class="auth-bottom">
+                            <span>Not Registered Yet?</span>
+                            <a href="{{ route('register') }}">Create an account</a>
+                        </p>
+                    @else
+                        <form method="POST" action="{{ route('register') }}" class="auth-form">
+                            @csrf
+                            <div class="auth-honeypot" aria-hidden="true">
+                                <label for="register_website">Website</label>
+                                <input id="register_website" type="text" name="website" tabindex="-1" autocomplete="off">
+                            </div>
+                            <input type="hidden" name="form_started_at" value="{{ now()->timestamp }}">
 
-                        <label class="auth-field" for="register_invite_code">
-                            <span>Invite code</span>
-                            <input
-                                id="register_invite_code"
-                                type="text"
-                                name="invite_code"
-                                value="{{ old('invite_code') }}"
-                                required
-                                autocomplete="off"
-                                placeholder="One-time access code"
-                            >
-                            <x-input-error :messages="$errors->get('invite_code')" class="auth-input-error" />
-                        </label>
+                            <label class="auth-field" for="register_name">
+                                <span>Name</span>
+                                <input
+                                    id="register_name"
+                                    type="text"
+                                    name="name"
+                                    value="{{ old('name') }}"
+                                    required
+                                    autofocus
+                                    autocomplete="name"
+                                    placeholder="Nickname"
+                                >
+                                <x-input-error :messages="$errors->get('name')" class="auth-input-error" />
+                            </label>
 
-                        <label class="auth-field" for="register_password">
-                            <span>Password</span>
-                            <input
-                                id="register_password"
-                                type="password"
-                                name="password"
-                                required
-                                autocomplete="new-password"
-                                placeholder="Create a password"
-                            >
-                            <x-input-error :messages="$errors->get('password')" class="auth-input-error" />
-                        </label>
+                            <label class="auth-field" for="register_email">
+                                <span>Email</span>
+                                <input
+                                    id="register_email"
+                                    type="email"
+                                    name="email"
+                                    value="{{ old('email') }}"
+                                    required
+                                    autocomplete="username"
+                                    placeholder="mail@example.com"
+                                >
+                                <x-input-error :messages="$errors->get('email')" class="auth-input-error" />
+                            </label>
 
-                        <label class="auth-field" for="register_password_confirmation">
-                            <span>Confirm password</span>
-                            <input
-                                id="register_password_confirmation"
-                                type="password"
-                                name="password_confirmation"
-                                required
-                                autocomplete="new-password"
-                                placeholder="Repeat your password"
-                            >
-                            <x-input-error :messages="$errors->get('password_confirmation')" class="auth-input-error" />
-                        </label>
+                            <label class="auth-field" for="register_password">
+                                <span>Password</span>
+                                <input
+                                    id="register_password"
+                                    type="password"
+                                    name="password"
+                                    required
+                                    autocomplete="new-password"
+                                    placeholder="Create password"
+                                >
+                                <x-input-error :messages="$errors->get('password')" class="auth-input-error" />
+                            </label>
 
-                        <div class="auth-meta auth-meta--single">
-                            <p class="auth-note">Registration is available only with an active invite code.</p>
-                            <a class="auth-link" href="{{ route('login') }}" data-auth-switch="login">Already have an account?</a>
-                        </div>
+                            <label class="auth-field" for="register_password_confirmation">
+                                <span>Confirm password</span>
+                                <input
+                                    id="register_password_confirmation"
+                                    type="password"
+                                    name="password_confirmation"
+                                    required
+                                    autocomplete="new-password"
+                                    placeholder="Repeat password"
+                                >
+                                <x-input-error :messages="$errors->get('password_confirmation')" class="auth-input-error" />
+                            </label>
 
-                        <button class="auth-submit" type="submit">
-                            Create account
-                        </button>
-                    </form>
+                            <button class="auth-submit" type="submit">Create account</button>
+                        </form>
+
+                        <p class="auth-bottom">
+                            <span>Already have an account?</span>
+                            <a href="{{ route('login') }}">Login</a>
+                        </p>
+                    @endif
                 </div>
             </main>
         </section>

@@ -1,4 +1,13 @@
-<?php $isAuthPage = request()->routeIs('login') || request()->routeIs('register'); ?>
+<?php
+    $isAuthPage = request()->routeIs([
+        'login',
+        'register',
+        'verification.*',
+        'password.confirm',
+        'password.request',
+        'password.reset',
+    ]);
+?>
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
