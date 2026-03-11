@@ -69,12 +69,14 @@ class SecurityHeaders
         $defaultSrc = ["'self'"];
         $imgSrc = ["'self'", 'data:'];
         $styleSrc = ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdn.jsdelivr.net'];
-        $scriptSrc = ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://cdn.jsdelivr.net'];
+        $scriptSrc = ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'];
         $fontSrc = ["'self'", 'data:', 'https://fonts.gstatic.com'];
         $connectSrc = ["'self'", 'https://cdn.jsdelivr.net'];
         $frameSrc = ["'self'", 'https://www.youtube.com', 'https://www.youtube-nocookie.com'];
 
         if (app()->environment('local')) {
+            // Keep eval only for local tooling / HMR.
+            $scriptSrc[] = "'unsafe-eval'";
             $devOrigins = $this->getDevOrigins($request);
 
             foreach ($devOrigins as $origin) {
@@ -88,6 +90,11 @@ class SecurityHeaders
                 $connectSrc[] = $wsOrigin;
             }
 
+            // Local defaults for Reverb / Pusher.
+            $connectSrc[] = 'http://localhost:8080';
+            $connectSrc[] = 'ws://localhost:8080';
+            $connectSrc[] = 'http://127.0.0.1:8080';
+            $connectSrc[] = 'ws://127.0.0.1:8080';
         }
 
         // Allow realtime connections (e.g., Reverb/Pusher).
@@ -95,17 +102,12 @@ class SecurityHeaders
             $connectSrc[] = $origin;
         }
 
-        // Accept both 127.0.0.1 and localhost for Reverb/Pusher by default.
-        $connectSrc[] = 'http://localhost:8080';
-        $connectSrc[] = 'ws://localhost:8080';
-        $connectSrc[] = 'http://127.0.0.1:8080';
-        $connectSrc[] = 'ws://127.0.0.1:8080';
-
         $directives = [
             'default-src' => $defaultSrc,
             'img-src' => $imgSrc,
             'style-src' => $styleSrc,
             'script-src' => $scriptSrc,
+            'script-src-attr' => ["'none'"],
             'font-src' => $fontSrc,
             'connect-src' => $connectSrc,
             'object-src' => ["'none'"],
@@ -113,12 +115,16 @@ class SecurityHeaders
             'frame-ancestors' => ["'self'"],
             'frame-src' => $frameSrc,
             'form-action' => ["'self'"],
+            'manifest-src' => ["'self'"],
+            'worker-src' => ["'self'", 'blob:'],
         ];
 
         $parts = [];
         foreach ($directives as $name => $sources) {
             $uniqueSources = array_values(array_unique(array_filter($sources)));
-            $parts[] = $name.' '.implode(' ', $uniqueSources);
+            $parts[] = empty($uniqueSources)
+                ? $name
+                : $name.' '.implode(' ', $uniqueSources);
         }
 
         return implode('; ', $parts);
