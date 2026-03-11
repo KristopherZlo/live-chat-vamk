@@ -3835,7 +3835,7 @@ body.is-resizing {
   background: color-mix(in srgb, var(--accent-soft) 30%, var(--bg-elevated) 70%);
 }
 
-.btn-ghost.btn-sm:hover,.btn:hover {
+.btn-ghost.btn-sm:hover,.btn:not(.btn-danger):hover {
   border-color: color-mix(in srgb, var(--btn-border-neutral) 75%, var(--accent) 25%);
   color: var(--accent-strong);
   background-color: color-mix(in srgb, var(--accent-soft) 35%, var(--bg-elevated) 65%);
@@ -3847,7 +3847,9 @@ body.is-resizing {
 }
 
 .btn-danger:hover {
-  background-color: rgba(220, 38, 38, 0.06);
+  border-color: var(--danger);
+  color: #fff5f5;
+  background-color: color-mix(in srgb, var(--danger) 88%, #ffffff 12%);
 }
 
 .btn.queue-ban-btn:hover,
@@ -4072,7 +4074,7 @@ body[data-theme="dark"] {
   color: var(--text-primary);
 }
 
-[data-theme="dark"] .app-nav .btn:hover,
+[data-theme="dark"] .app-nav .btn:not(.btn-danger):hover,
     [data-theme="dark"] .app-controls .btn-ghost:hover,
     [data-theme="dark"] .icon-btn:hover {
   border-color: var(--btn-gray-border);
@@ -4897,6 +4899,7 @@ body.app, .app {
   font-size: 1.55rem;
   line-height: 1.2;
   font-weight: 650;
+  color: color-mix(in srgb, var(--text-primary) 84%, var(--text-secondary) 16%);
 }
 
 .eyebrow {
@@ -11156,6 +11159,15 @@ body[data-route-name="rooms.show"] .app-header .icon-btn:hover {
 .app-header .icon-btn:hover {
   border-color: var(--border-strong);
   color: var(--text-primary);
+}
+
+:root:not([data-theme="dark"]) .room-card-actions .btn.btn-danger:hover,
+:root:not([data-theme="dark"]) .room-card-actions .btn.btn-danger:focus-visible,
+:root:not([data-theme="dark"]) .room-delete-modal .btn.btn-danger:hover,
+:root:not([data-theme="dark"]) .room-delete-modal .btn.btn-danger:focus-visible {
+  border-color: var(--danger);
+  color: #fff5f5;
+  background-color: color-mix(in srgb, var(--danger) 88%, #ffffff 12%);
 }
 
 [data-theme="dark"] .app-header {
