@@ -2,8 +2,13 @@
     RewriteEngine On
     RewriteBase /live-chat-vamk/
 
-    # Redirect everything under /live-chat-vamk to the Laravel public front controller
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^ public/index.php [L]
+    # If the project root is exposed by mistake, deny sensitive internals.
+    RewriteRule ^(\.env.*|artisan|composer\.(json|lock)|package(-lock)?\.json|phpunit\.xml|README\.md|deploy_ghostroom\.sh)$ - [F,L,NC]
+    RewriteRule ^(app|bootstrap|config|database|resources|routes|storage|tests|vendor)(/|$) - [F,L,NC]
+
+    # Keep direct access to the public/ subtree.
+    RewriteRule ^public/ - [L]
+
+    # Fallback: route everything through /public.
+    RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
