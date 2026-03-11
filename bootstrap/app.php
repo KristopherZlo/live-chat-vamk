@@ -1,9 +1,12 @@
 <?php
 
+use App\Support\ErrorHtmlNormalizer;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Middleware\ThrottleRequests;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Apache can expose APP_KEY as an empty server variable, which prevents
@@ -63,5 +66,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('web', 'normalize.error.html');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->respond(function (Response $response, \Throwable $exception, Request $request): Response {
+            return app(ErrorHtmlNormalizer::class)->normalizeResponse($response);
+        });
     })->create();
