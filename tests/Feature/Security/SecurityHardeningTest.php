@@ -74,8 +74,9 @@ test('login attempts are locked after repeated failures', function () {
 
 test('registration is rate limited per IP', function () {
     $ip = '10.0.0.2';
+    $allowedAttempts = (int) config('ghostroom.limits.auth.register_per_minute_ip', 4);
 
-    for ($i = 0; $i < 5; $i++) {
+    for ($i = 0; $i < $allowedAttempts; $i++) {
         $this
             ->withServerVariables(['REMOTE_ADDR' => $ip])
             ->post('/register', [
