@@ -2,7 +2,7 @@
 
 return [
     'links' => [
-        'support_email' => env('SUPPORT_EMAIL', 'zloydeveloper.info@gmail.com'), // Support contact shown in the UI.
+        'support_email' => env('SUPPORT_EMAIL', 'support@example.com'), // Support contact shown in the UI.
         'github_repository' => env('GITHUB_REPO_URL', 'https://github.com/KristopherZlo/live-chat-vamk'), // Link to the repo displayed in the UI.
         'tutorial_video_url' => env('TUTORIAL_VIDEO_URL', 'https://www.youtube.com/embed/_ZLGiWFADis'), // Embedded tutorial video URL.
     ],
