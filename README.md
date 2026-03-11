@@ -193,6 +193,30 @@ Deployment notes:
 * Clear config cache: `php artisan config:clear`
 * Rebuild frontend assets: `npm run build`
 
+### Automated UI screenshots
+
+Use Playwright to capture all static `GET` pages from `php artisan route:list --json` in both light and dark themes.
+
+1. Install browser binaries once:
+   `npm run ui:screenshots:install`
+2. Start the app locally (for example in another terminal):
+   `php artisan serve --host=127.0.0.1 --port=8000`
+3. Optional for authenticated pages:
+   set `SCREENSHOT_AUTH_EMAIL` and `SCREENSHOT_AUTH_PASSWORD`
+4. Run capture:
+   `npm run ui:screenshots`
+
+Useful env vars:
+
+* `SCREENSHOT_BASE_URL` (default `http://127.0.0.1:8000`)
+* `SCREENSHOT_OUTPUT_DIR` (default `interface-screenshots-auto`)
+* `SCREENSHOT_VIEWPORT` (default `1440x900`)
+* `SCREENSHOT_WAIT_MS` (default `450`)
+* `SCREENSHOT_TIMEOUT_MS` (default `30000`)
+* `SCREENSHOT_INCLUDE_TEST_ROUTES=1` (include `__test/*` routes)
+
+Each run writes screenshots into a timestamped folder and a `manifest.json` with captured/skipped/failed pages.
+
 ### Dev / test only
 
 * Seed a room with demo chat data (messages, replies, questions, reactions):
