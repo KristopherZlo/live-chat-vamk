@@ -26,7 +26,7 @@ Ghost Room is a web application for university lectures, seminars, and live even
 
 ## Screenshots
 
-Latest automated capture: `interface-screenshots-auto/2026-03-12T01-01-43-604Z`
+Latest automated capture: `docs/screenshots/latest`
 
 <details>
 <summary>Light Theme</summary>
@@ -34,39 +34,39 @@ Latest automated capture: `interface-screenshots-auto/2026-03-12T01-01-43-604Z`
 ### Guest
 
 `home.png`  
-<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/light/guest/home.png" alt="Light guest home" width="960">
+<img src="docs/screenshots/latest/light/guest/home.png" alt="Light guest home" width="960">
 
 `login.png`  
-<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/light/guest/login.png" alt="Light guest login" width="960">
+<img src="docs/screenshots/latest/light/guest/login.png" alt="Light guest login" width="960">
 
 `r__neo-zion-briefing.png`  
-<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/light/guest/r__neo-zion-briefing.png" alt="Light guest room" width="960">
+<img src="docs/screenshots/latest/light/guest/r__neo-zion-briefing.png" alt="Light guest room" width="960">
 
 `register.png`  
-<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/light/guest/register.png" alt="Light guest register" width="960">
+<img src="docs/screenshots/latest/light/guest/register.png" alt="Light guest register" width="960">
 
 `rooms.join.png`  
-<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/light/guest/rooms.join.png" alt="Light guest join" width="960">
+<img src="docs/screenshots/latest/light/guest/rooms.join.png" alt="Light guest join" width="960">
 
 `updates.index.png`  
-<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/light/guest/updates.index.png" alt="Light guest updates" width="960">
+<img src="docs/screenshots/latest/light/guest/updates.index.png" alt="Light guest updates" width="960">
 
 ### Auth
 
 `dashboard.png`  
-<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/light/auth/dashboard.png" alt="Light auth dashboard" width="960">
+<img src="docs/screenshots/latest/light/auth/dashboard.png" alt="Light auth dashboard" width="960">
 
 `password.confirm.png`  
-<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/light/auth/password.confirm.png" alt="Light auth password confirm" width="960">
+<img src="docs/screenshots/latest/light/auth/password.confirm.png" alt="Light auth password confirm" width="960">
 
 `profile.edit.png`  
-<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/light/auth/profile.edit.png" alt="Light auth profile edit" width="960">
+<img src="docs/screenshots/latest/light/auth/profile.edit.png" alt="Light auth profile edit" width="960">
 
 `r__neo-zion-briefing.png`  
-<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/light/auth/r__neo-zion-briefing.png" alt="Light auth room" width="960">
+<img src="docs/screenshots/latest/light/auth/r__neo-zion-briefing.png" alt="Light auth room" width="960">
 
 `rooms.create.png`  
-<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/light/auth/rooms.create.png" alt="Light auth room create" width="960">
+<img src="docs/screenshots/latest/light/auth/rooms.create.png" alt="Light auth room create" width="960">
 
 </details>
 
@@ -76,39 +76,39 @@ Latest automated capture: `interface-screenshots-auto/2026-03-12T01-01-43-604Z`
 ### Guest
 
 `home.png`  
-<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/dark/guest/home.png" alt="Dark guest home" width="960">
+<img src="docs/screenshots/latest/dark/guest/home.png" alt="Dark guest home" width="960">
 
 `login.png`  
-<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/dark/guest/login.png" alt="Dark guest login" width="960">
+<img src="docs/screenshots/latest/dark/guest/login.png" alt="Dark guest login" width="960">
 
 `r__neo-zion-briefing.png`  
-<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/dark/guest/r__neo-zion-briefing.png" alt="Dark guest room" width="960">
+<img src="docs/screenshots/latest/dark/guest/r__neo-zion-briefing.png" alt="Dark guest room" width="960">
 
 `register.png`  
-<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/dark/guest/register.png" alt="Dark guest register" width="960">
+<img src="docs/screenshots/latest/dark/guest/register.png" alt="Dark guest register" width="960">
 
 `rooms.join.png`  
-<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/dark/guest/rooms.join.png" alt="Dark guest join" width="960">
+<img src="docs/screenshots/latest/dark/guest/rooms.join.png" alt="Dark guest join" width="960">
 
 `updates.index.png`  
-<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/dark/guest/updates.index.png" alt="Dark guest updates" width="960">
+<img src="docs/screenshots/latest/dark/guest/updates.index.png" alt="Dark guest updates" width="960">
 
 ### Auth
 
 `dashboard.png`  
-<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/dark/auth/dashboard.png" alt="Dark auth dashboard" width="960">
+<img src="docs/screenshots/latest/dark/auth/dashboard.png" alt="Dark auth dashboard" width="960">
 
 `password.confirm.png`  
-<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/dark/auth/password.confirm.png" alt="Dark auth password confirm" width="960">
+<img src="docs/screenshots/latest/dark/auth/password.confirm.png" alt="Dark auth password confirm" width="960">
 
 `profile.edit.png`  
-<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/dark/auth/profile.edit.png" alt="Dark auth profile edit" width="960">
+<img src="docs/screenshots/latest/dark/auth/profile.edit.png" alt="Dark auth profile edit" width="960">
 
 `r__neo-zion-briefing.png`  
-<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/dark/auth/r__neo-zion-briefing.png" alt="Dark auth room" width="960">
+<img src="docs/screenshots/latest/dark/auth/r__neo-zion-briefing.png" alt="Dark auth room" width="960">
 
 `rooms.create.png`  
-<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/dark/auth/rooms.create.png" alt="Dark auth room create" width="960">
+<img src="docs/screenshots/latest/dark/auth/rooms.create.png" alt="Dark auth room create" width="960">
 
 </details>
 
