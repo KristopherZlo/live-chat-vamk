@@ -12,6 +12,19 @@ const INCLUDE_TEST_ROUTES = process.env.SCREENSHOT_INCLUDE_TEST_ROUTES === '1';
 const AUTH_EMAIL = process.env.SCREENSHOT_AUTH_EMAIL ?? '';
 const AUTH_PASSWORD = process.env.SCREENSHOT_AUTH_PASSWORD ?? '';
 const DISABLE_ONBOARDING_MODALS = process.env.SCREENSHOT_DISABLE_ONBOARDING_MODALS !== '0';
+const PRELOAD_LAST_VISITED_ROOMS = process.env.SCREENSHOT_PRELOAD_LAST_VISITED_ROOMS !== '0';
+
+const DEFAULT_LAST_VISITED_ROOMS = [
+  { slug: 'neo-zion-briefing', title: 'Zion Briefing', description: 'Matrix strategy sync for Zion crew.', owner: 'Thomas Anderson' },
+  { slug: 'neo-nebuchadnezzar-ops', title: 'Nebuchadnezzar Ops', description: 'Mission room for ship operations and routing.', owner: 'Thomas Anderson' },
+  { slug: 'neo-construct-training', title: 'Construct Training', description: 'Simulation drills and operator notes.', owner: 'Thomas Anderson' },
+  { slug: 'neo-sentinel-watch', title: 'Sentinel Watch', description: 'Perimeter alerts and incident callouts.', owner: 'Thomas Anderson' },
+  { slug: 'neo-oracle-corner', title: 'Oracle Corner', description: 'Predictions, edge-cases, and tough questions.', owner: 'Thomas Anderson' },
+  { slug: 'neo-architect-debate', title: 'Architect Debate', description: 'Protocol decisions and system design tradeoffs.', owner: 'Thomas Anderson' },
+  { slug: 'neo-red-pill-qa', title: 'Red Pill Q&A', description: 'Hard questions that need direct answers.', owner: 'Thomas Anderson' },
+  { slug: 'neo-blue-pill-lobby', title: 'Blue Pill Lobby', description: 'Soft landing room for general updates.', owner: 'Thomas Anderson' },
+  { slug: 'neo-matrix-reloaded-lab', title: 'Matrix Reloaded Lab', description: 'Experiments, regressions, and release checks.', owner: 'Thomas Anderson' },
+];
 
 const EXCLUDED_URIS = new Set([
   '_boost/browser-logs',
@@ -204,6 +217,15 @@ async function captureRouteGroup({
         // ignore localStorage failures in restricted contexts
       }
     });
+  }
+  if (PRELOAD_LAST_VISITED_ROOMS) {
+    await context.addInitScript((rooms) => {
+      try {
+        localStorage.setItem('gr:lastVisitedRooms', JSON.stringify(rooms));
+      } catch (error) {
+        // ignore localStorage failures in restricted contexts
+      }
+    }, DEFAULT_LAST_VISITED_ROOMS);
   }
 
   const captured = [];

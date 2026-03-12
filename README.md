@@ -215,6 +215,7 @@ Useful env vars:
 * `SCREENSHOT_TIMEOUT_MS` (default `30000`)
 * `SCREENSHOT_INCLUDE_TEST_ROUTES=1` (include `__test/*` routes)
 * `SCREENSHOT_DISABLE_ONBOARDING_MODALS=0` (by default welcome/what's-new/tutorial modals are suppressed)
+* `SCREENSHOT_PRELOAD_LAST_VISITED_ROOMS=0` (by default preloads 9 demo "Last visited" rooms for join page screenshots)
 
 Each run writes screenshots into a timestamped folder and a `manifest.json` with captured/skipped/failed pages.
 
