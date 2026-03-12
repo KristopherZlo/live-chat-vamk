@@ -26,25 +26,91 @@ Ghost Room is a web application for university lectures, seminars, and live even
 
 ## Screenshots
 
-### Light theme
+Latest automated capture: `interface-screenshots-auto/2026-03-12T01-01-43-604Z`
 
-| Login | Join | Create |
-| --- | --- | --- |
-| <img src="interface-screenshots-version-130/login.png" alt="Login" width="300"> | <img src="interface-screenshots-version-130/light-theme-join.png" alt="Join room (light)" width="300"> | <img src="interface-screenshots-version-130/light-theme-create.png" alt="Create room (light)" width="300"> |
+<details>
+<summary>Light Theme</summary>
 
-| Dashboard | Room | QR code |
-| --- | --- | --- |
-| <img src="interface-screenshots-version-130/light-theme-dashboard.png" alt="Dashboard (light)" width="300"> | <img src="interface-screenshots-version-130/light-theme-room.png" alt="Room (light)" width="300"> | <img src="interface-screenshots-version-130/light-theme-qrcode.png" alt="QR code (light)" width="300"> |
+### Guest
 
-### Dark theme
+`home.png`  
+<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/light/guest/home.png" alt="Light guest home" width="960">
 
-| Join | Create | Dashboard |
-| --- | --- | --- |
-| <img src="interface-screenshots-version-130/dark-theme-join.png" alt="Join room (dark)" width="300"> | <img src="interface-screenshots-version-130/dark-theme-create.png" alt="Create room (dark)" width="300"> | <img src="interface-screenshots-version-130/dark-theme-dashboard.png" alt="Dashboard (dark)" width="300"> |
+`login.png`  
+<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/light/guest/login.png" alt="Light guest login" width="960">
 
-| Room | QR code |
-| --- | --- |
-| <img src="interface-screenshots-version-130/dark-theme-room.png" alt="Room (dark)" width="300"> | <img src="interface-screenshots-version-130/dark-theme-qrcode.png" alt="QR code (dark)" width="300"> |
+`r__neo-zion-briefing.png`  
+<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/light/guest/r__neo-zion-briefing.png" alt="Light guest room" width="960">
+
+`register.png`  
+<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/light/guest/register.png" alt="Light guest register" width="960">
+
+`rooms.join.png`  
+<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/light/guest/rooms.join.png" alt="Light guest join" width="960">
+
+`updates.index.png`  
+<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/light/guest/updates.index.png" alt="Light guest updates" width="960">
+
+### Auth
+
+`dashboard.png`  
+<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/light/auth/dashboard.png" alt="Light auth dashboard" width="960">
+
+`password.confirm.png`  
+<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/light/auth/password.confirm.png" alt="Light auth password confirm" width="960">
+
+`profile.edit.png`  
+<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/light/auth/profile.edit.png" alt="Light auth profile edit" width="960">
+
+`r__neo-zion-briefing.png`  
+<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/light/auth/r__neo-zion-briefing.png" alt="Light auth room" width="960">
+
+`rooms.create.png`  
+<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/light/auth/rooms.create.png" alt="Light auth room create" width="960">
+
+</details>
+
+<details>
+<summary>Dark Theme</summary>
+
+### Guest
+
+`home.png`  
+<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/dark/guest/home.png" alt="Dark guest home" width="960">
+
+`login.png`  
+<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/dark/guest/login.png" alt="Dark guest login" width="960">
+
+`r__neo-zion-briefing.png`  
+<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/dark/guest/r__neo-zion-briefing.png" alt="Dark guest room" width="960">
+
+`register.png`  
+<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/dark/guest/register.png" alt="Dark guest register" width="960">
+
+`rooms.join.png`  
+<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/dark/guest/rooms.join.png" alt="Dark guest join" width="960">
+
+`updates.index.png`  
+<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/dark/guest/updates.index.png" alt="Dark guest updates" width="960">
+
+### Auth
+
+`dashboard.png`  
+<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/dark/auth/dashboard.png" alt="Dark auth dashboard" width="960">
+
+`password.confirm.png`  
+<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/dark/auth/password.confirm.png" alt="Dark auth password confirm" width="960">
+
+`profile.edit.png`  
+<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/dark/auth/profile.edit.png" alt="Dark auth profile edit" width="960">
+
+`r__neo-zion-briefing.png`  
+<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/dark/auth/r__neo-zion-briefing.png" alt="Dark auth room" width="960">
+
+`rooms.create.png`  
+<img src="interface-screenshots-auto/2026-03-12T01-01-43-604Z/dark/auth/rooms.create.png" alt="Dark auth room create" width="960">
+
+</details>
 
 ---
 
@@ -210,13 +276,22 @@ Useful env vars:
 
 * `SCREENSHOT_BASE_URL` (default `http://127.0.0.1:8000`)
 * `SCREENSHOT_OUTPUT_DIR` (default `interface-screenshots-auto`)
-* `SCREENSHOT_VIEWPORT` (default `1440x900`)
+* `SCREENSHOT_VIEWPORT` (default `1920x1080`)
 * `SCREENSHOT_WAIT_MS` (default `450`)
 * `SCREENSHOT_TIMEOUT_MS` (default `30000`)
+* `SCREENSHOT_NAV_RETRIES` (default `3`, retries navigation on `5xx` responses)
 * `SCREENSHOT_INCLUDE_TEST_ROUTES=1` (include `__test/*` routes)
 * `SCREENSHOT_DISABLE_ONBOARDING_MODALS=0` (by default welcome/what's-new/tutorial modals are suppressed)
 * `SCREENSHOT_PRELOAD_LAST_VISITED_ROOMS=0` (by default preloads 9 demo "Last visited" rooms for join page screenshots)
+* `SCREENSHOT_SEED_ROOM_DEMO=0` (by default runs `chat:seed-demo` before capture)
+* `SCREENSHOT_SEED_ROOM_SLUG` (default `neo-zion-briefing`)
+* `SCREENSHOT_SEED_DEMO_COUNT` (default `90`)
+* `SCREENSHOT_EXTRA_GUEST_ROUTES` (comma-separated, e.g. `/r/custom-room`)
+* `SCREENSHOT_EXTRA_AUTH_ROUTES` (comma-separated, e.g. `/dashboard,/profile`)
+* `SCREENSHOT_USE_HMR=1` (by default the script temporarily disables `public/hot` so screenshots use built assets)
 
+By default, routes containing `presentation`, plus `/admin`, `/broadcasting/auth`, `/legal/privacy`, and `/verify-email`, are skipped.
+The seeded public room route (`/r/<slug>`) is captured in both guest and auth modes.
 Each run writes screenshots into a timestamped folder and a `manifest.json` with captured/skipped/failed pages.
 
 ### Dev / test only

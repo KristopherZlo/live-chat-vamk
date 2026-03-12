@@ -862,6 +862,14 @@
         <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1.27.0/index.js"></script>
     @endpush
     @php
+        $viteAssetOrNull = static function (string $assetPath): ?string {
+            try {
+                return \Illuminate\Support\Facades\Vite::asset($assetPath);
+            } catch (\Throwable) {
+                return null;
+            }
+        };
+
         $roomPageConfig = [
             'roomSlug' => $room->slug,
             'isOwnerUser' => $isOwner,
@@ -871,7 +879,7 @@
             'currentParticipantName' => $participant?->display_name ?? 'Guest',
             'publicLink' => $publicLink,
             'queueSoundUrl' => $queueSoundUrl,
-            'cacodemonImageUrl' => \Illuminate\Support\Facades\Vite::asset('resources/images/cacodemon.png'),
+            'cacodemonImageUrl' => $viteAssetOrNull('resources/images/cacodemon.png'),
             'messagesHistoryUrl' => $messagesHistoryUrl,
             'messagesHasMoreInitial' => $messagesHasMore ?? false,
             'messagesOldestId' => $messagesOldestId,

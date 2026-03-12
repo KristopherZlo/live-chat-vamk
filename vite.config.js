@@ -53,6 +53,7 @@ export default defineConfig(({ mode }) => {
                     'resources/js/lucide.ts',
                     'resources/js/quick-responses.ts',
                     'resources/js/room-show.ts',
+                    'resources/js/track-last-visited-room.ts',
                 ],
                 refresh: true,
             }),

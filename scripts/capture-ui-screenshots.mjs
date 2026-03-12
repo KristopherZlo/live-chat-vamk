@@ -5,14 +5,21 @@ import { chromium } from 'playwright';
 
 const BASE_URL = normalizeBaseUrl(process.env.SCREENSHOT_BASE_URL ?? 'http://127.0.0.1:8000');
 const OUTPUT_ROOT = process.env.SCREENSHOT_OUTPUT_DIR ?? 'interface-screenshots-auto';
-const VIEWPORT = parseViewport(process.env.SCREENSHOT_VIEWPORT ?? '1440x900');
+const VIEWPORT = parseViewport(process.env.SCREENSHOT_VIEWPORT ?? '1920x1080');
 const WAIT_MS = parsePositiveInt(process.env.SCREENSHOT_WAIT_MS, 450);
 const TIMEOUT_MS = parsePositiveInt(process.env.SCREENSHOT_TIMEOUT_MS, 30000);
+const NAV_RETRIES = parsePositiveInt(process.env.SCREENSHOT_NAV_RETRIES, 3);
 const INCLUDE_TEST_ROUTES = process.env.SCREENSHOT_INCLUDE_TEST_ROUTES === '1';
 const AUTH_EMAIL = process.env.SCREENSHOT_AUTH_EMAIL ?? '';
 const AUTH_PASSWORD = process.env.SCREENSHOT_AUTH_PASSWORD ?? '';
+const USE_HMR = process.env.SCREENSHOT_USE_HMR === '1';
 const DISABLE_ONBOARDING_MODALS = process.env.SCREENSHOT_DISABLE_ONBOARDING_MODALS !== '0';
 const PRELOAD_LAST_VISITED_ROOMS = process.env.SCREENSHOT_PRELOAD_LAST_VISITED_ROOMS !== '0';
+const SEED_ROOM_DEMO = process.env.SCREENSHOT_SEED_ROOM_DEMO !== '0';
+const SEED_ROOM_SLUG = String(process.env.SCREENSHOT_SEED_ROOM_SLUG ?? 'neo-zion-briefing').trim();
+const SEED_DEMO_COUNT = parsePositiveInt(process.env.SCREENSHOT_SEED_DEMO_COUNT, 90);
+const EXTRA_GUEST_ROUTES = parseRouteList(process.env.SCREENSHOT_EXTRA_GUEST_ROUTES ?? '');
+const EXTRA_AUTH_ROUTES = parseRouteList(process.env.SCREENSHOT_EXTRA_AUTH_ROUTES ?? '');
 
 const DEFAULT_LAST_VISITED_ROOMS = [
   { slug: 'neo-zion-briefing', title: 'Zion Briefing', description: 'Matrix strategy sync for Zion crew.', owner: 'Thomas Anderson' },
@@ -28,8 +35,12 @@ const DEFAULT_LAST_VISITED_ROOMS = [
 
 const EXCLUDED_URIS = new Set([
   '_boost/browser-logs',
+  'admin',
+  'broadcasting/auth',
+  'legal/privacy',
   'sitemap.xml',
   'up',
+  'verify-email',
 ]);
 
 const EXCLUDED_PREFIXES = [
@@ -37,11 +48,16 @@ const EXCLUDED_PREFIXES = [
 ];
 
 async function main() {
+  const restoreHotFile = await disableViteHotFileIfNeeded();
   const timestamp = new Date().toISOString().replace(/[.:]/g, '-');
   const runDir = path.resolve(process.cwd(), OUTPUT_ROOT, timestamp);
   await fs.mkdir(runDir, { recursive: true });
 
-  const routes = loadStaticGetRoutes();
+  if (SEED_ROOM_DEMO && SEED_ROOM_SLUG) {
+    seedRoomDemoData(SEED_ROOM_SLUG, SEED_DEMO_COUNT);
+  }
+
+  const routes = withExtraRoutes(loadStaticGetRoutes());
   const guestRoutes = routes.filter((route) => !route.requiresAuth);
   const authRoutes = routes.filter((route) => route.requiresAuth);
 
@@ -61,51 +77,55 @@ async function main() {
   };
 
   try {
-    for (const theme of ['light', 'dark']) {
-      const themeDir = path.join(runDir, theme);
-      await fs.mkdir(themeDir, { recursive: true });
+    try {
+      for (const theme of ['light', 'dark']) {
+        const themeDir = path.join(runDir, theme);
+        await fs.mkdir(themeDir, { recursive: true });
 
-      const guestResult = await captureRouteGroup({
-        browser,
-        routes: guestRoutes,
-        theme,
-        mode: 'guest',
-        outputDir: themeDir,
-      });
-      summary.runs.push(guestResult);
-      summary.counts.captured += guestResult.captured.length;
-      summary.counts.skipped += guestResult.skipped.length;
-      summary.counts.failed += guestResult.failed.length;
-
-      if (AUTH_EMAIL !== '' && AUTH_PASSWORD !== '') {
-        const authResult = await captureRouteGroup({
+        const guestResult = await captureRouteGroup({
           browser,
-          routes: authRoutes,
+          routes: guestRoutes,
           theme,
-          mode: 'auth',
+          mode: 'guest',
           outputDir: themeDir,
-          credentials: {
-            email: AUTH_EMAIL,
-            password: AUTH_PASSWORD,
-          },
         });
-        summary.runs.push(authResult);
-        summary.counts.captured += authResult.captured.length;
-        summary.counts.skipped += authResult.skipped.length;
-        summary.counts.failed += authResult.failed.length;
-      } else {
-        summary.runs.push({
-          theme,
-          mode: 'auth',
-          captured: [],
-          skipped: authRoutes.map((route) => ({
-            route: route.uri,
-            reason: 'Missing SCREENSHOT_AUTH_EMAIL or SCREENSHOT_AUTH_PASSWORD',
-          })),
-          failed: [],
-        });
-        summary.counts.skipped += authRoutes.length;
+        summary.runs.push(guestResult);
+        summary.counts.captured += guestResult.captured.length;
+        summary.counts.skipped += guestResult.skipped.length;
+        summary.counts.failed += guestResult.failed.length;
+
+        if (AUTH_EMAIL !== '' && AUTH_PASSWORD !== '') {
+          const authResult = await captureRouteGroup({
+            browser,
+            routes: authRoutes,
+            theme,
+            mode: 'auth',
+            outputDir: themeDir,
+            credentials: {
+              email: AUTH_EMAIL,
+              password: AUTH_PASSWORD,
+            },
+          });
+          summary.runs.push(authResult);
+          summary.counts.captured += authResult.captured.length;
+          summary.counts.skipped += authResult.skipped.length;
+          summary.counts.failed += authResult.failed.length;
+        } else {
+          summary.runs.push({
+            theme,
+            mode: 'auth',
+            captured: [],
+            skipped: authRoutes.map((route) => ({
+              route: route.uri,
+              reason: 'Missing SCREENSHOT_AUTH_EMAIL or SCREENSHOT_AUTH_PASSWORD',
+            })),
+            failed: [],
+          });
+          summary.counts.skipped += authRoutes.length;
+        }
       }
+    } finally {
+      await restoreHotFile();
     }
   } finally {
     await browser.close();
@@ -170,6 +190,60 @@ function loadStaticGetRoutes() {
   return Array.from(byUri.values()).sort((a, b) => a.uri.localeCompare(b.uri));
 }
 
+function withExtraRoutes(routes) {
+  const routeKey = (uri, requiresAuth) => `${requiresAuth ? 'auth' : 'guest'}:${uri}`;
+  const byRouteKey = new Map(
+    routes.map((route) => [routeKey(route.uri, route.requiresAuth), { ...route }]),
+  );
+  const seedRoomPublicRoute = SEED_ROOM_SLUG ? `/r/${SEED_ROOM_SLUG}` : null;
+  const seedGuestRoute = seedRoomPublicRoute ? [seedRoomPublicRoute] : [];
+  const seedAuthRoutes = SEED_ROOM_SLUG
+    ? [seedRoomPublicRoute]
+    : [];
+
+  const extraGuestRoutes = [...seedGuestRoute, ...EXTRA_GUEST_ROUTES];
+  for (const uri of extraGuestRoutes) {
+    const normalizedUri = normalizeUri(uri);
+    if (normalizedUri === '' || shouldSkipUri(normalizedUri)) {
+      continue;
+    }
+    const fullUri = `/${normalizedUri}`;
+    const key = routeKey(fullUri, false);
+    if (!byRouteKey.has(key)) {
+      byRouteKey.set(key, {
+        uri: fullUri,
+        name: null,
+        requiresAuth: false,
+      });
+    }
+  }
+
+  const extraAuthRoutes = [...seedAuthRoutes, ...EXTRA_AUTH_ROUTES];
+  for (const uri of extraAuthRoutes) {
+    const normalizedUri = normalizeUri(uri);
+    if (normalizedUri === '' || shouldSkipUri(normalizedUri)) {
+      continue;
+    }
+    const fullUri = `/${normalizedUri}`;
+    const key = routeKey(fullUri, true);
+    if (!byRouteKey.has(key)) {
+      byRouteKey.set(key, {
+        uri: fullUri,
+        name: null,
+        requiresAuth: true,
+      });
+    }
+  }
+
+  return Array.from(byRouteKey.values()).sort((a, b) => {
+    const uriCompare = a.uri.localeCompare(b.uri);
+    if (uriCompare !== 0) {
+      return uriCompare;
+    }
+    return Number(a.requiresAuth) - Number(b.requiresAuth);
+  });
+}
+
 function normalizeUri(value) {
   return String(value ?? '')
     .trim()
@@ -180,6 +254,9 @@ function normalizeUri(value) {
 function shouldSkipUri(uri) {
   if (uri === '') {
     return false;
+  }
+  if (uri.includes('presentation')) {
+    return true;
   }
   if (!INCLUDE_TEST_ROUTES && uri.startsWith('__test/')) {
     return true;
@@ -245,7 +322,7 @@ async function captureRouteGroup({
       const screenshotPath = path.join(groupDir, `${fileName}.png`);
 
       try {
-        const response = await page.goto(toNavigableRoute(route.uri), { waitUntil: 'domcontentloaded' });
+        const { response, attempts } = await gotoWithRetries(page, route.uri);
         await page.waitForTimeout(WAIT_MS);
 
         if (!response) {
@@ -258,6 +335,17 @@ async function captureRouteGroup({
 
         const headers = response.headers();
         const contentType = String(headers['content-type'] ?? '');
+        const status = response.status();
+        if (status >= 400) {
+          failed.push({
+            route: route.uri,
+            status,
+            attempts,
+            finalUrl: page.url(),
+            error: `HTTP ${status}`,
+          });
+          continue;
+        }
         if (!contentType.includes('text/html')) {
           skipped.push({
             route: route.uri,
@@ -274,7 +362,8 @@ async function captureRouteGroup({
         captured.push({
           route: route.uri,
           file: path.relative(path.dirname(outputDir), screenshotPath).replace(/\\/g, '/'),
-          status: response.status(),
+          status,
+          attempts,
           finalUrl: page.url(),
         });
       } catch (error) {
@@ -363,7 +452,7 @@ function toNavigableRoute(uri) {
 function parseViewport(raw) {
   const match = /^(\d{3,5})x(\d{3,5})$/i.exec(raw.trim());
   if (!match) {
-    return { width: 1440, height: 900 };
+    return { width: 1920, height: 1080 };
   }
   return {
     width: Number.parseInt(match[1], 10),
@@ -377,6 +466,88 @@ function parsePositiveInt(value, fallback) {
     return fallback;
   }
   return parsed;
+}
+
+function parseRouteList(value) {
+  const raw = String(value ?? '').trim();
+  if (raw === '') {
+    return [];
+  }
+  return raw
+    .split(',')
+    .map((item) => normalizeUri(item))
+    .filter((item) => item !== '')
+    .map((item) => `/${item}`);
+}
+
+async function gotoWithRetries(page, routeUri) {
+  const target = toNavigableRoute(routeUri);
+  let response = null;
+  let attempts = 0;
+
+  for (let attempt = 1; attempt <= NAV_RETRIES; attempt += 1) {
+    attempts = attempt;
+    response = await page.goto(target, { waitUntil: 'domcontentloaded' });
+    if (!response) {
+      break;
+    }
+    const status = response.status();
+    if (status < 500) {
+      break;
+    }
+    if (attempt < NAV_RETRIES) {
+      await page.waitForTimeout(600 * attempt);
+    }
+  }
+
+  return { response, attempts };
+}
+
+function seedRoomDemoData(roomSlug, count) {
+  try {
+    execFileSync(
+      'php',
+      ['artisan', 'chat:seed-demo', roomSlug, `--count=${count}`, '--delay=0'],
+      { encoding: 'utf8' },
+    );
+    console.log(`[ui:screenshots] seeded room ${roomSlug} with demo data (count=${count})`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[ui:screenshots] warning: failed to seed room ${roomSlug}: ${message}`);
+  }
+}
+
+async function disableViteHotFileIfNeeded() {
+  if (USE_HMR) {
+    return async () => {};
+  }
+
+  const hotPath = path.resolve(process.cwd(), 'public', 'hot');
+  const tempHotPath = path.resolve(process.cwd(), 'public', 'hot.screenshots-disabled');
+
+  try {
+    await fs.access(hotPath);
+  } catch {
+    return async () => {};
+  }
+
+  try {
+    await fs.rm(tempHotPath, { force: true });
+  } catch {
+    // ignore remove failures; rename below will throw if needed
+  }
+
+  await fs.rename(hotPath, tempHotPath);
+  console.log('[ui:screenshots] temporarily disabled public/hot to use built assets');
+
+  return async () => {
+    try {
+      await fs.rename(tempHotPath, hotPath);
+      console.log('[ui:screenshots] restored public/hot');
+    } catch {
+      // ignore restore failures (e.g., if file already restored manually)
+    }
+  };
 }
 
 function normalizeBaseUrl(url) {
