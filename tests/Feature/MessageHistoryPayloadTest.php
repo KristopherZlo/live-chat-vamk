@@ -126,7 +126,7 @@ test('message history includes poll payload and my vote', function () {
         'participant_id' => $otherParticipant->id,
     ]);
 
-    $sessionKey = 'room_participant_' . $room->id;
+    $sessionKey = 'room_participant_'.$room->id;
     $response = $this->withSession([$sessionKey => $participant->id])
         ->getJson(route('rooms.messages.history', $room));
 
@@ -184,7 +184,7 @@ test('message history hides banned participant messages for others', function ()
         'display_name' => $participant->display_name,
     ]);
 
-    $sessionKey = 'room_participant_' . $room->id;
+    $sessionKey = 'room_participant_'.$room->id;
 
     $response = $this->withSession([$sessionKey => $viewer->id])
         ->getJson(route('rooms.messages.history', $room));
@@ -198,6 +198,5 @@ test('message history hides banned participant messages for others', function ()
         ->getJson(route('rooms.messages.history', $room));
 
     $selfResponse
-        ->assertOk()
-        ->assertJsonFragment(['content' => 'Hidden message']);
+        ->assertForbidden();
 });

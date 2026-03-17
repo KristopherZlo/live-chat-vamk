@@ -3,33 +3,35 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
-use App\Models\Room;
 use App\Models\Message;
-use App\Models\MessageReaction;
 use App\Models\MessagePoll;
 use App\Models\MessagePollOption;
 use App\Models\MessagePollVote;
+use App\Models\MessageReaction;
 use App\Models\Participant;
-use App\Models\RoomBan;
 use App\Models\Question;
+use App\Models\Room;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class RoomController extends Controller
 {
     private const MESSAGE_PAGE_SIZE = 50;
+
     private const QUEUE_PAGE_SIZE = 50;
+
     private const MAX_MY_QUESTIONS = 200;
+
     private static array $identityColumnCache = [];
 
     public function landing()
@@ -52,7 +54,7 @@ class RoomController extends Controller
             'code' => [
                 'required',
                 'string',
-                'max:' . config('ghostroom.limits.room.code_max', 255),
+                'max:'.config('ghostroom.limits.room.code_max', 255),
             ],
         ]);
 
@@ -73,7 +75,7 @@ class RoomController extends Controller
 
         $room = Room::where('slug', $slug)->first();
 
-        if (!$room) {
+        if (! $room) {
             return back()
                 ->withErrors(['code' => 'Room not found. Check the code and try again.'])
                 ->withInput();
@@ -84,7 +86,7 @@ class RoomController extends Controller
 
     protected function ensureOwner(Room $room): void
     {
-        if (!Auth::check() || Auth::id() !== $room->user_id) {
+        if (! Auth::check() || Auth::id() !== $room->user_id) {
             abort(403);
         }
     }
@@ -113,7 +115,7 @@ class RoomController extends Controller
             'title' => [
                 'required',
                 'string',
-                'max:' . config('ghostroom.limits.room.title_max', 255),
+                'max:'.config('ghostroom.limits.room.title_max', 255),
             ],
             'description' => ['nullable', 'string'],
             'is_public_read' => ['nullable', 'boolean'],
@@ -162,7 +164,7 @@ class RoomController extends Controller
                 'sometimes',
                 'required',
                 'string',
-                'max:' . config('ghostroom.limits.room.title_max', 255),
+                'max:'.config('ghostroom.limits.room.title_max', 255),
             ],
             'description' => ['sometimes', 'nullable', 'string'],
             'status' => ['sometimes', 'in:active,finished'],
@@ -315,18 +317,22 @@ class RoomController extends Controller
     {
         $room = Room::where('slug', $slug)->firstOrFail();
 
-        if ($room->status === 'finished' && !$room->is_public_read && !$this->isOwner($room)) {
+        if ($room->status === 'finished' && ! $room->is_public_read && ! $this->isOwner($room)) {
             abort(403);
         }
 
         $fingerprint = $this->resolveFingerprint($request);
         $ipAddress = $request->ip();
 
-        if (!$this->isOwner($room) && $this->isIdentityBanned($room, $ipAddress, $fingerprint)) {
+        if (! $this->isOwner($room) && $room->isIdentityBanned($ipAddress, $fingerprint)) {
             abort(403);
         }
 
         $participant = $this->getOrCreateParticipant($request, $room, $fingerprint, $ipAddress);
+
+        if (! $this->isOwner($room) && $room->isAccessRevoked($participant, $ipAddress, $fingerprint)) {
+            abort(403);
+        }
 
         $messagesQuery = $this->applyBannedMessageFilter(
             $this->baseMessagesQuery($room),
@@ -348,7 +354,6 @@ class RoomController extends Controller
 
         $viewer = $request->user();
         $isOwner = $this->isOwner($room);
-        $isBanned = false;
 
         $queueQuestions = collect();
         $bannedParticipants = collect();
@@ -373,13 +378,11 @@ class RoomController extends Controller
                 ->with('participant')
                 ->orderByDesc('created_at')
                 ->get();
-        } elseif ($participant && $participant->id) {
-            $isBanned = $room->isParticipantBanned($participant, $ipAddress, $fingerprint);
         }
 
         $myQuestions = collect();
 
-        if (!$isOwner && $participant && $participant->id) {
+        if (! $isOwner && $participant && $participant->id) {
             $myQuestions = $room->questions()
                 ->where('participant_id', $participant->id)
                 ->whereNull('deleted_by_participant_at')
@@ -401,7 +404,6 @@ class RoomController extends Controller
             'messagesOldestId' => $oldestMessageId,
             'participant' => $participant,
             'isOwner' => $isOwner,
-            'isBanned' => $isBanned,
             'bannedParticipants' => $bannedParticipants,
             'queueQuestions' => $queueQuestions,
             'queueStatusCounts' => $queueStatusCounts,
@@ -433,7 +435,7 @@ class RoomController extends Controller
         $ipAddress = $ipAddress ?? $request->ip();
         $hasIdentityColumns = $this->hasIdentityColumns('participants');
 
-        //      
+        //
         if ($user && $user->id === $room->user_id) {
             $data = [
                 'room_id' => $room->id,
@@ -449,7 +451,7 @@ class RoomController extends Controller
             return new Participant($data);
         }
 
-        $sessionKey = 'room_participant_' . $room->id;
+        $sessionKey = 'room_participant_'.$room->id;
 
         $participantId = $request->session()->get($sessionKey);
 
@@ -480,7 +482,7 @@ class RoomController extends Controller
         $participantData = [
             'room_id' => $room->id,
             'session_token' => $token,
-            'display_name' => $user && $user->is_dev ? $user->name : 'User' . random_int(1000, 9999),
+            'display_name' => $user && $user->is_dev ? $user->name : 'User'.random_int(1000, 9999),
         ];
 
         if ($hasIdentityColumns) {
@@ -505,15 +507,15 @@ class RoomController extends Controller
             return;
         }
 
-        $sessionKey = 'room_participant_' . $room->id;
+        $sessionKey = 'room_participant_'.$room->id;
         if ($request->session()->has($sessionKey)) {
             return;
         }
 
         $ipAddress = $ipAddress ?? $request->ip();
-        $baseKey = 'room-participant|' . $room->id;
-        $ipKey = $baseKey . '|ip|' . $ipAddress;
-        $fingerprintKey = $fingerprint !== '' ? $baseKey . '|fp|' . $fingerprint : null;
+        $baseKey = 'room-participant|'.$room->id;
+        $ipKey = $baseKey.'|ip|'.$ipAddress;
+        $fingerprintKey = $fingerprint !== '' ? $baseKey.'|fp|'.$fingerprint : null;
 
         $perMinuteFingerprint = (int) config('ghostroom.limits.room.participant_create_per_minute', 8);
         $perMinuteIp = (int) config('ghostroom.limits.room.participant_create_per_minute_ip', 60);
@@ -540,7 +542,7 @@ class RoomController extends Controller
         $isOwner = $user && $user->id === $room->user_id;
         $isAdmin = $user && $user->is_dev;
 
-        if (!$user || (!$isOwner && !$isAdmin)) {
+        if (! $user || (! $isOwner && ! $isAdmin)) {
             abort(403);
         }
 
@@ -560,10 +562,10 @@ class RoomController extends Controller
         $queueOffset = $offset + $queueQuestions->count();
 
         $viewData = [
-            'room'            => $room,
-            'queueQuestions'  => $queueQuestions,
+            'room' => $room,
+            'queueQuestions' => $queueQuestions,
             'queueStatusCounts' => $this->getQueueStatusCounts($room),
-            'isOwner'         => $isOwner,
+            'isOwner' => $isOwner,
             'queuePageSize' => self::QUEUE_PAGE_SIZE,
             'queueHasMore' => $queueHasMore,
             'queueOffset' => $queueOffset,
@@ -581,7 +583,7 @@ class RoomController extends Controller
         $user = $request->user();
         $isOwner = $user && ($user->id === $room->user_id || $user->is_dev);
 
-        if (!$isOwner) {
+        if (! $isOwner) {
             abort(403);
         }
 
@@ -618,7 +620,7 @@ class RoomController extends Controller
         $user = $request->user();
         $isOwner = $user && ($user->id === $room->user_id || $user->is_dev);
 
-        if (!$isOwner) {
+        if (! $isOwner) {
             abort(403);
         }
 
@@ -645,7 +647,7 @@ class RoomController extends Controller
         $items = [];
         foreach ($ids as $id) {
             $question = $questions->get($id);
-            if (!$question) {
+            if (! $question) {
                 continue;
             }
 
@@ -696,9 +698,20 @@ class RoomController extends Controller
             abort(403);
         }
 
-        $participant = $this->getOrCreateParticipant($request, $room, $this->resolveFingerprint($request), $request->ip());
+        $fingerprint = $this->resolveFingerprint($request);
+        $ipAddress = $request->ip();
 
-        if (!$participant || !$participant->id) {
+        if ($room->isIdentityBanned($ipAddress, $fingerprint)) {
+            abort(403);
+        }
+
+        $participant = $this->getOrCreateParticipant($request, $room, $fingerprint, $ipAddress);
+
+        if (! $participant || ! $participant->id) {
+            abort(403);
+        }
+
+        if ($room->isAccessRevoked($participant, $ipAddress, $fingerprint)) {
             abort(403);
         }
 
@@ -723,7 +736,7 @@ class RoomController extends Controller
         $user = $request->user();
         $isOwner = $user && ($user->id === $room->user_id || $user->is_dev);
 
-        if (!$isOwner || $question->room_id !== $room->id) {
+        if (! $isOwner || $question->room_id !== $room->id) {
             abort(403);
         }
 
@@ -738,15 +751,25 @@ class RoomController extends Controller
 
     public function messagesHistory(Request $request, Room $room)
     {
-        if ($room->status === 'finished' && !$room->is_public_read && !$this->isOwner($room)) {
+        if ($room->status === 'finished' && ! $room->is_public_read && ! $this->isOwner($room)) {
             abort(403);
         }
 
         $limit = max(1, min(self::MESSAGE_PAGE_SIZE, (int) $request->integer('limit', self::MESSAGE_PAGE_SIZE)));
         $beforeId = $request->integer('before_id');
+        $fingerprint = $this->resolveFingerprint($request);
+        $ipAddress = $request->ip();
 
         $viewer = $request->user();
-        $participant = $this->getOrCreateParticipant($request, $room, $this->resolveFingerprint($request), $request->ip());
+        if (! $this->isOwner($room) && $room->isIdentityBanned($ipAddress, $fingerprint)) {
+            abort(403);
+        }
+
+        $participant = $this->getOrCreateParticipant($request, $room, $fingerprint, $ipAddress);
+
+        if (! $this->isOwner($room) && $room->isAccessRevoked($participant, $ipAddress, $fingerprint)) {
+            abort(403);
+        }
 
         $query = $this->applyBannedMessageFilter(
             $this->baseMessagesQuery($room),
@@ -769,7 +792,6 @@ class RoomController extends Controller
             ->reverse()
             ->values();
         /** @var Collection<int, Message> $messages */
-
         $reactionPayload = $this->summarizeMessageReactions($messages, $viewer, $participant);
         $pollPayloads = $this->summarizeMessagePolls($messages, $viewer, $participant);
         $payload = $messages->map(fn (Message $message) => $this->formatMessagePayload(
@@ -846,7 +868,7 @@ class RoomController extends Controller
         $status = strtolower((string) $status);
         $allowed = ['new', 'later', 'answered', 'ignored'];
 
-        if (!in_array($status, $allowed, true)) {
+        if (! in_array($status, $allowed, true)) {
             return $query;
         }
 
@@ -861,11 +883,10 @@ class RoomController extends Controller
         array $myReactionsByMessage = [],
         array $pollPayloads = [],
         ?Room $room = null
-    ): array
-    {
+    ): array {
         $message->loadMissing(['user', 'participant', 'replyTo.user', 'replyTo.participant']);
         $roomModel = $room;
-        if (!$roomModel) {
+        if (! $roomModel) {
             $message->loadMissing('room');
             $roomModel = $message->room;
         }
@@ -896,6 +917,7 @@ class RoomController extends Controller
                     if ($participant && $reaction->participant_id === $participant->id) {
                         return true;
                     }
+
                     return false;
                 })
                 ->pluck('emoji')
@@ -973,6 +995,7 @@ class RoomController extends Controller
                         if ($countDiff !== 0) {
                             return $countDiff;
                         }
+
                         return strcasecmp($a['emoji'], $b['emoji']);
                     })
                     ->values()
@@ -1011,7 +1034,7 @@ class RoomController extends Controller
     }
 
     /**
-     * @param Collection<int, Message> $messages
+     * @param  Collection<int, Message>  $messages
      */
     protected function summarizeMessagePolls(Collection $messages, ?User $user = null, ?Participant $participant = null): array
     {
@@ -1086,6 +1109,7 @@ class RoomController extends Controller
             ->map(function (MessagePollOption $option) use ($countMap, $totalVotes) {
                 $votes = (int) ($countMap->get($option->id, 0));
                 $percent = $totalVotes > 0 ? (int) round(($votes / $totalVotes) * 100) : 0;
+
                 return [
                     'id' => $option->id,
                     'label' => $option->label,
@@ -1131,30 +1155,6 @@ class RoomController extends Controller
         ));
 
         return $fingerprint;
-    }
-
-    protected function isIdentityBanned(Room $room, ?string $ipAddress, ?string $fingerprint): bool
-    {
-        $hasIdentityColumns = $this->hasIdentityColumns('room_bans');
-
-        if (!$hasIdentityColumns) {
-            return false;
-        }
-
-        if (!$ipAddress && !$fingerprint) {
-            return false;
-        }
-
-        return $room->bans()
-            ->where(function ($query) use ($ipAddress, $fingerprint) {
-                if ($ipAddress) {
-                    $query->orWhere('ip_address', $ipAddress);
-                }
-                if ($fingerprint) {
-                    $query->orWhere('fingerprint', $fingerprint);
-                }
-            })
-            ->exists();
     }
 
     protected function isOwner(Room $room): bool

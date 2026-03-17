@@ -3,6 +3,7 @@
 use App\Models\Participant;
 use App\Models\Question;
 use App\Models\Room;
+use App\Models\RoomBan;
 use App\Models\User;
 use Illuminate\Support\Str;
 
@@ -194,7 +195,7 @@ test('participants can load the my questions panel', function () {
         'status' => 'new',
     ]);
 
-    $sessionKey = 'room_participant_' . $room->id;
+    $sessionKey = 'room_participant_'.$room->id;
     $response = $this->withSession([$sessionKey => $participant->id])
         ->get(route('rooms.myQuestionsPanel', $room));
 
@@ -215,4 +216,38 @@ test('owners cannot access the my questions panel', function () {
     $response = $this->actingAs($owner)->get(route('rooms.myQuestionsPanel', $room));
 
     $response->assertStatus(403);
+});
+
+test('banned participants cannot access the my questions panel', function () {
+    $owner = User::factory()->create();
+    $room = Room::create([
+        'user_id' => $owner->id,
+        'title' => 'Banned participant room',
+        'slug' => Str::random(8),
+    ]);
+
+    $participant = Participant::create([
+        'room_id' => $room->id,
+        'session_token' => (string) Str::uuid(),
+        'display_name' => 'Blocked guest',
+        'ip_address' => '203.0.113.90',
+        'fingerprint' => 'fp-my-questions',
+    ]);
+
+    RoomBan::create([
+        'room_id' => $room->id,
+        'participant_id' => $participant->id,
+        'session_token' => $participant->session_token,
+        'display_name' => $participant->display_name,
+        'ip_address' => $participant->ip_address,
+        'fingerprint' => $participant->fingerprint,
+    ]);
+
+    $sessionKey = 'room_participant_'.$room->id;
+
+    $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.90'])
+        ->withCookie('lc_fp', 'fp-my-questions')
+        ->withSession([$sessionKey => $participant->id])
+        ->get(route('rooms.myQuestionsPanel', $room))
+        ->assertStatus(403);
 });

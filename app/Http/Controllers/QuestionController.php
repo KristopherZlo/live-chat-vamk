@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\QuestionUpdated;
 use App\Models\AuditLog;
+use App\Models\Participant;
 use App\Models\Question;
+use App\Models\QuestionRating;
 use App\Models\Room;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\QuestionRating;
-use App\Events\QuestionUpdated;
 
 class QuestionController extends Controller
 {
@@ -17,11 +18,11 @@ class QuestionController extends Controller
     {
         /** @var Room|null $room */
         $room = $question->room;
-        if (!$room) {
+        if (! $room) {
             abort(404);
         }
 
-        if (!Auth::check() || Auth::id() !== $room->user_id) {
+        if (! Auth::check() || Auth::id() !== $room->user_id) {
             abort(403);
         }
 
@@ -74,11 +75,11 @@ class QuestionController extends Controller
     {
         /** @var Room|null $room */
         $room = $question->room;
-        if (!$room) {
+        if (! $room) {
             abort(404);
         }
 
-        if (!Auth::check() || Auth::id() !== $room->user_id) {
+        if (! Auth::check() || Auth::id() !== $room->user_id) {
             abort(403);
         }
 
@@ -108,14 +109,19 @@ class QuestionController extends Controller
     {
         /** @var Room|null $room */
         $room = $question->room;
-        if (!$room) {
+        if (! $room) {
             abort(404);
         }
 
-        $sessionKey = 'room_participant_' . $room->id;
+        $sessionKey = 'room_participant_'.$room->id;
         $participantId = $request->session()->get($sessionKey);
 
-        if (!$participantId || $question->participant_id !== $participantId) {
+        $participant = $participantId ? Participant::find($participantId) : null;
+        if (! $participant || $participant->room_id !== $room->id || $question->participant_id !== $participant->id) {
+            abort(403);
+        }
+
+        if ($room->isAccessRevoked($participant, $request->ip(), $request->cookie('lc_fp'))) {
             abort(403);
         }
 
@@ -146,15 +152,20 @@ class QuestionController extends Controller
     {
         /** @var Room|null $room */
         $room = $question->room;
-        if (!$room) {
+        if (! $room) {
             abort(404);
         }
 
         // Оценивать можно только свои вопросы
-        $sessionKey = 'room_participant_' . $room->id;
+        $sessionKey = 'room_participant_'.$room->id;
         $participantId = $request->session()->get($sessionKey);
 
-        if (!$participantId || $question->participant_id !== $participantId) {
+        $participant = $participantId ? Participant::find($participantId) : null;
+        if (! $participant || $participant->room_id !== $room->id || $question->participant_id !== $participant->id) {
+            abort(403);
+        }
+
+        if ($room->isAccessRevoked($participant, $request->ip(), $request->cookie('lc_fp'))) {
             abort(403);
         }
 
@@ -170,7 +181,7 @@ class QuestionController extends Controller
         QuestionRating::updateOrCreate(
             [
                 'question_id' => $question->id,
-                'participant_id' => $participantId,
+                'participant_id' => $participant->id,
             ],
             [
                 'rating' => (int) $data['rating'],
@@ -187,11 +198,11 @@ class QuestionController extends Controller
     {
         /** @var Room|null $room */
         $room = $question->room;
-        if (!$room) {
+        if (! $room) {
             abort(404);
         }
 
-        if (!Auth::check() || Auth::id() !== $room->user_id) {
+        if (! Auth::check() || Auth::id() !== $room->user_id) {
             abort(403);
         }
 

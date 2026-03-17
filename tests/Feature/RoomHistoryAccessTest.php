@@ -11,7 +11,7 @@ test('message history resolves rooms by slug instead of id', function () {
     $room = Room::create([
         'user_id' => $owner->id,
         'title' => 'Public room',
-        'slug' => 'room-' . Str::random(8),
+        'slug' => 'room-'.Str::random(8),
     ]);
 
     Message::create([
@@ -26,16 +26,16 @@ test('message history resolves rooms by slug instead of id', function () {
         ->assertOk()
         ->assertJsonStructure(['data']);
 
-    $this->getJson('/rooms/' . $room->id . '/messages')
+    $this->getJson('/rooms/'.$room->id.'/messages')
         ->assertStatus(404);
 });
 
-test('banned identities can still read message history', function () {
+test('banned identities cannot read message history', function () {
     $owner = User::factory()->create();
     $room = Room::create([
         'user_id' => $owner->id,
         'title' => 'Read-only ban room',
-        'slug' => 'room-' . Str::random(8),
+        'slug' => 'room-'.Str::random(8),
     ]);
 
     Message::create([
@@ -58,6 +58,5 @@ test('banned identities can still read message history', function () {
         ->withServerVariables(['REMOTE_ADDR' => '203.0.113.50'])
         ->withCookie('lc_fp', 'fp-ban')
         ->getJson(route('rooms.messages.history', $room))
-        ->assertOk()
-        ->assertJsonPath('data.0.content', 'Hello banned reader');
+        ->assertStatus(403);
 });
