@@ -56,6 +56,24 @@ jobs:
         run: npm ci
       - name: Build frontend assets
         run: npm run build
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - name: Run migrations for browser smoke
+        run: php artisan migrate --force --ansi
+      - name: Start app server for browser smoke
+        run: php artisan serve --host=127.0.0.1 --port=8000 > storage/logs/browser-smoke-server.log 2>&1 &
+      - name: Wait for app server
+        run: |
+          for i in {1..20}; do
+            if curl --silent --fail http://127.0.0.1:8000/up > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Browser smoke server did not become ready" >&2
+          exit 1
+      - name: Browser smoke
+        run: npm run ui:smoke
       - name: Lint PHP
         run: ./vendor/bin/pint --test --diff=origin/main
       - name: Static analysis

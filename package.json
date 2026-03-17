@@ -6,6 +6,7 @@
         "build": "vite build",
         "dev": "vite",
         "clean:css": "powershell -Command \"Copy-Item resources/css/*.css backup-css/ -Force; postcss resources/css/app.css -o resources/css/app.css; postcss resources/css/design.css -o resources/css/design.css; postcss resources/css/login.css -o resources/css/login.css; postcss resources/css/onboarding.css -o resources/css/onboarding.css\"",
+        "ui:smoke": "node scripts/room-smoke.mjs",
         "ui:screenshots": "node scripts/capture-ui-screenshots.mjs",
         "ui:screenshots:install": "playwright install chromium"
     },
