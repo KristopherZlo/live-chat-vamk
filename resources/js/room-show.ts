@@ -2,6 +2,7 @@ import 'emoji-picker-element';
 import emojiDataUrl from 'emoji-picker-element-data/en/emojibase/data.json?url';
 import { resolveQueueSoundUrl } from './design/queue-sound';
 import { onRoomPageReady } from './room-show/config';
+import { setupChatTabs as createChatTabs } from './room-show/tabs';
 
             onRoomPageReady((roomPageConfig) => {
                 const roomSlug = roomPageConfig.roomSlug;
@@ -3475,19 +3476,20 @@ import { onRoomPageReady } from './room-show/config';
                 };
 
                 function setupChatTabs() {
-                    if (!chatTabButtons.length || !chatPanes.length) return;
-                    const current = Array.from(chatTabButtons).find((btn) => btn.classList.contains('active'));
-                    if (current?.dataset.chatTab) {
-                        chatActiveTab = current.dataset.chatTab;
-                    }
-
-                    chatTabButtons.forEach((btn) => {
-                        btn.addEventListener('click', () => {
-                            setChatTab(btn.dataset.chatTab || 'chat');
-                        });
+                    const { activeTab, setActiveTab } = createChatTabs({
+                        buttons: chatTabButtons,
+                        panes: chatPanes,
+                        initialTab: chatActiveTab || 'chat',
+                        onChange: (tabName) => {
+                            chatActiveTab = tabName;
+                            if (tabName !== 'replies') {
+                                hideReplyDetail();
+                            }
+                        },
                     });
 
-                    setChatTab(chatActiveTab || 'chat');
+                    chatActiveTab = activeTab;
+                    setChatTab = setActiveTab;
                 }
 
                 function syncRepliesDetailLayout() {
@@ -3521,16 +3523,8 @@ import { onRoomPageReady } from './room-show/config';
                     }
                     syncRepliesDetailLayout();
                 };
-                const setChatTab = (tabName = 'chat') => {
+                let setChatTab = (tabName = 'chat') => {
                     chatActiveTab = tabName;
-                    chatTabButtons.forEach((btn) => {
-                        const isActive = btn.dataset.chatTab === tabName;
-                        btn.classList.toggle('active', isActive);
-                    });
-                    chatPanes.forEach((pane) => {
-                        const isMatch = pane.dataset.chatPanel === tabName;
-                        pane.hidden = !isMatch;
-                    });
                     if (tabName !== 'replies') {
                         hideReplyDetail();
                     }
