@@ -20,7 +20,7 @@ class MessagePollController extends Controller
         $poll->loadMissing(['message', 'options']);
 
         $pollMessage = $poll->message;
-        if (!$pollMessage || $pollMessage->room_id !== $room->id) {
+        if (! $pollMessage || $pollMessage->room_id !== $room->id) {
             abort(404);
         }
 
@@ -41,17 +41,17 @@ class MessagePollController extends Controller
 
         $user = Auth::user();
         $isOwner = $user && $user->id === $room->user_id;
-        $isDevUser = $user && !$isOwner && $user->is_dev;
+        $isDevUser = $user && ! $isOwner && $user->is_dev;
         $participant = null;
 
-        if (!$isOwner && !$isDevUser) {
-            $sessionKey = 'room_participant_' . $room->id;
+        if (! $isOwner && ! $isDevUser) {
+            $sessionKey = 'room_participant_'.$room->id;
             $participantId = $request->session()->get($sessionKey);
             if ($participantId) {
                 $participant = Participant::find($participantId);
             }
 
-            if (!$participant) {
+            if (! $participant) {
                 return response()->json(['message' => 'Session expired. Please refresh and try again.'], 403);
             }
 
@@ -64,7 +64,7 @@ class MessagePollController extends Controller
         $actorUserId = $isOwner || $isDevUser ? $user?->id : null;
         $actorParticipantId = $participant?->id;
 
-        if (!$actorUserId && !$actorParticipantId) {
+        if (! $actorUserId && ! $actorParticipantId) {
             return response()->json(['message' => 'Unknown participant.'], 403);
         }
 
@@ -88,6 +88,7 @@ class MessagePollController extends Controller
             if ($existing) {
                 $existing->option_id = $optionId;
                 $existing->save();
+
                 return;
             }
 
@@ -107,10 +108,7 @@ class MessagePollController extends Controller
                 $room->slug,
                 $poll->message_id,
                 $poll->id,
-                $pollPayload,
-                $selectedOptionId,
-                $actorUserId,
-                $actorParticipantId
+                $pollPayload
             ));
         } catch (\Throwable $e) {
             // Broadcast failures should not block poll voting.
@@ -144,6 +142,7 @@ class MessagePollController extends Controller
             ->map(function (MessagePollOption $option) use ($counts, $totalVotes) {
                 $votesCount = (int) ($counts->get($option->id, 0));
                 $percent = $totalVotes > 0 ? (int) round(($votesCount / $totalVotes) * 100) : 0;
+
                 return [
                     'id' => $option->id,
                     'label' => $option->label,

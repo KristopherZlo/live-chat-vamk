@@ -4,11 +4,11 @@ namespace App\Events;
 
 use App\Models\Message;
 use Illuminate\Broadcasting\Channel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
-use Illuminate\Support\Str;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Str;
 
 class MessageSent implements ShouldBroadcastNow
 {
@@ -35,24 +35,19 @@ class MessageSent implements ShouldBroadcastNow
         $slug = $this->message->room?->slug;
         $channelId = $slug ?: (string) $this->message->room_id;
 
-        return new Channel('room.' . $channelId);
+        return new Channel('room.'.$channelId);
     }
 
     public function broadcastWith(): array
     {
-        \Log::info('MessageSent broadcastWith', [
-            'id' => $this->message->id,
-            'room_id' => $this->message->room_id,
-        ]);
-
         $isOwner = $this->message->user_id && $this->message->room?->user_id && $this->message->user_id === $this->message->room->user_id;
 
         return [
-            'id'         => $this->message->id,
-            'room_id'    => $this->message->room_id,
-            'content'    => $this->message->content,
+            'id' => $this->message->id,
+            'room_id' => $this->message->room_id,
+            'content' => $this->message->content,
             'created_at' => $this->message->created_at->toIso8601String(),
-            'author'     => [
+            'author' => [
                 'type' => $isOwner ? 'owner' : 'participant',
                 'name' => $this->message->user_id
                     ? $this->message->user->name
@@ -94,7 +89,7 @@ class MessageSent implements ShouldBroadcastNow
     protected function formatPollPayload(): ?array
     {
         $poll = $this->message->poll;
-        if (!$poll) {
+        if (! $poll) {
             return null;
         }
 

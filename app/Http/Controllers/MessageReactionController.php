@@ -28,24 +28,24 @@ class MessageReactionController extends Controller
             'emoji' => [
                 'required',
                 'string',
-                'max:' . config('ghostroom.limits.message.emoji_max', 32),
+                'max:'.config('ghostroom.limits.message.emoji_max', 32),
             ],
         ]);
 
         $user = Auth::user();
         $isOwner = $user && $user->id === $room->user_id;
-        $isDevUser = $user && !$isOwner && $user->is_dev;
+        $isDevUser = $user && ! $isOwner && $user->is_dev;
 
         $participant = null;
 
-        if (!$isOwner && !$isDevUser) {
-            $sessionKey = 'room_participant_' . $room->id;
+        if (! $isOwner && ! $isDevUser) {
+            $sessionKey = 'room_participant_'.$room->id;
             $participantId = $request->session()->get($sessionKey);
             if ($participantId) {
                 $participant = Participant::find($participantId);
             }
 
-            if (!$participant) {
+            if (! $participant) {
                 return response()->json(['message' => 'Session expired. Please refresh and try again.'], 403);
             }
 
@@ -58,12 +58,12 @@ class MessageReactionController extends Controller
         $actorUserId = $isOwner || $isDevUser ? $user?->id : null;
         $actorParticipantId = $participant?->id;
 
-        if (!$actorUserId && !$actorParticipantId) {
+        if (! $actorUserId && ! $actorParticipantId) {
             return response()->json(['message' => 'Unknown participant.'], 403);
         }
 
         $emoji = trim($data['emoji']);
-        if (!$this->isValidEmoji($emoji)) {
+        if (! $this->isValidEmoji($emoji)) {
             return response()->json(['message' => 'Invalid reaction emoji.'], 422);
         }
 
@@ -89,6 +89,7 @@ class MessageReactionController extends Controller
                     $existing->delete();
                     $action = 'removed';
                     $yourReactions = [];
+
                     return;
                 }
 
@@ -96,6 +97,7 @@ class MessageReactionController extends Controller
                 $existing->save();
                 $action = 'updated';
                 $yourReactions = [$emoji];
+
                 return;
             }
 
@@ -116,10 +118,7 @@ class MessageReactionController extends Controller
                 $room->id,
                 $room->slug,
                 $message->id,
-                $summary,
-                $yourReactions,
-                $actorUserId,
-                $actorParticipantId
+                $summary
             ));
         } catch (\Throwable $e) {
             Log::warning('Reaction broadcast failed', [
@@ -169,6 +168,7 @@ class MessageReactionController extends Controller
                 if ($countDiff !== 0) {
                     return $countDiff;
                 }
+
                 return strcasecmp($a['emoji'], $b['emoji']);
             })
             ->values()

@@ -5,8 +5,8 @@ namespace App\Events;
 use App\Models\Participant;
 use App\Models\Question;
 use App\Models\Room;
-use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
@@ -23,14 +23,14 @@ class QuestionCreated implements ShouldBroadcastNow
         $this->question = $question->load(['participant', 'room']);
     }
 
-    public function broadcastOn(): Channel
+    public function broadcastOn(): PrivateChannel
     {
         /** @var Room|null $room */
         $room = $this->question->room;
         $slug = $room?->slug;
         $channelId = $slug ?: (string) $this->question->room_id;
 
-        return new Channel('room.' . $channelId);
+        return new PrivateChannel('room.host.'.$channelId);
     }
 
     public function broadcastWith(): array

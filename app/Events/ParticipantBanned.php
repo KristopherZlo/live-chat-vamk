@@ -2,8 +2,8 @@
 
 namespace App\Events;
 
-use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
@@ -13,13 +13,21 @@ class ParticipantBanned implements ShouldBroadcastNow
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public int $roomId;
+
     public string $roomSlug;
+
     public int $banId;
+
     public int $participantId;
+
     public string $displayName;
+
     public ?string $bannedAt;
+
     public ?int $banCount;
+
     public ?int $actorUserId;
+
     public ?int $actorParticipantId;
 
     public function __construct(
@@ -44,11 +52,11 @@ class ParticipantBanned implements ShouldBroadcastNow
         $this->actorParticipantId = $actorParticipantId;
     }
 
-    public function broadcastOn(): Channel
+    public function broadcastOn(): PrivateChannel
     {
         $channelId = $this->roomSlug ?: (string) $this->roomId;
 
-        return new Channel('room.' . $channelId);
+        return new PrivateChannel('room.host.'.$channelId);
     }
 
     public function broadcastWith(): array
