@@ -5,10 +5,10 @@ namespace App\Console\Commands;
 use App\Events\MessageDeleted;
 use App\Events\MessageSent;
 use App\Events\QuestionCreated;
-use App\Events\ReactionUpdated;
-use App\Models\MessageReaction;
 use App\Events\QuestionUpdated;
+use App\Events\ReactionUpdated;
 use App\Models\Message;
+use App\Models\MessageReaction;
 use App\Models\Participant;
 use App\Models\Question;
 use App\Models\Room;
@@ -35,8 +35,9 @@ class SeedDemoChat extends Command
 
     public function handle(): int
     {
-        if (!app()->environment(['testing', 'local', 'development'])) {
+        if (! app()->environment(['testing', 'local', 'development'])) {
             $this->error('This command is only allowed in testing/local environments.');
+
             return self::FAILURE;
         }
 
@@ -54,8 +55,9 @@ class SeedDemoChat extends Command
             ->orWhere('slug', $roomInput)
             ->first();
 
-        if (!$room) {
+        if (! $room) {
             $this->error('Room not found.');
+
             return self::FAILURE;
         }
 
@@ -66,9 +68,10 @@ class SeedDemoChat extends Command
         $participants = collect(range(1, $participantCount))
             ->map(function () use ($room, &$usedNames) {
                 do {
-                    $name = 'user' . random_int(100, 999);
+                    $name = 'user'.random_int(100, 999);
                 } while (in_array($name, $usedNames, true));
                 $usedNames[] = $name;
+
                 return $this->createParticipant($room, $name);
             });
 
@@ -219,11 +222,11 @@ class SeedDemoChat extends Command
             $parent = $messages->random();
             $authorIsHost = $host && random_int(0, 4) === 0; // 20% chance host replies.
             $authorParticipant = $participants->random();
-            $isQuestion = !$authorIsHost && random_int(0, 5) === 0; // some participant replies are questions.
+            $isQuestion = ! $authorIsHost && random_int(0, 5) === 0; // some participant replies are questions.
 
             $content = Arr::random($replyLines);
             if ($isQuestion && random_int(0, 1) === 1) {
-                $content = 'Question: ' . $content;
+                $content = 'Question: '.$content;
             }
 
             $message = $this->createMessage(
@@ -263,7 +266,7 @@ class SeedDemoChat extends Command
             foreach ($toDelete as $messageId) {
                 /** @var Message|null $target */
                 $target = $messages->firstWhere('id', $messageId);
-                if (!$target || $target->trashed()) {
+                if (! $target || $target->trashed()) {
                     continue;
                 }
 
@@ -318,9 +321,11 @@ class SeedDemoChat extends Command
         if (preg_match('/^(\\d+(?:\\.\\d+)?)-(\\d+(?:\\.\\d+)?)$/', $raw, $m)) {
             $a = (float) $m[1];
             $b = (float) $m[2];
+
             return [min($a, $b), max($a, $b)];
         }
         $sec = max(0.0, (float) $raw);
+
         return [$sec, $sec];
     }
 
@@ -429,10 +434,7 @@ class SeedDemoChat extends Command
                 $room->id,
                 $room->slug,
                 $message->id,
-                $summary,
-                $yourReactions,
-                null,
-                null
+                $summary
             ));
         }
     }
@@ -454,6 +456,7 @@ class SeedDemoChat extends Command
                 if ($countDiff !== 0) {
                     return $countDiff;
                 }
+
                 return strcasecmp($a['emoji'], $b['emoji']);
             })
             ->values()

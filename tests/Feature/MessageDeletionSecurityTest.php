@@ -37,7 +37,7 @@ test('participant cannot delete another participant message', function () {
         'content' => 'Hello world',
     ]);
 
-    $sessionKey = 'room_participant_' . $room->id;
+    $sessionKey = 'room_participant_'.$room->id;
 
     $response = $this
         ->withSession([$sessionKey => $other->id])
@@ -70,7 +70,7 @@ test('participant can delete their own message using session binding', function 
         'content' => 'Deletable content',
     ]);
 
-    $sessionKey = 'room_participant_' . $room->id;
+    $sessionKey = 'room_participant_'.$room->id;
 
     $response = $this
         ->withSession([$sessionKey => $author->id])

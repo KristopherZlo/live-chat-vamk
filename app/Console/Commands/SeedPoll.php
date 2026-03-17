@@ -27,21 +27,24 @@ class SeedPoll extends Command
 
     public function handle(): int
     {
-        if (!$this->option('force') && app()->environment('production')) {
+        if (! $this->option('force') && app()->environment('production')) {
             $this->warn('Refusing to run in production without --force');
+
             return self::FAILURE;
         }
 
         $room = $this->findRoom($this->argument('room'));
-        if (!$room) {
+        if (! $room) {
             $this->error('Room not found.');
+
             return self::FAILURE;
         }
 
         $room->loadMissing('owner');
         $host = $room->owner;
-        if (!$host) {
+        if (! $host) {
             $this->error('Room owner not found.');
+
             return self::FAILURE;
         }
 
@@ -108,7 +111,7 @@ class SeedPoll extends Command
             $participants->push(Participant::create([
                 'room_id' => $room->id,
                 'session_token' => (string) Str::uuid(),
-                'display_name' => $names->get($i, 'Guest ' . ($i + 1)),
+                'display_name' => $names->get($i, 'Guest '.($i + 1)),
             ]));
         }
 
@@ -163,7 +166,7 @@ class SeedPoll extends Command
         $result = $options->values()->all();
         $start = count($result) + 1;
         for ($i = $start; $i <= $count; $i++) {
-            $result[] = 'Option ' . $i;
+            $result[] = 'Option '.$i;
         }
 
         return $result;
@@ -174,6 +177,7 @@ class SeedPoll extends Command
         $raw = $this->option($option);
         if ($raw !== null && $raw !== '') {
             $value = (int) $raw;
+
             return max($min, min($max, $value));
         }
 
@@ -237,7 +241,7 @@ class SeedPoll extends Command
     }
 
     /**
-     * @param EloquentCollection<int, Participant> $participants
+     * @param  EloquentCollection<int, Participant>  $participants
      */
     protected function seedReplies(
         Room $room,
@@ -279,7 +283,7 @@ class SeedPoll extends Command
     }
 
     /**
-     * @param EloquentCollection<int, Participant> $participants
+     * @param  EloquentCollection<int, Participant>  $participants
      */
     protected function seedVotes(
         Room $room,
@@ -320,15 +324,12 @@ class SeedPoll extends Command
             $room->slug,
             $poll->message_id,
             $poll->id,
-            $payload,
-            null,
-            null,
-            null
+            $payload
         ));
     }
 
     /**
-     * @param EloquentCollection<int, Participant> $participants
+     * @param  EloquentCollection<int, Participant>  $participants
      */
     protected function seedReactions(
         Room $room,
@@ -365,15 +366,12 @@ class SeedPoll extends Command
             $room->id,
             $room->slug,
             $messageId,
-            $summary,
-            [],
-            null,
-            null
+            $summary
         ));
     }
 
     /**
-     * @param EloquentCollection<int, Participant> $participants
+     * @param  EloquentCollection<int, Participant>  $participants
      */
     protected function actorPool(EloquentCollection $participants, int $hostId)
     {
@@ -414,6 +412,7 @@ class SeedPoll extends Command
             ->map(function (MessagePollOption $option) use ($counts, $totalVotes) {
                 $votesCount = (int) ($counts->get($option->id, 0));
                 $percent = $totalVotes > 0 ? (int) round(($votesCount / $totalVotes) * 100) : 0;
+
                 return [
                     'id' => $option->id,
                     'label' => $option->label,
@@ -451,6 +450,7 @@ class SeedPoll extends Command
                 if ($countDiff !== 0) {
                     return $countDiff;
                 }
+
                 return strcasecmp($a['emoji'], $b['emoji']);
             })
             ->values()

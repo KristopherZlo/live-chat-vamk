@@ -22,7 +22,7 @@ test('join submit accepts full url and redirects', function () {
         'slug' => Str::random(8),
     ]);
 
-    $input = 'https://example.test/r/' . $room->slug . '?ref=1';
+    $input = 'https://example.test/r/'.$room->slug.'?ref=1';
 
     $this->post(route('rooms.join.submit'), ['code' => $input])
         ->assertRedirect(route('rooms.public', $room->slug));
@@ -39,7 +39,7 @@ test('room exists endpoint reports status', function () {
         ->assertOk()
         ->assertJson(['exists' => true]);
 
-    $this->getJson(route('rooms.exists', 'missing-' . Str::random(6)))
+    $this->getJson(route('rooms.exists', 'missing-'.Str::random(6)))
         ->assertOk()
         ->assertJson(['exists' => false]);
 });

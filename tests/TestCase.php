@@ -52,7 +52,7 @@ abstract class TestCase extends BaseTestCase
                 $limits[] = Limit::perMinute($perMinuteRoom)->by('room|'.$roomId);
             }
 
-            if (!$isAuthenticated && $fingerprint && $roomId) {
+            if (! $isAuthenticated && $fingerprint && $roomId) {
                 $perMinuteFingerprint = (int) config('ghostroom.limits.room.messages_per_minute_fingerprint', $perMinute);
                 $limits[] = Limit::perMinute($perMinuteFingerprint)->by('room|'.$roomId.'|fp|'.$fingerprint);
             }

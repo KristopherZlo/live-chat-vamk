@@ -44,7 +44,7 @@ test('rotating anonymous sessions cannot bypass room message and reaction thrott
 
         $sessionId = Str::random(40);
         $csrfToken = Str::random(40);
-        $sessionKey = 'room_participant_' . $room->id;
+        $sessionKey = 'room_participant_'.$room->id;
         $session = app('session.store');
         $session->setId($sessionId);
         $session->setExists(false);
@@ -126,7 +126,7 @@ test('rotating IPs cannot bypass fingerprint throttles', function () {
 
         $sessionId = Str::random(40);
         $csrfToken = Str::random(40);
-        $sessionKey = 'room_participant_' . $room->id;
+        $sessionKey = 'room_participant_'.$room->id;
         $session = app('session.store');
         $session->setId($sessionId);
         $session->setExists(false);
@@ -207,7 +207,7 @@ test('participant creation is throttled per fingerprint', function () {
             ->assertOk();
     }
 
-    $rateKey = 'room-participant|' . $room->id . '|fp|' . $fingerprint;
+    $rateKey = 'room-participant|'.$room->id.'|fp|'.$fingerprint;
     expect(RateLimiter::attempts($rateKey))->toBe(2);
 
     $this

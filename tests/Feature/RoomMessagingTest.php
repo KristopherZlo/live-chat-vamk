@@ -1,8 +1,6 @@
 <?php
 
-use App\Models\Message;
 use App\Models\Participant;
-use App\Models\Question;
 use App\Models\Room;
 use App\Models\RoomBan;
 use App\Models\User;
@@ -58,7 +56,7 @@ test('banned participant cannot send messages', function () {
         'display_name' => $participant->display_name,
     ]);
 
-    $response = $this->withSession(['room_participant_' . $room->id => $participant->id])
+    $response = $this->withSession(['room_participant_'.$room->id => $participant->id])
         ->post(route('rooms.messages.store', $room), [
             'content' => 'Let me in',
         ]);

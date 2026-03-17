@@ -81,7 +81,7 @@ test('participants cannot create polls', function () {
         'display_name' => 'Guest',
     ]);
 
-    $sessionKey = 'room_participant_' . $room->id;
+    $sessionKey = 'room_participant_'.$room->id;
 
     $response = $this
         ->withSession([$sessionKey => $participant->id])
@@ -195,7 +195,7 @@ test('participants can vote and update their vote', function () {
         'display_name' => 'Guest',
     ]);
 
-    $sessionKey = 'room_participant_' . $room->id;
+    $sessionKey = 'room_participant_'.$room->id;
     $voteRoute = route('rooms.polls.vote', [$room, $poll]);
 
     $first = $this
@@ -264,7 +264,7 @@ test('banned participants cannot vote in polls', function () {
         'fingerprint' => $participant->fingerprint,
     ]);
 
-    $sessionKey = 'room_participant_' . $room->id;
+    $sessionKey = 'room_participant_'.$room->id;
 
     $response = $this
         ->withServerVariables(['REMOTE_ADDR' => '203.0.113.99'])

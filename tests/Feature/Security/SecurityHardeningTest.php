@@ -2,9 +2,9 @@
 
 use App\Models\Room;
 use App\Models\User;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 
 test('admin area is blocked for non-whitelisted IPs', function () {
@@ -68,7 +68,7 @@ test('login attempts are locked after repeated failures', function () {
 
     $lockoutResponse->assertStatus(422)->assertJsonValidationErrors('email');
 
-    $userKey = Str::lower($email) . '|' . $ip;
+    $userKey = Str::lower($email).'|'.$ip;
     expect(RateLimiter::tooManyAttempts($userKey, 5))->toBeTrue();
 });
 

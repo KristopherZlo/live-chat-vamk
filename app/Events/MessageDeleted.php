@@ -3,10 +3,10 @@
 namespace App\Events;
 
 use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Broadcasting\InteractsWithSockets;
 
 class MessageDeleted implements ShouldBroadcastNow
 {
@@ -18,14 +18,13 @@ class MessageDeleted implements ShouldBroadcastNow
         public string $roomSlug,
         public ?int $deletedByUserId = null,
         public ?int $deletedByParticipantId = null,
-    ) {
-    }
+    ) {}
 
     public function broadcastOn(): Channel
     {
         $channelId = $this->roomSlug ?: (string) $this->roomId;
 
-        return new Channel('room.' . $channelId);
+        return new Channel('room.'.$channelId);
     }
 
     public function broadcastWith(): array

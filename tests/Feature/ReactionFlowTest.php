@@ -80,7 +80,7 @@ test('participants need a session to react', function () {
     $this->postJson($route, ['emoji' => "\u{1F44D}"])
         ->assertStatus(403);
 
-    $sessionKey = 'room_participant_' . $room->id;
+    $sessionKey = 'room_participant_'.$room->id;
     $this->withSession([$sessionKey => $participant->id])
         ->postJson($route, ['emoji' => "\u{1F44D}"])
         ->assertOk();

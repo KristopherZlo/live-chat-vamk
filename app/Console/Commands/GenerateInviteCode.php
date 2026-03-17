@@ -32,6 +32,7 @@ class GenerateInviteCode extends Command
 
         if ($count < 1 || $length < 6) {
             $this->error('Count must be at least 1 and length at least 6.');
+
             return self::FAILURE;
         }
 

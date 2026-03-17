@@ -41,7 +41,7 @@ test('participant can send a question message', function () {
         'display_name' => 'Guest',
     ]);
 
-    $sessionKey = 'room_participant_' . $room->id;
+    $sessionKey = 'room_participant_'.$room->id;
 
     $response = $this
         ->withSession([$sessionKey => $participant->id])
@@ -113,7 +113,7 @@ test('participants cannot create polls', function () {
         'display_name' => 'Guest',
     ]);
 
-    $sessionKey = 'room_participant_' . $room->id;
+    $sessionKey = 'room_participant_'.$room->id;
 
     $response = $this
         ->withSession([$sessionKey => $participant->id])
@@ -202,7 +202,7 @@ test('banned participants cannot send messages', function () {
         'display_name' => $participant->display_name,
     ]);
 
-    $sessionKey = 'room_participant_' . $room->id;
+    $sessionKey = 'room_participant_'.$room->id;
 
     $this->withSession([$sessionKey => $participant->id])
         ->postJson(route('rooms.messages.store', $room), [

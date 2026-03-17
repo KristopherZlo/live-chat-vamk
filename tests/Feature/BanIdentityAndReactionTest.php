@@ -41,7 +41,7 @@ test('participants with banned fingerprint or ip cannot post messages', function
         'fingerprint' => 'fp-blocked',
     ]);
 
-    $sessionKey = 'room_participant_' . $room->id;
+    $sessionKey = 'room_participant_'.$room->id;
 
     $response = $this
         ->withServerVariables(['REMOTE_ADDR' => '203.0.113.10'])
@@ -88,7 +88,7 @@ test('banned participant cannot react to messages', function () {
         'content' => 'React here',
     ]);
 
-    $sessionKey = 'room_participant_' . $room->id;
+    $sessionKey = 'room_participant_'.$room->id;
     $route = route('rooms.messages.reactions.toggle', [$room, $message]);
 
     $response = $this

@@ -19,14 +19,16 @@ class SeedQuestions extends Command
 
     public function handle(): int
     {
-        if (!$this->option('force') && app()->environment('production')) {
+        if (! $this->option('force') && app()->environment('production')) {
             $this->warn('Refusing to run in production without --force');
+
             return self::FAILURE;
         }
 
         $room = $this->findRoom($this->argument('room'));
-        if (!$room) {
+        if (! $room) {
             $this->error('Room not found.');
+
             return self::FAILURE;
         }
 
@@ -99,9 +101,11 @@ class SeedQuestions extends Command
         if (preg_match('/^(\\d+(?:\\.\\d+)?)-(\\d+(?:\\.\\d+)?)$/', $raw, $m)) {
             $a = (float) $m[1];
             $b = (float) $m[2];
+
             return [min($a, $b), max($a, $b)];
         }
         $sec = max(0.0, (float) $raw);
+
         return [$sec, $sec];
     }
 

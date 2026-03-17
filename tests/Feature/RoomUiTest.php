@@ -39,7 +39,7 @@ test('participant chat view includes question toggle and hides host tools', func
         'display_name' => 'Guest',
     ]);
 
-    $sessionKey = 'room_participant_' . $room->id;
+    $sessionKey = 'room_participant_'.$room->id;
 
     $this->withSession([$sessionKey => $participant->id])
         ->get(route('rooms.public', $room->slug))
@@ -87,5 +87,5 @@ test('closed private rooms are blocked for participants but visible to owners', 
     $this->actingAs($owner)
         ->get(route('rooms.public', $room->slug))
         ->assertOk()
-        ->assertSee('data-room-slug="' . $room->slug . '"', false);
+        ->assertSee('data-room-slug="'.$room->slug.'"', false);
 });

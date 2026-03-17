@@ -31,14 +31,16 @@ class StreamDemoChat extends Command
 
     public function handle(): int
     {
-        if (!$this->option('force') && app()->environment('production')) {
+        if (! $this->option('force') && app()->environment('production')) {
             $this->warn('Refusing to run in production without --force');
+
             return self::FAILURE;
         }
 
         $room = $this->findRoom($this->argument('room'));
-        if (!$room) {
+        if (! $room) {
             $this->error('Room not found.');
+
             return self::FAILURE;
         }
 
@@ -46,6 +48,7 @@ class StreamDemoChat extends Command
         $participants = $this->loadBotParticipants($room, $participantsCount);
         if ($participants->isEmpty()) {
             $this->error('Unable to load demo participants.');
+
             return self::FAILURE;
         }
 
@@ -144,7 +147,7 @@ class StreamDemoChat extends Command
 
     protected function registerSignalHandlers(): void
     {
-        if (!function_exists('pcntl_async_signals') || !function_exists('pcntl_signal')) {
+        if (! function_exists('pcntl_async_signals') || ! function_exists('pcntl_signal')) {
             return;
         }
 
@@ -191,7 +194,7 @@ class StreamDemoChat extends Command
             $usedNames[] = $name;
             $participants->push(Participant::create([
                 'room_id' => $room->id,
-                'session_token' => 'demo_stream_' . Str::uuid(),
+                'session_token' => 'demo_stream_'.Str::uuid(),
                 'display_name' => $name,
             ]));
         }
@@ -202,7 +205,7 @@ class StreamDemoChat extends Command
     protected function uniqueUserName(array $used): string
     {
         do {
-            $name = 'user' . random_int(100, 999);
+            $name = 'user'.random_int(100, 999);
         } while (in_array($name, $used, true));
 
         return $name;
@@ -213,9 +216,11 @@ class StreamDemoChat extends Command
         if (preg_match('/^(\\d+(?:\\.\\d+)?)-(\\d+(?:\\.\\d+)?)$/', $raw, $m)) {
             $a = (float) $m[1];
             $b = (float) $m[2];
+
             return [min($a, $b), max($a, $b)];
         }
         $sec = max(0.0, (float) $raw);
+
         return [$sec, $sec];
     }
 
@@ -229,6 +234,7 @@ class StreamDemoChat extends Command
         $minMs = max(0, $minMs);
         $maxMs = max($minMs, $maxMs);
         $delayMs = $minMs === $maxMs ? $minMs : random_int($minMs, $maxMs);
+
         return $delayMs / 1000;
     }
 
@@ -238,11 +244,12 @@ class StreamDemoChat extends Command
         if (count($recent) > $limit) {
             $recent = array_slice($recent, -$limit);
         }
+
         return $recent;
     }
 
     /**
-     * @param EloquentCollection<int, Participant> $participants
+     * @param  EloquentCollection<int, Participant>  $participants
      */
     protected function scanNewMessages(
         Room $room,
@@ -281,7 +288,7 @@ class StreamDemoChat extends Command
     }
 
     /**
-     * @param EloquentCollection<int, Participant> $participants
+     * @param  EloquentCollection<int, Participant>  $participants
      */
     protected function scanNewReactions(
         Room $room,
@@ -314,7 +321,7 @@ class StreamDemoChat extends Command
     }
 
     /**
-     * @param EloquentCollection<int, Participant> $participants
+     * @param  EloquentCollection<int, Participant>  $participants
      */
     protected function scanNewPolls(
         Room $room,
@@ -341,7 +348,7 @@ class StreamDemoChat extends Command
     }
 
     /**
-     * @param EloquentCollection<int, Participant> $participants
+     * @param  EloquentCollection<int, Participant>  $participants
      */
     protected function buildPollPlan(MessagePoll $poll, EloquentCollection $participants): array
     {
@@ -367,6 +374,7 @@ class StreamDemoChat extends Command
         foreach ($pendingPolls as $pollId => $plan) {
             if (empty($plan['pending'])) {
                 unset($pendingPolls[$pollId]);
+
                 continue;
             }
 
@@ -377,8 +385,9 @@ class StreamDemoChat extends Command
             /** @var MessagePoll|null $poll */
             $poll = MessagePoll::with(['message', 'options'])->find($pollId);
             $pollMessage = $poll?->message;
-            if (!$poll || $poll->is_closed || !$pollMessage || $pollMessage->room_id !== $room->id) {
+            if (! $poll || $poll->is_closed || ! $pollMessage || $pollMessage->room_id !== $room->id) {
                 unset($pendingPolls[$pollId]);
+
                 continue;
             }
 
@@ -426,13 +435,15 @@ class StreamDemoChat extends Command
             }
 
             $question = Question::find($questionId);
-            if (!$question || $question->status !== 'answered' || !$question->participant_id) {
+            if (! $question || $question->status !== 'answered' || ! $question->participant_id) {
                 unset($pendingRatings[$questionId]);
+
                 continue;
             }
 
             if ($question->ratings()->exists()) {
                 unset($pendingRatings[$questionId]);
+
                 continue;
             }
 
@@ -451,7 +462,7 @@ class StreamDemoChat extends Command
     }
 
     /**
-     * @param EloquentCollection<int, Participant> $participants
+     * @param  EloquentCollection<int, Participant>  $participants
      */
     protected function queueRepliesAndReactions(
         Message $message,
@@ -487,7 +498,7 @@ class StreamDemoChat extends Command
     }
 
     /**
-     * @param EloquentCollection<int, Participant> $participants
+     * @param  EloquentCollection<int, Participant>  $participants
      */
     protected function queueFollowUpReactions(
         int $messageId,
@@ -516,12 +527,13 @@ class StreamDemoChat extends Command
         foreach ($pendingActions as $action) {
             if ($action['dueAt'] > $now) {
                 $remaining[] = $action;
+
                 continue;
             }
 
             if ($action['type'] === 'reply') {
                 $target = Message::find($action['message_id']);
-                if (!$target) {
+                if (! $target) {
                     continue;
                 }
 
@@ -531,6 +543,7 @@ class StreamDemoChat extends Command
                     participantId: $action['participant_id'],
                     replyToId: $target->id
                 );
+
                 continue;
             }
 
@@ -548,7 +561,7 @@ class StreamDemoChat extends Command
     }
 
     /**
-     * @param EloquentCollection<int, Participant> $participants
+     * @param  EloquentCollection<int, Participant>  $participants
      */
     protected function sendStreamMessage(Room $room, EloquentCollection $participants, array $recentMessageIds): ?Message
     {
@@ -557,6 +570,7 @@ class StreamDemoChat extends Command
 
         if ($roll <= 20) {
             $content = Arr::random($this->questionLines());
+
             return $this->createMessage(
                 room: $room,
                 content: $content,
@@ -565,11 +579,12 @@ class StreamDemoChat extends Command
             );
         }
 
-        if ($roll <= 45 && !empty($recentMessageIds)) {
+        if ($roll <= 45 && ! empty($recentMessageIds)) {
             $targetId = $recentMessageIds[array_rand($recentMessageIds)];
             $target = Message::find($targetId);
             if ($target) {
                 $content = Arr::random($this->replyLines());
+
                 return $this->createMessage(
                     room: $room,
                     content: $content,
@@ -580,6 +595,7 @@ class StreamDemoChat extends Command
         }
 
         $content = Arr::random($this->messageLines());
+
         return $this->createMessage(
             room: $room,
             content: $content,
@@ -645,10 +661,7 @@ class StreamDemoChat extends Command
             $room->id,
             $room->slug,
             $messageId,
-            $summary,
-            [],
-            null,
-            $participantId
+            $summary
         ));
     }
 
@@ -669,6 +682,7 @@ class StreamDemoChat extends Command
                 if ($countDiff !== 0) {
                     return $countDiff;
                 }
+
                 return strcasecmp((string) $a['emoji'], (string) $b['emoji']);
             })
             ->values()
@@ -679,7 +693,7 @@ class StreamDemoChat extends Command
     {
         $poll->loadMissing(['options', 'message']);
         $pollMessage = $poll->message;
-        if ($poll->is_closed || !$pollMessage || $pollMessage->room_id !== $room->id) {
+        if ($poll->is_closed || ! $pollMessage || $pollMessage->room_id !== $room->id) {
             return;
         }
 
@@ -713,10 +727,7 @@ class StreamDemoChat extends Command
             $room->slug,
             $poll->message_id,
             $poll->id,
-            $payload,
-            $optionId,
-            null,
-            $participantId
+            $payload
         ));
     }
 
@@ -739,6 +750,7 @@ class StreamDemoChat extends Command
             ->map(function (MessagePollOption $option) use ($counts, $totalVotes) {
                 $votesCount = (int) ($counts->get($option->id, 0));
                 $percent = $totalVotes > 0 ? (int) round(($votesCount / $totalVotes) * 100) : 0;
+
                 return [
                     'id' => $option->id,
                     'label' => $option->label,
@@ -806,14 +818,14 @@ class StreamDemoChat extends Command
     protected function reactionEmojis(): array
     {
         return [
-            "👍",
-            "👏",
-            "🎯",
-            "🔥",
-            "💡",
-            "✅",
-            "🤔",
-            "🚀",
+            '👍',
+            '👏',
+            '🎯',
+            '🔥',
+            '💡',
+            '✅',
+            '🤔',
+            '🚀',
         ];
     }
 }
