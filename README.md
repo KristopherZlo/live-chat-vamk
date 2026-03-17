@@ -20,7 +20,7 @@ Ghost Room is a web application for university lectures, seminars, and live even
 
 ## Project status
 
-**BETA**
+**OPEN BETA**
 
 ---
 
@@ -150,11 +150,13 @@ Latest automated capture: `docs/screenshots/latest`
 
 ## Security & access control
 
-* Invite-only registration
+* Open registration with email verification
 * CSRF / XSRF protection
 * Throttling for registration, login, and messaging
-* Ban enforcement using IP and fingerprint
+* Host-only private moderation / question queue channel
+* Ban lockout enforced across room read and write endpoints using participant session, IP, and fingerprint
 * Strict permission checks for all moderation actions
+* Production CSP without runtime CDN dependencies on the room page
 
 ---
 
@@ -249,7 +251,48 @@ Deployment notes:
 
 * Ensure `storage/` and `bootstrap/cache/` are writable by the web server.
 * Point the web server document root to `public/`.
-* Keep `php artisan queue:work` running under supervisor or systemd if queues are used.
+* Keep the Reverb server running for live updates.
+* Add a cron entry for `* * * * * php artisan schedule:run`.
+* Queue workers are optional for the current beta release; add `php artisan queue:work` only if you move mail or other background jobs to a queue.
+
+### Operator runbook
+
+Minimum production services:
+
+* PHP app
+* MySQL / MariaDB
+* Reverb
+* mail delivery
+* cron for `php artisan schedule:run`
+
+Required production env:
+
+* `APP_ENV=production`
+* `APP_DEBUG=false`
+* `APP_URL=https://your-domain`
+* `BROADCAST_CONNECTION=reverb`
+* valid `REVERB_APP_ID`, `REVERB_APP_KEY`, `REVERB_APP_SECRET`, `REVERB_HOST`, `REVERB_PORT`, `REVERB_SCHEME`
+* valid `MAIL_*` settings
+* `SESSION_SECURE_COOKIE=true` when serving over HTTPS
+
+Preflight before a public rollout:
+
+* `composer install --no-dev --optimize-autoloader`
+* `npm install && npm run build`
+* `php artisan migrate --force`
+* `php artisan config:cache`
+* `php artisan route:cache`
+* `vendor/bin/phpstan analyse --no-progress`
+* `composer audit`
+* `npm audit --omit=dev`
+* green CI for `php artisan test`
+
+Rollback basics:
+
+* redeploy the previous release
+* restore the previous `public/build` assets
+* run `php artisan config:clear` and `php artisan route:clear`
+* verify `/up`, a public room page, Reverb connectivity, and email delivery
 
 ---
 
@@ -305,17 +348,12 @@ Each run writes screenshots into a timestamped folder and a `manifest.json` with
   `php artisan chat:stream-demo <room-id-or-slug> [--delay=1-3] [--participants=8]`
 * Simulate a live question stream (with a delay between questions):
   `php artisan chat:seed-questions <room-id-or-slug> [--count=50] [--delay=1]`
-* Generate invite codes for registration:
-  `php artisan invite:generate {count=1} [--length=12]`
-
----
-
 ## TODO
 
 * [x] Polls and live voting
 * [ ] Further loading and performance optimizations
 * [ ] Interactive onboarding tutorial for hosts and students
-* [ ] Email verification
+* [x] Email verification
 
 ---
 

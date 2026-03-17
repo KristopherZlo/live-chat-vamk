@@ -20,7 +20,7 @@ class SecurityHeaders
             'X-Frame-Options' => 'SAMEORIGIN',
             'X-Content-Type-Options' => 'nosniff',
             'Referrer-Policy' => 'strict-origin-when-cross-origin',
-            'Permissions-Policy' => "geolocation=(), microphone=(), camera=(), fullscreen=(self \"https://www.youtube.com\" \"https://www.youtube-nocookie.com\"), payment=()",
+            'Permissions-Policy' => 'geolocation=(), microphone=(), camera=(), fullscreen=(self "https://www.youtube.com" "https://www.youtube-nocookie.com"), payment=()',
             'Cross-Origin-Opener-Policy' => 'same-origin',
             'Cross-Origin-Resource-Policy' => 'same-origin',
         ];
@@ -33,7 +33,7 @@ class SecurityHeaders
         }
 
         foreach ($headers as $name => $value) {
-            if (!$response->headers->has($name)) {
+            if (! $response->headers->has($name)) {
                 $response->headers->set($name, $value);
             }
         }
@@ -68,14 +68,16 @@ class SecurityHeaders
     {
         $defaultSrc = ["'self'"];
         $imgSrc = ["'self'", 'data:'];
-        $styleSrc = ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdn.jsdelivr.net'];
-        $scriptSrc = ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'];
+        $styleSrc = ["'self'", 'https://fonts.googleapis.com'];
+        $scriptSrc = ["'self'"];
         $fontSrc = ["'self'", 'data:', 'https://fonts.gstatic.com'];
-        $connectSrc = ["'self'", 'https://cdn.jsdelivr.net'];
+        $connectSrc = ["'self'"];
         $frameSrc = ["'self'", 'https://www.youtube.com', 'https://www.youtube-nocookie.com'];
 
         if (app()->environment('local')) {
             // Keep eval only for local tooling / HMR.
+            $styleSrc[] = "'unsafe-inline'";
+            $scriptSrc[] = "'unsafe-inline'";
             $scriptSrc[] = "'unsafe-eval'";
             $devOrigins = $this->getDevOrigins($request);
 
@@ -138,7 +140,7 @@ class SecurityHeaders
         $protocol = env('VITE_DEV_PROTOCOL', 'http');
         $host = env('VITE_DEV_HOST', 'localhost');
         $hmrHost = env('VITE_DEV_HMR_HOST');
-        if (!$hmrHost) {
+        if (! $hmrHost) {
             $hmrHost = $host;
         }
         $port = env('VITE_DEV_PORT', 5173);

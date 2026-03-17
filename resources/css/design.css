@@ -684,6 +684,23 @@ body.is-resizing {
   animation: message-in 0.15s ease-out forwards;
 }
 
+.message-loader {
+  justify-content: center;
+  padding: 12px;
+  color: var(--muted, #6b7280);
+}
+
+.message-loader-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #f8fafc;
+  font-weight: 600;
+}
+
 .message--outgoing {
   justify-content: flex-end;
 }
@@ -708,6 +725,16 @@ body.is-resizing {
   font-weight: 700;
   border-color: transparent;
 }
+
+.avatar-tone-0 { background: #2563eb; color: #fff; border-color: transparent; }
+.avatar-tone-1 { background: #0ea5e9; color: #fff; border-color: transparent; }
+.avatar-tone-2 { background: #6366f1; color: #fff; border-color: transparent; }
+.avatar-tone-3 { background: #8b5cf6; color: #fff; border-color: transparent; }
+.avatar-tone-4 { background: #14b8a6; color: #fff; border-color: transparent; }
+.avatar-tone-5 { background: #f97316; color: #fff; border-color: transparent; }
+.avatar-tone-6 { background: #f59e0b; color: #fff; border-color: transparent; }
+.avatar-tone-7 { background: #10b981; color: #fff; border-color: transparent; }
+.avatar-tone-8 { background: #ef4444; color: #fff; border-color: transparent; }
 
 .message-body {
   max-width: 70%;
@@ -940,9 +967,15 @@ body.is-resizing {
 
 .option .fill {
   position: absolute;
-  inset: 0 auto 0 0;
-  width: 0%;
-  background: #1f2b44;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.option .fill .fill-rect {
+  fill: #1f2b44;
 }
 
 .option .label {
@@ -1333,11 +1366,15 @@ body.is-resizing {
 
 .yoda-blade .fill {
   width: 100%;
-  border-radius: 0 50px 50px 0;
-  left: 0px;
+  height: 100%;
+  left: 0;
   z-index: 0;
-  background: #fff;
+  border-radius: 0 50px 50px 0;
   animation: yoda-core 0.9s steps(5, end) infinite;
+}
+
+.yoda-blade .fill .fill-rect {
+  fill: #fff;
 }
 
 .yoda-blade .tip,
@@ -1591,8 +1628,7 @@ body.is-resizing {
 }
 
 .poll-option--saber .yoda-blade .fill {
-  background: #fff;
-  box-shadow: inset 0 0 5px #01fe32, 0 0 20px #08ff35, 0 0 30px #08ff35, 0 0 20px #08ff35;
+  filter: drop-shadow(0 0 20px #08ff35) drop-shadow(0 0 30px #08ff35) drop-shadow(0 0 20px #08ff35);
   animation: yoda-flicker 1.2s steps(6, end) infinite, yoda-core 0.9s steps(5, end) infinite;
 }
 
@@ -1646,11 +1682,16 @@ body.is-resizing {
   top: 0;
   bottom: 0;
   left: 0;
-  width: 0;
+  width: 100%;
+  height: 100%;
   background: color-mix(in srgb, var(--accent) 18%, transparent);
   transform-origin: left center;
   z-index: 0;
   pointer-events: none;
+}
+
+.poll-option-bar-fill {
+  fill: color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 .poll-option-label,

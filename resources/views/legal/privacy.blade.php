@@ -25,12 +25,13 @@
             </ul>
 
             <h2>2. What we collect</h2>
-            <p>We collect only the data needed to operate the chat:</p>
-            <p><strong>Account data (beta users):</strong></p>
+            <p>We collect only the data needed to operate the service and keep it safe:</p>
+            <p><strong>Account data (open beta users):</strong></p>
             <ul>
                 <li>name or display name</li>
                 <li>email</li>
                 <li>hashed password</li>
+                <li>email verification codes and verification timestamps</li>
             </ul>
             <p><strong>Chat data:</strong></p>
             <ul>
@@ -38,6 +39,7 @@
                 <li>participant display names</li>
                 <li>public messages and questions</li>
                 <li>ratings (if used)</li>
+                <li>poll votes and reactions</li>
             </ul>
             <p><strong>Technical data:</strong></p>
             <ul>
@@ -45,6 +47,8 @@
                 <li>browser headers</li>
                 <li>device fingerprint</li>
                 <li>timestamps (used for security and abuse prevention)</li>
+                <li>audit logs for moderation and account actions</li>
+                <li>client error reports and operational diagnostics</li>
             </ul>
             <p><strong>Cookies:</strong></p>
             <ul>
@@ -63,8 +67,9 @@
             <h2>4. Why we use this data</h2>
             <ul>
                 <li>operate the chat and let users join rooms</li>
-                <li>authenticate beta accounts</li>
+                <li>authenticate and verify open beta accounts</li>
                 <li>protect the service from spam and attacks</li>
+                <li>enforce bans and moderation actions</li>
                 <li>troubleshoot issues and maintain performance</li>
             </ul>
             <p>There is no automated decision-making or profiling.</p>
@@ -72,8 +77,9 @@
             <h2>5. Storage and retention</h2>
             <ul>
                 <li>Chat rooms and messages remain until removed by the site owner.</li>
-                <li>Beta account data is kept until the user requests deletion.</li>
-                <li>IP logs and security data are kept only as long as needed for protection and debugging.</li>
+                <li>Open beta account data is kept until the user requests deletion or the account is removed.</li>
+                <li>Email verification codes expire automatically after a short time and are deleted after successful verification.</li>
+                <li>Audit logs, client error reports, and security data are kept only as long as needed for protection, debugging, and abuse prevention.</li>
                 <li>Backups (if any) follow the same deletion rules.</li>
             </ul>
             <p>Data is hosted within the EU/EEA.</p>
@@ -82,6 +88,8 @@
             <p>We take basic measures to protect personal data:</p>
             <ul>
                 <li>hashed passwords (bcrypt/argon2)</li>
+                <li>private realtime channels for host-only moderation data</li>
+                <li>security headers, CSRF protection, and rate limiting</li>
                 <li>access to server and admin tools is restricted</li>
                 <li>security monitoring and log checks</li>
             </ul>
