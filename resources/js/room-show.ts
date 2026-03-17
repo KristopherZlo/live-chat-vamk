@@ -1,23 +1,9 @@
 import 'emoji-picker-element';
 import emojiDataUrl from 'emoji-picker-element-data/en/emojibase/data.json?url';
 import { resolveQueueSoundUrl } from './design/queue-sound';
+import { onRoomPageReady } from './room-show/config';
 
-            const getRoomPageConfig = () => {
-                const configEl = document.getElementById('roomPageConfig');
-                const rawConfig = configEl?.getAttribute('data-room-page-config');
-                if (!rawConfig) return null;
-                try {
-                    return JSON.parse(rawConfig);
-                } catch (error) {
-                    console.error('Failed to parse room page config', error);
-                    return null;
-                }
-            };
-            document.addEventListener('DOMContentLoaded', () => {
-                const roomPageConfig = getRoomPageConfig();
-                if (!roomPageConfig) return;
-                if (window.__chatPageBound) return;
-                window.__chatPageBound = true;
+            onRoomPageReady((roomPageConfig) => {
                 const roomSlug = roomPageConfig.roomSlug;
                 const isOwnerUser = roomPageConfig.isOwnerUser;
                 const currentUserId = roomPageConfig.currentUserId;
