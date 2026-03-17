@@ -1,11 +1,15 @@
+import 'emoji-picker-element';
+import emojiDataUrl from 'emoji-picker-element-data/en/emojibase/data.json?url';
 import { resolveQueueSoundUrl } from './design/queue-sound';
 
             const getRoomPageConfig = () => {
                 const configEl = document.getElementById('roomPageConfig');
-                if (!configEl?.textContent) return null;
+                const rawConfig = configEl?.getAttribute('data-room-page-config');
+                if (!rawConfig) return null;
                 try {
-                    return JSON.parse(configEl.textContent);
+                    return JSON.parse(rawConfig);
                 } catch (error) {
+                    console.error('Failed to parse room page config', error);
                     return null;
                 }
             };
@@ -40,7 +44,7 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                 const banDestroyUrlTemplate = roomPageConfig.banDestroyUrlTemplate;
                 const pollVoteUrlTemplate = roomPageConfig.pollVoteUrlTemplate;
                 const roomIsClosed = roomPageConfig.roomIsClosed;
-                const viewerIsBanned = roomPageConfig.viewerIsBanned;
+                const isDevUser = Boolean(roomPageConfig.isDevUser);
                 const rootWindow = window;
                 const bansPanel = document.querySelector('[data-bans-panel]');
                 const bannedParticipantIds = new Set();
@@ -1166,6 +1170,10 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                             headers: { 'X-Requested-With': 'XMLHttpRequest' },
                         });
                         if (!response.ok) {
+                            if (response.status === 403) {
+                                handleGuestAccessRevoked();
+                                return;
+                            }
                             throw new Error(`HTTP ${response.status}`);
                         }
                         const payload = await response.json();
@@ -1228,7 +1236,7 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                 const sendButton = document.getElementById('sendButton');
                 const chatEmojiToggle = document.getElementById('chatEmojiToggle');
                 const chatEmojiPanel = document.getElementById('chatEmojiPanel');
-                const chatEmojiPicker = document.getElementById('chatEmojiPicker');
+                const chatEmojiPickerMount = document.getElementById('chatEmojiPickerMount');
                 const pollToggleButton = document.querySelector('[data-poll-toggle]');
                 const pollModeInput = document.getElementById('pollMode');
                 const pollComposer = document.querySelector('[data-poll-composer]');
@@ -1242,7 +1250,44 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                 const reactionMenuMorePanel = reactionMenu?.querySelector('[data-reaction-more-panel]');
                 const reactionMenuCurrent = reactionMenu?.querySelector('[data-reaction-current]');
                 const reactionMenuCurrentEmoji = reactionMenu?.querySelector('[data-reaction-current-emoji]');
+                let chatEmojiPicker = null;
                 let reactionEmojiPicker = null;
+                const configureEmojiPicker = (picker) => {
+                    if (!picker) return;
+                    if ('dataSource' in picker) {
+                        picker.dataSource = emojiDataUrl;
+                    }
+                    if (typeof picker.setAttribute !== 'function') return;
+                    picker.setAttribute('data-source', emojiDataUrl);
+                };
+                const bindChatEmojiPicker = (picker) => {
+                    if (!picker) return;
+                    picker.addEventListener('emoji-click', (event) => {
+                        const emoji = event.detail?.unicode || event.detail?.emoji || '';
+                        if (!emoji) return;
+                        if (emojiPickerMode === 'reaction' && reactionPickerTarget) {
+                            toggleReaction(reactionPickerTarget, emoji);
+                            closeReactionMenus();
+                            hideEmojiPanel();
+                        } else {
+                            insertEmojiIntoInput(emoji);
+                            chatInput?.focus();
+                        }
+                    });
+                };
+                const ensureChatEmojiPicker = () => {
+                    if (chatEmojiPicker) return chatEmojiPicker;
+                    if (!chatEmojiPickerMount) return null;
+                    const picker = document.createElement('emoji-picker');
+                    picker.id = 'chatEmojiPicker';
+                    picker.className = 'emoji-picker-element light';
+                    configureEmojiPicker(picker);
+                    bindChatEmojiPicker(picker);
+                    chatEmojiPickerMount.replaceChildren(picker);
+                    chatEmojiPicker = picker;
+                    syncEmojiPickerTheme();
+                    return picker;
+                };
                 const isMobileViewport = () => window.matchMedia('(max-width: 640px)').matches;
                 const setEmojiToggleState = (isActive) => {
                     if (!chatEmojiToggle) return;
@@ -1251,10 +1296,12 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                 const syncEmojiPickerTheme = () => {
                     const isDark = document.body?.dataset?.theme === 'dark';
                     if (chatEmojiPicker) {
+                        configureEmojiPicker(chatEmojiPicker);
                         chatEmojiPicker.classList.remove('dark', 'light');
                         chatEmojiPicker.classList.add(isDark ? 'dark' : 'light');
                     }
                     if (reactionEmojiPicker) {
+                        configureEmojiPicker(reactionEmojiPicker);
                         reactionEmojiPicker.classList.remove('dark', 'light');
                         reactionEmojiPicker.classList.add(isDark ? 'dark' : 'light');
                     }
@@ -1931,7 +1978,9 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                                         </span>
                                     </span>
                                     <span class="option yoda-blade ${selected ? 'selected' : ''}">
-                                        <span class="fill" style="width: ${escapeHtml(String(percent))}%;"></span>
+                                        <svg class="fill" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                                            <rect class="fill-rect" x="0" y="0" width="${escapeHtml(String(percent))}" height="100"></rect>
+                                        </svg>
                                         <span class="tip" aria-hidden="true"></span>
                                         <span class="label">${escapeHtml(optionLabel)}</span>
                                         <span class="right">
@@ -1949,7 +1998,9 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                                     <span class="poll-option-count">${escapeHtml(String(votes))}</span>
                                     <span class="poll-option-percent">${escapeHtml(String(percent))}%</span>
                                 </span>
-                                <span class="poll-option-bar" style="width: ${escapeHtml(String(percent))}%;"></span>
+                                <svg class="poll-option-bar" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                                    <rect class="poll-option-bar-fill" x="0" y="0" width="${escapeHtml(String(percent))}" height="100"></rect>
+                                </svg>
                             </button>
                         `;
                     }).join('');
@@ -1974,7 +2025,7 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                 const renderPoll = (messageEl, poll, myVoteId = null) => {
                     if (!messageEl || !poll) return;
                     const pollClosed = Boolean(poll?.is_closed);
-                    const interactive = !pollClosed && !roomIsClosed && !viewerIsBanned;
+                    const interactive = !pollClosed && !roomIsClosed;
                     const pollCard = messageEl.querySelector('[data-poll-card]');
                     const markup = buildPollMarkup(poll, myVoteId, interactive);
                     if (!markup) return;
@@ -2064,7 +2115,7 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                     if (asQuestion) container.classList.add('message--question');
                     const authorNameRaw = author?.name || currentUserName || 'Guest';
                     const authorName = escapeHtml(authorNameRaw);
-                    const avatarColor = avatarColorFromName(authorNameRaw);
+                    const avatarToneClass = avatarToneClassFromName(authorNameRaw);
                     const initials = escapeHtml((authorNameRaw || '??').slice(0, 2).toUpperCase());
                     const devBadge = author.is_dev ? '<span class="message-badge message-badge-dev">dev</span>' : '';
                     const replyDeleted = Boolean(replyTo?.is_deleted);
@@ -2078,7 +2129,7 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                         : '';
                     const hasPoll = poll && Array.isArray(poll.options) && poll.options.length > 0;
                     const pollVoteId = poll?.my_vote_id ?? null;
-                    const pollInteractive = hasPoll && !poll?.is_closed && !roomIsClosed && !viewerIsBanned;
+                    const pollInteractive = hasPoll && !poll?.is_closed && !roomIsClosed;
                     const pollHtml = hasPoll ? buildPollMarkup(poll, pollVoteId, pollInteractive) : '';
                     const messageTextHtml = `<div class="message-text">${escapeHtml(content)}</div>`;
                     container.dataset.userId = authorUserId ?? '';
@@ -2116,7 +2167,7 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                         </button>
                     ` : '';
                     container.innerHTML = `
-                        <div class="message-avatar colorized" style="background:${avatarColor}; color:#fff; border-color:transparent;">${initials}</div>
+                        <div class="message-avatar colorized ${avatarToneClass}">${initials}</div>
                         <div class="message-content">
                             <div class="message-body">
                                 <button type="button" class="message-menu-trigger" data-message-menu-trigger aria-label="Message actions" aria-expanded="false">
@@ -2271,6 +2322,7 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                     picker.id = 'reactionEmojiPicker';
                     picker.className = 'emoji-picker-element compact';
                     picker.dataset.reactionPicker = '1';
+                    configureEmojiPicker(picker);
                     picker.addEventListener('emoji-click', (event) => {
                         const emoji = event.detail?.unicode || event.detail?.emoji || '';
                         if (!emoji || !activeReactionMessage) return;
@@ -2634,18 +2686,7 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                     }
                 };
 
-                const isPayloadFromMe = (payload) => {
-                    if (!payload) return false;
-                    const actorUserId = payload.actor_user_id ? Number(payload.actor_user_id) : null;
-                    const actorParticipantId = payload.actor_participant_id ? Number(payload.actor_participant_id) : null;
-                    if (actorUserId && currentUserId && Number(currentUserId) === actorUserId) return true;
-                    if (actorParticipantId && currentParticipantId && Number(currentParticipantId) === actorParticipantId) return true;
-                    return false;
-                };
-                const getMyReactions = (messageEl, payload) => {
-                    if (isPayloadFromMe(payload) && payload?.your_reactions && Array.isArray(payload.your_reactions)) {
-                        return payload.your_reactions;
-                    }
+                const getMyReactions = (messageEl) => {
                     return parseJsonSafe(messageEl?.dataset?.myReactions, []);
                 };
                 const toggleReaction = async (messageEl, emoji) => {
@@ -2673,6 +2714,9 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                         if (!response.ok) {
                             console.error('Reaction request failed', response.status);
                             renderReactions(messageEl, previous.reactions, previous.mine);
+                            if (response.status === 403) {
+                                handleGuestAccessRevoked();
+                            }
                             if (activeReactionMessage === messageEl) {
                                 setReactionMenuActive(messageEl);
                             }
@@ -2683,7 +2727,7 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                         const reactions = Array.isArray(payload.reactions) ? payload.reactions : null;
                         const mineRaw = Array.isArray(payload.your_reactions)
                             ? payload.your_reactions
-                            : getMyReactions(messageEl, payload);
+                            : getMyReactions(messageEl);
                         const mine = Array.isArray(mineRaw) ? mineRaw : [];
                         if (Array.isArray(reactions)) {
                             renderReactions(messageEl, reactions, mine);
@@ -2709,17 +2753,14 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                 const updateReactionsFromEvent = (messageId, reactions, payload = {}) => {
                     const messageEl = document.querySelector(`.message[data-message-id="${messageId}"]`);
                     if (!messageEl) return;
-                    const mine = getMyReactions(messageEl, payload);
+                    const mine = getMyReactions(messageEl);
                     renderReactions(messageEl, reactions || [], mine);
                     if (activeReactionMessage === messageEl) {
                         setReactionMenuActive(messageEl);
                     }
                 };
                 const getPollData = (messageEl) => parseJsonSafe(messageEl?.dataset?.poll, null);
-                const getMyPollVote = (messageEl, payload, pollPayload) => {
-                    if (isPayloadFromMe(payload) && payload?.your_vote_id) {
-                        return payload.your_vote_id;
-                    }
+                const getMyPollVote = (messageEl, _payload, pollPayload) => {
                     const existing = getPollData(messageEl);
                     return existing?.my_vote_id ?? pollPayload?.my_vote_id ?? null;
                 };
@@ -2763,7 +2804,7 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                     if (!messageEl) return;
                     const poll = getPollData(messageEl);
                     if (!poll || !poll.id) return;
-                    if (poll.is_closed || roomIsClosed || viewerIsBanned) {
+                    if (poll.is_closed || roomIsClosed) {
                         showPollError('Voting is closed for this poll.');
                         return;
                     }
@@ -2775,6 +2816,10 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                         const { ok, status, payload } = await requestPollVote(pollId, option.dataset.pollOptionId);
                         if (status === 429) {
                             showThrottleNotice(payload?.message || 'You are voting too quickly. Please wait.');
+                            return;
+                        }
+                        if (status === 403) {
+                            handleGuestAccessRevoked();
                             return;
                         }
                         if (!ok) {
@@ -2833,6 +2878,7 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                 };
                 const showEmojiPanel = (mode = 'input', targetMessage = null) => {
                     if (!chatEmojiPanel) return;
+                    ensureChatEmojiPicker();
                     emojiPickerMode = mode;
                     reactionPickerTarget = targetMessage;
                     chatEmojiPanel.hidden = false;
@@ -2856,13 +2902,19 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                     updateSendButtonState();
                 };
 
-                const showBanState = (messageText = 'You were banned by the host. Chat is locked.') => {
+                const showBanState = (messageText = 'Access to this room was revoked. Reloading...') => {
                     if (!chatInputWrapper) return;
                     chatInputWrapper.innerHTML = `
                         <div class="flash flash-danger">
                             <span>${escapeHtml(messageText)}</span>
                         </div>
                     `;
+                };
+                const handleGuestAccessRevoked = (messageText = 'Access to this room was revoked. Reloading...') => {
+                    if (isOwnerUser) return false;
+                    showBanState(messageText);
+                    window.setTimeout(() => window.location.reload(), 150);
+                    return true;
                 };
 
                 const getBanList = () => bansPanel?.querySelector('[data-ban-list]') || null;
@@ -3641,14 +3693,14 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                     const time = escapeHtml(node?.time || '');
                     const isQuestion = Boolean(node?.is_question);
                     const targetId = escapeHtml(String(node?.id || ''));
-                    const avatarBg = avatarColorFromName(authorName);
+                    const avatarToneClass = avatarToneClassFromName(authorName);
                     const initials = escapeHtml(initialsFromName(authorName));
                     const nodeContent = node?.deleted ? deletedMessageText : (node?.content || '');
 
                     const item = document.createElement('div');
                     item.className = 'reply-thread-message';
                     item.innerHTML = `
-                        <div class="reply-thread-avatar" style="background: ${avatarBg}; color: #fff;">${initials}</div>
+                        <div class="reply-thread-avatar ${avatarToneClass}">${initials}</div>
                         <div class="reply-thread-bubble">
                             <div class="reply-thread-meta">
                                 <span class="reply-thread-author">${author}</span>
@@ -3682,7 +3734,7 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                     const replyLabel = replyCount === 1 ? 'reply' : 'replies';
                     const parentName = parent.author || 'Guest';
                     const parentInitials = initialsFromName(parentName);
-                    const parentAvatarBg = avatarColorFromName(parentName);
+                    const parentAvatarToneClass = avatarToneClassFromName(parentName);
                     const parentContent = parent.deleted ? deletedMessageText : (parent.content || '');
                     activeReplyParentId = String(parent.id || '');
                     replyThreadsState.set(String(parent.id || ''), threadData);
@@ -3699,7 +3751,7 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                     header.className = 'reply-detail-header';
                     header.innerHTML = `
                         <div class="reply-question">
-                            <div class="reply-question-avatar" style="background: ${parentAvatarBg}; color: #fff;">${escapeHtml(parentInitials)}</div>
+                            <div class="reply-question-avatar ${parentAvatarToneClass}">${escapeHtml(parentInitials)}</div>
                             <div class="reply-question-content">
                                 <div class="reply-question-meta">
                                     <span class="reply-question-author">${escapeHtml(parentName)}</span>
@@ -4056,21 +4108,6 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                                 return;
                             }
                             sendButton?.click();
-                        }
-                    });
-                }
-
-                if (chatEmojiPicker) {
-                    chatEmojiPicker.addEventListener('emoji-click', (event) => {
-                        const emoji = event.detail?.unicode || event.detail?.emoji || '';
-                        if (!emoji) return;
-                        if (emojiPickerMode === 'reaction' && reactionPickerTarget) {
-                            toggleReaction(reactionPickerTarget, emoji);
-                            closeReactionMenus();
-                            hideEmojiPanel();
-                        } else {
-                            insertEmojiIntoInput(emoji);
-                            chatInput?.focus();
                         }
                     });
                 }
@@ -4452,6 +4489,9 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                         });
                         const ok = response.status >= 200 && response.status < 400;
                         if (!ok) {
+                            if (response.status === 403) {
+                                handleGuestAccessRevoked();
+                            }
                             console.error('Remote form failed', response.status);
                             return false;
                         }
@@ -4610,16 +4650,16 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                     });
                 };
 
-                const avatarColorFromName = (name = 'Guest') => {
+                const avatarToneFromName = (name = 'Guest') => {
                     const str = String(name || 'Guest');
                     let hash = 0;
                     for (let i = 0; i < str.length; i += 1) {
                         hash = ((hash << 5) - hash) + str.charCodeAt(i);
                         hash |= 0;
                     }
-                    const idx = Math.abs(hash) % avatarPalette.length;
-                    return avatarPalette[idx];
+                    return Math.abs(hash) % avatarPalette.length;
                 };
+                const avatarToneClassFromName = (name = 'Guest') => `avatar-tone-${avatarToneFromName(name)}`;
                 const initialsFromName = (name = 'Guest') => {
                     const parts = String(name || 'Guest').trim().split(/\s+/).filter(Boolean);
                     if (!parts.length) return 'GU';
@@ -4871,6 +4911,10 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                         });
 
                         if (!response.ok) {
+                            if (response.status === 403) {
+                                handleGuestAccessRevoked();
+                                return;
+                            }
                             console.error('Failed to refresh my questions panel', response.status);
                             return;
                         }
@@ -5106,53 +5150,60 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                 };
 
                 const initRealtime = () => {
-                    if (window.Echo) {
-                        const channelName = 'room.' + roomSlug;
-                        window.Echo.channel(channelName)
-                            .listen('MessageSent', (e) => {
-                                enqueueIncomingMessage(e);
-                            })
-                            .listen('ReactionUpdated', (payload) => {
-                                updateReactionsFromEvent(payload.message_id, payload.reactions, payload);
-                            })
-                            .listen('PollUpdated', (payload) => {
-                                if (payload?.message_id && payload?.poll) {
-                                    updatePollFromEvent(payload.message_id, payload.poll, payload);
-                                }
-                            })
-                            .listen('ParticipantBanned', (payload) => {
-                                applyBanUpdate(payload);
-                            })
-                            .listen('ParticipantUnbanned', (payload) => {
-                                applyUnbanUpdate(payload);
-                            })
-                            .listen('MessageDeleted', (payload) => {
-                                handleMessageDeleted(payload.id);
-                            })
-                            .listen('QuestionCreated', (payload) => {
-                                if (questionsPanel && payload?.id) {
-                                    upsertQueueItem(payload.id);
-                                }
-                                if (myQuestionsPanel) {
-                                    reloadMyQuestionsPanel();
-                                }
-                            })
-                            .listen('QuestionUpdated', (payload) => {
-                                if (questionsPanel && payload?.id) {
-                                    upsertQueueItem(payload.id);
-                                }
-                                if (myQuestionsPanel) {
-                                    reloadMyQuestionsPanel();
-                                }
-                            })
-                            .error(() => {
-                                startQuestionsPolling();
-                                startMyQuestionsPolling();
-                            });
+                    startMyQuestionsPolling();
+                    if (!window.Echo) {
+                        startQuestionsPolling();
                         return;
                     }
-                    startQuestionsPolling();
-                    startMyQuestionsPolling();
+
+                    const channelName = 'room.' + roomSlug;
+                    window.Echo.channel(channelName)
+                        .listen('MessageSent', (e) => {
+                            enqueueIncomingMessage(e);
+                        })
+                        .listen('ReactionUpdated', (payload) => {
+                            updateReactionsFromEvent(payload.message_id, payload.reactions, payload);
+                        })
+                        .listen('PollUpdated', (payload) => {
+                            if (payload?.message_id && payload?.poll) {
+                                updatePollFromEvent(payload.message_id, payload.poll, payload);
+                            }
+                        })
+                        .listen('MessageDeleted', (payload) => {
+                            handleMessageDeleted(payload.id);
+                        })
+                        .error(() => {
+                            startQuestionsPolling();
+                        });
+
+                    const canUseHostRealtime = Boolean((questionsPanel || bansPanel) && (isOwnerUser || isDevUser));
+                    if (!canUseHostRealtime) {
+                        if (questionsPanel) {
+                            startQuestionsPolling();
+                        }
+                        return;
+                    }
+
+                    window.Echo.private(`room.host.${roomSlug}`)
+                        .listen('ParticipantBanned', (payload) => {
+                            applyBanUpdate(payload);
+                        })
+                        .listen('ParticipantUnbanned', (payload) => {
+                            applyUnbanUpdate(payload);
+                        })
+                        .listen('QuestionCreated', (payload) => {
+                            if (questionsPanel && payload?.id) {
+                                upsertQueueItem(payload.id);
+                            }
+                        })
+                        .listen('QuestionUpdated', (payload) => {
+                            if (questionsPanel && payload?.id) {
+                                upsertQueueItem(payload.id);
+                            }
+                        })
+                        .error(() => {
+                            startQuestionsPolling();
+                        });
                 };
 
                 const echoReady = window.__echoReady;
@@ -5270,7 +5321,7 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
 
                             if (response.status === 403) {
                                 if (optimisticEl) optimisticEl.remove();
-                                showBanState('You were banned by the host. Chat is locked.');
+                                handleGuestAccessRevoked();
                                 return;
                             }
 
@@ -5289,6 +5340,9 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
                             }
 
                             const payload = await response.json().catch(() => ({}));
+                            if (payload?.question_id && myQuestionsPanel) {
+                                reloadMyQuestionsPanel();
+                            }
                             if (isCacodemonTrigger) {
                                 spawnCacodemon();
                             }

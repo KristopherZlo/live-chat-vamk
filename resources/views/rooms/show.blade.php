@@ -7,11 +7,12 @@
     @endphp
     @php
         $avatarPalette = ['#2563eb', '#0ea5e9', '#6366f1', '#8b5cf6', '#14b8a6', '#f97316', '#f59e0b', '#10b981', '#ef4444'];
-        $avatarColor = function (string $name = 'Guest') use ($avatarPalette) {
+        $avatarTone = function (string $name = 'Guest') use ($avatarPalette) {
             $hash = crc32($name);
             $index = abs((int) $hash) % count($avatarPalette);
-            return $avatarPalette[$index];
+            return $index;
         };
+        $avatarToneClass = fn (string $name = 'Guest') => 'avatar-tone-'.$avatarTone($name);
     @endphp
     @php
         $popularReactions = ['❤️', '👍', '👎', '🔥', '🙏', '😁', '😭', '🤔'];
@@ -229,16 +230,6 @@
                     </div>
                     <div class="panel-subtitle">Ask and discuss during the lecture.</div>
                 </div>
-
-                @if($isBanned)
-                    <div class="flash flash-danger" data-flash>
-                        <span>You were banned by the host. Chat is read-only.</span>
-                        <button class="icon-btn flash-close" type="button" data-flash-close aria-label="Close">
-                            <i data-lucide="x"></i>
-                        </button>
-                    </div>
-                @endif
-
                 <div class="chat-subtabs" data-chat-tabs>
                     <button class="chat-tab-btn active" type="button" data-chat-tab="chat">
                         <span>Chat</span>
@@ -270,11 +261,10 @@
                             data-messages-loader
                             role="listitem"
                             hidden
-                            style="text-align:center; padding:12px; color:var(--muted, #6b7280);"
                         >
                             <div
+                                class="message-loader-chip"
                                 data-messages-loader-text
-                                style="display:inline-block; padding:8px 12px; border:1px solid #e5e7eb; border-radius:12px; background:#f8fafc; font-weight:600;"
                             >
                                 Fetching previous messages...
                             </div>
@@ -296,7 +286,7 @@
                                 $deleteUrl = route('rooms.messages.destroy', [$room, $message]);
                                 $canDeleteOwn = ($currentUserId && $message->user_id === $currentUserId)
                                     || ($participant && $message->participant && $participant->id === $message->participant->id);
-                                $avatarBg = $avatarColor($authorName);
+                                $avatarToneClassName = $avatarToneClass($authorName);
                                 $usePrecomputedReactions = isset($reactionsByMessage) && is_array($reactionsByMessage);
                                 $usePrecomputedMine = isset($myReactionsByMessage) && is_array($myReactionsByMessage);
                                 $pollPayload = $pollsByMessage[$message->id] ?? null;
@@ -346,7 +336,7 @@
                                 data-time="{{ $message->created_at?->format('H:i') }}"
                                 data-created="{{ $message->created_at?->toIso8601String() }}"
                             >
-                                <div class="message-avatar colorized" style="background: {{ $avatarBg }}; color: #fff; border-color: transparent;">{{ $initials }}</div>
+                                <div class="message-avatar colorized {{ $avatarToneClassName }}">{{ $initials }}</div>
                                 <div class="message-content">
                                     <div class="message-body">
                                         <button type="button" class="message-menu-trigger" data-message-menu-trigger aria-label="Message actions" aria-expanded="false">
@@ -388,7 +378,7 @@
                                                 $pollMyVoteId = $pollPayload['my_vote_id'] ?? null;
                                                 $pollOptions = $pollPayload['options'] ?? [];
                                                 $pollIsClosed = (bool) ($pollPayload['is_closed'] ?? false);
-                                                $pollCanVote = !$pollIsClosed && !$isClosed && !$isBanned;
+                                                $pollCanVote = !$pollIsClosed && !$isClosed;
                                                 $normalizeStarWarsLabel = static function (string $label): string {
                                                     return (string) \Illuminate\Support\Str::of($label)
                                                         ->lower()
@@ -434,7 +424,9 @@
                                                                     </span>
                                                                 </span>
                                                                 <span class="option yoda-blade {{ $isSelected ? 'selected' : '' }}">
-                                                                    <span class="fill" style="width: {{ $optionPercent }}%;"></span>
+                                                                    <svg class="fill" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                                                                        <rect class="fill-rect" x="0" y="0" width="{{ $optionPercent }}" height="100"></rect>
+                                                                    </svg>
                                                                     <span class="tip" aria-hidden="true"></span>
                                                                     <span class="label">{{ $optionLabel }}</span>
                                                                     <span class="right">
@@ -456,7 +448,9 @@
                                                                     <span class="poll-option-count">{{ $optionVotes }}</span>
                                                                     <span class="poll-option-percent">{{ $optionPercent }}%</span>
                                                                 </span>
-                                                                <span class="poll-option-bar" style="width: {{ $optionPercent }}%;"></span>
+                                                                <svg class="poll-option-bar" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                                                                    <rect class="poll-option-bar-fill" x="0" y="0" width="{{ $optionPercent }}" height="100"></rect>
+                                                                </svg>
                                                             </button>
                                                         @endif
                                                     @endforeach
@@ -559,11 +553,7 @@
                         <div class="reaction-menu-more-panel" data-reaction-more-panel hidden></div>
                     </div>
 
-                    @if($isBanned)
-                        <div class="panel-footer ban-notice">
-                            You were banned by the host. You can still read messages but cannot post.
-                        </div>
-                    @elseif(!$isClosed)
+                    @if(!$isClosed)
                         <div class="chat-input">
                             @if($isOwner)
                                 <div class="quick-responses" data-quick-responses data-default-responses='@json($defaultQuickResponses)'>
@@ -698,7 +688,7 @@
                                     </button>
                                 </div>
                                 <div class="emoji-picker-panel" id="chatEmojiPanel" hidden>
-                                    <emoji-picker id="chatEmojiPicker" class="emoji-picker-element light"></emoji-picker>
+                                    <div id="chatEmojiPickerMount" data-emoji-picker-mount="chat"></div>
                                 </div>
                                 <span class="panel-subtitle chat-hint">Press Enter to send, Shift+Enter for a new line</span>
                             </form>
@@ -852,15 +842,6 @@
             </div>
         </div>
     </div>
-
-    @push('styles')
-        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/emoji-picker-element@1.27.0/themes/light.css">
-    @endpush
-
-    @push('scripts')
-        <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@1.27.0/index.js"></script>
-    @endpush
     @php
         $viteAssetOrNull = static function (string $assetPath): ?string {
             try {
@@ -894,16 +875,14 @@
             'banDestroyUrlTemplate' => route('rooms.bans.destroy', [$room, '__BAN__']),
             'pollVoteUrlTemplate' => route('rooms.polls.vote', [$room, '__POLL__']),
             'roomIsClosed' => $isClosed,
-            'viewerIsBanned' => $isBanned,
             'reactionUrlTemplate' => route('rooms.messages.reactions.toggle', [$room, '__MESSAGE__']),
             'deleteUrlTemplate' => route('rooms.messages.destroy', [$room, '__MESSAGE__']),
             'popularReactions' => $popularReactions,
             'isDevUser' => auth()->user()?->is_dev,
         ];
+        $roomPageConfigJson = json_encode($roomPageConfig, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
     @endphp
-    <script type="application/json" id="roomPageConfig">
-        @json($roomPageConfig)
-    </script>
+    <div id="roomPageConfig" data-room-page-config='{{ $roomPageConfigJson }}' hidden></div>
     @vite('resources/js/room-show.ts')
     @vite('resources/js/quick-responses.ts')
     @vite('resources/js/track-last-visited-room.ts')

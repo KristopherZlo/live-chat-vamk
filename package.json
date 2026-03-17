@@ -33,6 +33,8 @@
     },
     "dependencies": {
         "driver.js": "^1.4.0",
+        "emoji-picker-element": "^1.27.0",
+        "emoji-picker-element-data": "^1.7.2",
         "qrcode": "^1.5.4"
     }
 }
