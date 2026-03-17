@@ -16,7 +16,7 @@ class AdminUpdatePostController extends Controller
 {
     public function storeBlog(Request $request): RedirectResponse
     {
-        $post = new UpdatePost();
+        $post = new UpdatePost;
         $this->persist($post, $request, UpdatePost::TYPE_BLOG);
 
         AuditLog::record($request, 'admin.blog.create', [
@@ -80,7 +80,7 @@ class AdminUpdatePostController extends Controller
 
     public function storeRelease(Request $request): RedirectResponse
     {
-        $post = new UpdatePost();
+        $post = new UpdatePost;
         $this->persist($post, $request, UpdatePost::TYPE_WHATS_NEW);
 
         if ($request->boolean('set_as_version')) {
@@ -156,7 +156,7 @@ class AdminUpdatePostController extends Controller
             'version' => [
                 'required',
                 'string',
-                'max:' . config('ghostroom.limits.update_post.version_max', 50),
+                'max:'.config('ghostroom.limits.update_post.version_max', 50),
             ],
         ]);
 
@@ -181,24 +181,24 @@ class AdminUpdatePostController extends Controller
             'title' => [
                 'required',
                 'string',
-                'max:' . config('ghostroom.limits.update_post.title_max', 255),
+                'max:'.config('ghostroom.limits.update_post.title_max', 255),
             ],
             'slug' => [
                 'nullable',
                 'string',
-                'max:' . config('ghostroom.limits.update_post.slug_max', 255),
+                'max:'.config('ghostroom.limits.update_post.slug_max', 255),
                 Rule::unique('update_posts', 'slug')->ignore($post->id),
             ],
             'excerpt' => [
                 'nullable',
                 'string',
-                'max:' . config('ghostroom.limits.update_post.excerpt_max', 500),
+                'max:'.config('ghostroom.limits.update_post.excerpt_max', 500),
             ],
             'body' => ['required', 'string'],
             'image' => [
                 'nullable',
                 'image',
-                'max:' . config('ghostroom.limits.update_post.image_max_kb', 4096),
+                'max:'.config('ghostroom.limits.update_post.image_max_kb', 4096),
             ],
             'is_published' => ['nullable', 'boolean'],
             'published_at' => ['nullable', 'date'],
@@ -209,14 +209,14 @@ class AdminUpdatePostController extends Controller
             $rules['version'] = [
                 'required',
                 'string',
-                'max:' . config('ghostroom.limits.update_post.version_max', 50),
+                'max:'.config('ghostroom.limits.update_post.version_max', 50),
             ];
             $rules['set_as_version'] = ['nullable', 'boolean'];
         } else {
             $rules['version'] = [
                 'nullable',
                 'string',
-                'max:' . config('ghostroom.limits.update_post.version_max', 50),
+                'max:'.config('ghostroom.limits.update_post.version_max', 50),
             ];
         }
 
@@ -233,7 +233,7 @@ class AdminUpdatePostController extends Controller
             'version' => $type === UpdatePost::TYPE_WHATS_NEW ? $data['version'] : null,
         ]);
 
-        if (!$post->excerpt && $post->body) {
+        if (! $post->excerpt && $post->body) {
             $post->excerpt = Str::limit(strip_tags($post->body), 220);
         }
 

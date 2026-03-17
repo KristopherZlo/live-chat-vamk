@@ -144,7 +144,7 @@ class RoomBanController extends Controller
 
     protected function ensureOwner(Room $room): void
     {
-        if (!Auth::check() || Auth::id() !== $room->user_id) {
+        if (! Auth::check() || Auth::id() !== $room->user_id) {
             abort(403);
         }
     }

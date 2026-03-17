@@ -13,8 +13,7 @@ class VerifyEmailCodeNotification extends Notification
     public function __construct(
         private readonly string $code,
         private readonly int $ttlMinutes,
-    ) {
-    }
+    ) {}
 
     /**
      * Get the notification's delivery channels.

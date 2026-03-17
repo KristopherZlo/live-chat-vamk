@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\UpdatePost;
 use Carbon\Carbon;
-use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class UpdatePostController extends Controller
@@ -65,7 +64,7 @@ class UpdatePostController extends Controller
                         'version' => $version,
                         'title' => $release['title'] ?? ('Version '.$version),
                         'excerpt' => $excerpt,
-                        'cover_url' => !empty($release['image']) ? asset($release['image']) : null,
+                        'cover_url' => ! empty($release['image']) ? asset($release['image']) : null,
                         'date' => $date,
                         'date_human' => $date ? Carbon::parse($date)->format('M d, Y') : null,
                         'is_config' => true,
@@ -120,7 +119,7 @@ class UpdatePostController extends Controller
 
     public function show(UpdatePost $post)
     {
-        if ($post->type !== UpdatePost::TYPE_BLOG || !$post->is_live) {
+        if ($post->type !== UpdatePost::TYPE_BLOG || ! $post->is_live) {
             abort(404);
         }
 

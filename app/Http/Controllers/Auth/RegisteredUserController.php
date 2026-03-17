@@ -10,8 +10,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rules;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class RegisteredUserController extends Controller
@@ -34,14 +34,14 @@ class RegisteredUserController extends Controller
         $this->pruneStaleUnverifiedUsers();
 
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:' . config('ghostroom.limits.user.name_max', 255)],
+            'name' => ['required', 'string', 'max:'.config('ghostroom.limits.user.name_max', 255)],
             'email' => [
                 'required',
                 'string',
                 'lowercase',
                 'email',
-                'max:' . config('ghostroom.limits.user.email_max', 255),
-                'unique:' . User::class,
+                'max:'.config('ghostroom.limits.user.email_max', 255),
+                'unique:'.User::class,
             ],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'website' => ['nullable', 'string', 'max:0'],

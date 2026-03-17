@@ -50,7 +50,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'is_dev' => 'boolean',
         ];
     }
-    
+
     /**
      * @return HasMany<Room, $this>
      */

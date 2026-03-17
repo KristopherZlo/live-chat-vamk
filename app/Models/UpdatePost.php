@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Storage;
 class UpdatePost extends Model
 {
     public const TYPE_BLOG = 'blog';
+
     public const TYPE_WHATS_NEW = 'whats_new';
 
     protected $fillable = [
@@ -54,7 +55,7 @@ class UpdatePost extends Model
 
     public function getCoverUrlAttribute(): ?string
     {
-        if (!$this->image_path) {
+        if (! $this->image_path) {
             return null;
         }
 
@@ -68,6 +69,7 @@ class UpdatePost extends Model
         $request = request();
         if ($request) {
             $base = rtrim($request->getSchemeAndHttpHost().$request->getBasePath(), '/');
+
             return $base.'/storage/'.$path;
         }
 
@@ -76,10 +78,10 @@ class UpdatePost extends Model
 
     public function getIsLiveAttribute(): bool
     {
-        if (!$this->is_published) {
+        if (! $this->is_published) {
             return false;
         }
 
-        return !$this->published_at || $this->published_at->isPast();
+        return ! $this->published_at || $this->published_at->isPast();
     }
 }

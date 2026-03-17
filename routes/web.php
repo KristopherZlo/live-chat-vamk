@@ -1,19 +1,19 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\LandingController;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\RoomController;
-use App\Http\Controllers\MessageController;
-use App\Http\Controllers\MessageReactionController;
-use App\Http\Controllers\MessagePollController;
-use App\Http\Controllers\QuestionController;
-use App\Http\Controllers\RoomBanController;
-use App\Http\Controllers\ClientErrorReportController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AdminUpdatePostController;
-use App\Http\Controllers\UpdatePostController;
+use App\Http\Controllers\ClientErrorReportController;
+use App\Http\Controllers\LandingController;
+use App\Http\Controllers\MessageController;
+use App\Http\Controllers\MessagePollController;
+use App\Http\Controllers\MessageReactionController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\QuestionController;
+use App\Http\Controllers\RoomBanController;
+use App\Http\Controllers\RoomController;
 use App\Http\Controllers\SeoController;
+use App\Http\Controllers\UpdatePostController;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', [RoomController::class, 'landing'])->name('home');
 Route::get('/presentation', LandingController::class)->name('presentation');
@@ -81,14 +81,14 @@ Route::get('/rooms/{room}/messages', [RoomController::class, 'messagesHistory'])
 Route::delete('/rooms/{room}/messages/{message}', [MessageController::class, 'destroy'])
     ->middleware('throttle:room-messages')
     ->name('rooms.messages.destroy');
-    Route::post('/rooms/{room}/messages/{message}/reactions', [MessageReactionController::class, 'toggle'])
-        ->middleware('throttle:room-messages')
-        ->name('rooms.messages.reactions.toggle');
-    Route::post('/rooms/{room}/polls/{poll}/vote', [MessagePollController::class, 'vote'])
-        ->middleware('throttle:room-messages')
-        ->name('rooms.polls.vote');
+Route::post('/rooms/{room}/messages/{message}/reactions', [MessageReactionController::class, 'toggle'])
+    ->middleware('throttle:room-messages')
+    ->name('rooms.messages.reactions.toggle');
+Route::post('/rooms/{room}/polls/{poll}/vote', [MessagePollController::class, 'vote'])
+    ->middleware('throttle:room-messages')
+    ->name('rooms.polls.vote');
 
-    Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
     // ... тут уже есть dashboard / rooms.create / rooms.store
 
     // Изменить статус вопроса (только владелец комнаты)
@@ -150,7 +150,9 @@ if (app()->environment('local')) {
         Route::get('/404', fn () => abort(404));
         Route::get('/419', fn () => abort(419));
         Route::get('/429', fn () => abort(429));
-        Route::get('/500', function () { throw new Exception('Test 500'); });
+        Route::get('/500', function () {
+            throw new Exception('Test 500');
+        });
         Route::get('/503', fn () => abort(503));
     });
 }

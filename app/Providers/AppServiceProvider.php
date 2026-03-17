@@ -7,8 +7,8 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
-use Illuminate\Support\Str;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -152,7 +152,7 @@ class AppServiceProvider extends ServiceProvider
                 $limits[] = Limit::perMinute($perMinuteRoom)->by('room|'.$roomId);
             }
 
-            if (!$isAuthenticated && $fingerprint && $roomId) {
+            if (! $isAuthenticated && $fingerprint && $roomId) {
                 $perMinuteFingerprint = (int) config('ghostroom.limits.room.messages_per_minute_fingerprint', $perMinute);
                 $limits[] = Limit::perMinute($perMinuteFingerprint)->by('room|'.$roomId.'|fp|'.$fingerprint);
             }

@@ -143,7 +143,7 @@ class AdminController extends Controller
             'code' => [
                 'nullable',
                 'string',
-                'max:' . config('ghostroom.limits.admin.invite_code_max', 64),
+                'max:'.config('ghostroom.limits.admin.invite_code_max', 64),
                 'unique:invite_codes,code',
             ],
         ]);
@@ -190,27 +190,27 @@ class AdminController extends Controller
             'session_token' => [
                 'nullable',
                 'string',
-                'max:' . config('ghostroom.limits.admin.session_token_max', 255),
+                'max:'.config('ghostroom.limits.admin.session_token_max', 255),
             ],
             'display_name' => [
                 'nullable',
                 'string',
-                'max:' . config('ghostroom.limits.admin.display_name_max', 255),
+                'max:'.config('ghostroom.limits.admin.display_name_max', 255),
             ],
             'ip_address' => [
                 'nullable',
                 'string',
-                'max:' . config('ghostroom.limits.admin.ip_address_max', 255),
+                'max:'.config('ghostroom.limits.admin.ip_address_max', 255),
             ],
             'fingerprint' => [
                 'nullable',
                 'string',
-                'max:' . config('ghostroom.limits.admin.fingerprint_max', 255),
+                'max:'.config('ghostroom.limits.admin.fingerprint_max', 255),
             ],
         ]);
 
         $participant = null;
-        if (!empty($data['participant_id'])) {
+        if (! empty($data['participant_id'])) {
             $participant = Participant::find($data['participant_id']);
         }
 
@@ -321,7 +321,7 @@ class AdminController extends Controller
                 }
             }
 
-            if (!empty($missing)) {
+            if (! empty($missing)) {
                 return [
                     'label' => 'Realtime',
                     'ok' => false,
@@ -352,13 +352,13 @@ class AdminController extends Controller
             $ok = empty($missing);
             $details = $ok ? 'pusher' : 'Missing: '.implode(', ', $missing);
         } elseif ($driver === 'ably') {
-            $ok = !empty($connection['key']);
+            $ok = ! empty($connection['key']);
             $details = $ok ? 'ably' : 'Missing: key';
         } elseif (in_array($driver, ['log', 'null'], true)) {
             $ok = false;
             $details = $driver.' (disabled)';
         } else {
-            $ok = !empty($connection);
+            $ok = ! empty($connection);
             $details = $connection ? $driver : $driver.' (unconfigured)';
         }
 

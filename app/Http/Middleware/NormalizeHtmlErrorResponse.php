@@ -9,9 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class NormalizeHtmlErrorResponse
 {
-    public function __construct(private readonly ErrorHtmlNormalizer $normalizer)
-    {
-    }
+    public function __construct(private readonly ErrorHtmlNormalizer $normalizer) {}
 
     public function handle(Request $request, Closure $next): Response
     {

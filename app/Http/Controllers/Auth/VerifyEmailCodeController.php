@@ -45,4 +45,3 @@ class VerifyEmailCodeController extends Controller
         return redirect()->intended(route('dashboard'));
     }
 }
-

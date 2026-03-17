@@ -20,7 +20,7 @@ class AdminIpGuard
                 ->filter()
                 ->all();
 
-            if (!empty($allowedList) && !in_array($request->ip(), $allowedList, true)) {
+            if (! empty($allowedList) && ! in_array($request->ip(), $allowedList, true)) {
                 abort(403, 'Admin access denied from this IP');
             }
         }

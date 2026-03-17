@@ -2,6 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\MessageDeleted;
+use App\Events\MessageSent;
+use App\Events\QuestionCreated;
+use App\Events\QuestionUpdated;
 use App\Models\AuditLog;
 use App\Models\Message;
 use App\Models\MessagePoll;
@@ -13,10 +17,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use App\Events\MessageSent;
-use App\Events\QuestionCreated;
-use App\Events\MessageDeleted;
-use App\Events\QuestionUpdated;
 
 class MessageController extends Controller
 {
@@ -24,7 +24,7 @@ class MessageController extends Controller
     {
         $user = Auth::user();
         $isOwner = $user && $user->id === $room->user_id;
-        $isDevUser = $user && !$isOwner && $user->is_dev;
+        $isDevUser = $user && ! $isOwner && $user->is_dev;
         $ipAddress = $request->ip();
         $fingerprint = $request->cookie('lc_fp');
 
@@ -45,7 +45,7 @@ class MessageController extends Controller
             'content' => [
                 'required',
                 'string',
-                'max:' . config('ghostroom.limits.message.content_max', 2048),
+                'max:'.config('ghostroom.limits.message.content_max', 2048),
             ],
             'as_question' => ['nullable', 'boolean'],
             'reply_to_id' => ['nullable', 'integer', 'exists:messages,id'],
@@ -54,7 +54,7 @@ class MessageController extends Controller
             'poll_options.*' => [
                 'nullable',
                 'string',
-                'max:' . config('ghostroom.limits.message.poll_option_max', 480),
+                'max:'.config('ghostroom.limits.message.poll_option_max', 480),
             ],
         ]);
 
@@ -64,7 +64,7 @@ class MessageController extends Controller
         if ($isOwner) {
             $participant = null;
         } else {
-            $sessionKey = 'room_participant_' . $room->id;
+            $sessionKey = 'room_participant_'.$room->id;
             $participantId = $request->session()->get($sessionKey);
 
             if ($participantId) {
@@ -73,12 +73,12 @@ class MessageController extends Controller
                     $participant->display_name = $user->name;
                     $participant->save();
                 }
-                if (!$participant) {
+                if (! $participant) {
                     $request->session()->forget($sessionKey);
                 }
             }
 
-            if (!$participant) {
+            if (! $participant) {
                 return back()->withErrors('Session expired. Please refresh and try again.');
             }
         }
@@ -97,13 +97,14 @@ class MessageController extends Controller
             ->map(fn ($option) => trim((string) $option))
             ->filter(fn ($option) => $option !== '')
             ->values();
-        $isPoll = !empty($data['poll_mode']) || $pollOptions->isNotEmpty();
+        $isPoll = ! empty($data['poll_mode']) || $pollOptions->isNotEmpty();
 
-        if ($isPoll && (!$isOwner && !$isDevUser)) {
+        if ($isPoll && (! $isOwner && ! $isDevUser)) {
             $message = 'You cannot create polls in this room.';
             if ($request->expectsJson()) {
                 return response()->json(['message' => $message], 403);
             }
+
             return back()->withErrors($message);
         }
 
@@ -113,6 +114,7 @@ class MessageController extends Controller
                 if ($request->expectsJson()) {
                     return response()->json(['message' => $message], 422);
                 }
+
                 return back()->withErrors($message);
             }
             if ($pollOptions->count() > 6) {
@@ -120,6 +122,7 @@ class MessageController extends Controller
                 if ($request->expectsJson()) {
                     return response()->json(['message' => $message], 422);
                 }
+
                 return back()->withErrors($message);
             }
             if (Str::length($data['content']) > 255) {
@@ -127,14 +130,15 @@ class MessageController extends Controller
                 if ($request->expectsJson()) {
                     return response()->json(['message' => $message], 422);
                 }
+
                 return back()->withErrors($message);
             }
         }
 
         $replyMessage = null;
-        if (!empty($data['reply_to_id'])) {
+        if (! empty($data['reply_to_id'])) {
             $replyMessage = Message::where('room_id', $room->id)->find($data['reply_to_id']);
-            if (!$replyMessage) {
+            if (! $replyMessage) {
                 return back()->withErrors('Reply target not found in this room.');
             }
         }
@@ -190,7 +194,7 @@ class MessageController extends Controller
 
         $question = null;
 
-        if (!$isPoll && !empty($data['as_question'])) {
+        if (! $isPoll && ! empty($data['as_question'])) {
             $question = Question::create([
                 'room_id' => $room->id,
                 'message_id' => $message->id,
@@ -209,11 +213,11 @@ class MessageController extends Controller
             event(new QuestionCreated($question));
         }
 
-        if ($replyMessage && !$message->relationLoaded('replyTo')) {
+        if ($replyMessage && ! $message->relationLoaded('replyTo')) {
             $message->setRelation('replyTo', $replyMessage);
         }
 
-        if ($poll && !$message->relationLoaded('poll')) {
+        if ($poll && ! $message->relationLoaded('poll')) {
             $message->setRelation('poll', $poll->loadMissing('options'));
         }
 
@@ -268,9 +272,9 @@ class MessageController extends Controller
         $isOwner = $user && $user->id === $room->user_id;
 
         $participant = null;
-        $sessionKey = 'room_participant_' . $room->id;
+        $sessionKey = 'room_participant_'.$room->id;
 
-        if (!$isOwner) {
+        if (! $isOwner) {
             $participantId = $request->session()->get($sessionKey);
             if ($participantId) {
                 $participant = Participant::find($participantId);
@@ -285,8 +289,9 @@ class MessageController extends Controller
             $isAuthor = true;
         }
 
-        if (!$isOwner && !$isAuthor) {
+        if (! $isOwner && ! $isAuthor) {
             $response = ['message' => 'You cannot delete this message.'];
+
             return $request->expectsJson()
                 ? response()->json($response, 403)
                 : abort(403, $response['message']);
@@ -303,7 +308,7 @@ class MessageController extends Controller
         $deletedByUserId = $isOwner || ($user && $message->user_id === $user->id)
             ? $user?->id
             : null;
-        $deletedByParticipantId = !$deletedByUserId && $participant && $message->participant_id === $participant->id
+        $deletedByParticipantId = ! $deletedByUserId && $participant && $message->participant_id === $participant->id
             ? $participant->id
             : null;
 
