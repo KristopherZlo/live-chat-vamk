@@ -2,6 +2,7 @@ import 'emoji-picker-element';
 import emojiDataUrl from 'emoji-picker-element-data/en/emojibase/data.json?url';
 import { resolveQueueSoundUrl } from './design/queue-sound';
 import { onRoomPageReady } from './room-show/config';
+import { roomLogger } from './room-show/logger';
 import { setupChatTabs as createChatTabs } from './room-show/tabs';
 
             onRoomPageReady((roomPageConfig) => {
@@ -476,27 +477,27 @@ import { setupChatTabs as createChatTabs } from './room-show/tabs';
                 };
                 const playQueueSoundSafe = () => {
                     if (!queueSoundUrl) return;
-                    console.debug('[queue-sound] playQueueSoundSafe start', {
+                    roomLogger.debug('[queue-sound] playQueueSoundSafe start', {
                         url: queueSoundUrl,
                         hasApi: typeof window.playQueueSound === 'function',
                         enabled: typeof window.isQueueSoundEnabled === 'function' ? window.isQueueSoundEnabled() : true,
                     });
                     if (typeof window.isQueueSoundEnabled === 'function' && !window.isQueueSoundEnabled()) {
-                        console.debug('[queue-sound] blocked by user setting');
+                        roomLogger.debug('[queue-sound] blocked by user setting');
                         return;
                     }
                     if (typeof window.initQueueSoundPlayer === 'function') {
                         try {
                             window.initQueueSoundPlayer(queueSoundUrl);
                         } catch (err) {
-                            console.debug('[queue-sound] initQueueSoundPlayer error', err);
+                            roomLogger.debug('[queue-sound] initQueueSoundPlayer error', err);
                         }
                     }
                     if (typeof window.playQueueSound === 'function') {
                         try {
                             window.playQueueSound(queueSoundUrl);
                         } catch (err) {
-                            console.debug('[queue-sound] playQueueSound error', err);
+                            roomLogger.debug('[queue-sound] playQueueSound error', err);
                         }
                         return;
                     }
@@ -504,10 +505,10 @@ import { setupChatTabs as createChatTabs } from './room-show/tabs';
                         const audio = new Audio(queueSoundUrl);
                         audio.currentTime = 0;
                         audio.play()
-                            .then(() => console.debug('[queue-sound] fallback audio played'))
-                            .catch((err) => console.debug('[queue-sound] fallback audio error', err));
+                            .then(() => roomLogger.debug('[queue-sound] fallback audio played'))
+                            .catch((err) => roomLogger.debug('[queue-sound] fallback audio error', err));
                     } catch (err) {
-                        console.debug('[queue-sound] playQueueSoundSafe fallback error', err);
+                        roomLogger.debug('[queue-sound] playQueueSoundSafe fallback error', err);
                     }
                 };
                 let cacodemonActive = false;
@@ -768,7 +769,7 @@ import { setupChatTabs as createChatTabs } from './room-show/tabs';
                         queueRenderedIds.add(id);
                     }
                     if (isNewId && isOwnerUser) {
-                        console.debug('[queue-sound] new queue item, triggering sound', {
+                        roomLogger.debug('[queue-sound] new queue item, triggering sound', {
                             id,
                             fromPayload: questionId,
                             status,
@@ -834,7 +835,7 @@ import { setupChatTabs as createChatTabs } from './room-show/tabs';
                                 removeQueueItem(missingId);
                             });
                     } catch (err) {
-                        console.warn('Queue upsert failed, falling back to reload', err);
+                        roomLogger.warn('Queue upsert failed, falling back to reload', err);
                         scheduleReloadQuestionsPanel();
                     }
                 };
@@ -983,7 +984,7 @@ import { setupChatTabs as createChatTabs } from './room-show/tabs';
                         applyFilterToQueue(queueActiveFilter || getQueueFilterValue());
                         updateQueueFilterCounts();
                     } catch (error) {
-                        console.error('Failed to load all queue items', error);
+                        roomLogger.error('Failed to load all queue items', error);
                         setQueueHasMore(false);
                     } finally {
                         queueLoading = false;
@@ -1200,7 +1201,7 @@ import { setupChatTabs as createChatTabs } from './room-show/tabs';
                         updateMessagesStateAttributes();
                         updateMessagesLoadMoreVisibility();
                     } catch (error) {
-                        console.error('Failed to load older messages', error);
+                        roomLogger.error('Failed to load older messages', error);
                     } finally {
                         messagesLoading = false;
                         setMessagesLoader(false);
@@ -1738,7 +1739,7 @@ import { setupChatTabs as createChatTabs } from './room-show/tabs';
                         window.showFlashNotification(text, { type: 'danger', source: 'poll-action', duration: 4800 });
                         return;
                     }
-                    console.error(text);
+                    roomLogger.error(text);
                 };
                 const showDeleteError = (message) => {
                     const text = message || 'Message delete failed. Please try again.';
@@ -1746,7 +1747,7 @@ import { setupChatTabs as createChatTabs } from './room-show/tabs';
                         window.showFlashNotification(text, { type: 'danger', source: 'message-delete', duration: 4800 });
                         return;
                     }
-                    console.error(text);
+                    roomLogger.error(text);
                 };
                 const removeEmptyMessageState = () => {
                     if (!chatContainer) return;
@@ -2699,7 +2700,7 @@ import { setupChatTabs as createChatTabs } from './room-show/tabs';
                         });
 
                         if (!response.ok) {
-                            console.error('Reaction request failed', response.status);
+                            roomLogger.error('Reaction request failed', response.status);
                             renderReactions(messageEl, previous.reactions, previous.mine);
                             if (response.status === 403) {
                                 handleGuestAccessRevoked();
@@ -2726,7 +2727,7 @@ import { setupChatTabs as createChatTabs } from './room-show/tabs';
                             setReactionMenuActive(messageEl);
                         }
                     } catch (err) {
-                        console.error('Reaction error', err);
+                        roomLogger.error('Reaction error', err);
                         renderReactions(messageEl, previous.reactions, previous.mine);
                         if (activeReactionMessage === messageEl) {
                             setReactionMenuActive(messageEl);
@@ -2773,7 +2774,7 @@ import { setupChatTabs as createChatTabs } from './room-show/tabs';
                         result.payload = await response.json().catch(() => ({}));
                         return result;
                     } catch (error) {
-                        console.error('Poll vote error', error);
+                        roomLogger.error('Poll vote error', error);
                         return result;
                     }
                 };
@@ -3048,7 +3049,7 @@ import { setupChatTabs as createChatTabs } from './room-show/tabs';
                         window.showFlashNotification(text, { type: 'danger', source: 'ban-action', duration: 4800 });
                         return;
                     }
-                    console.error(text);
+                    roomLogger.error(text);
                 };
                 const getBanErrorMessage = (payload, fallback) => {
                     if (payload?.message) return payload.message;
@@ -3168,7 +3169,7 @@ import { setupChatTabs as createChatTabs } from './room-show/tabs';
                         const payload = await response.json().catch(() => ({}));
                         return { ok: response.ok, status: response.status, payload };
                     } catch (error) {
-                        console.error('Ban request error', error);
+                        roomLogger.error('Ban request error', error);
                         return { ok: false, status: 0, payload: {} };
                     }
                 };
@@ -3412,7 +3413,7 @@ import { setupChatTabs as createChatTabs } from './room-show/tabs';
                         result.message = payload?.message || '';
                         return result;
                     } catch (error) {
-                        console.error('Delete message error', error);
+                        roomLogger.error('Delete message error', error);
                         return result;
                     }
                 };
@@ -4185,7 +4186,7 @@ import { setupChatTabs as createChatTabs } from './room-show/tabs';
                               ctx.fill();
                               ctx.globalCompositeOperation = 'source-over';
                           } catch (error) {
-                              console.error('Styled QR build failed', error);
+                              roomLogger.error('Styled QR build failed', error);
                               return;
                           }
                             lastRenderedLink = link;
@@ -4371,7 +4372,7 @@ import { setupChatTabs as createChatTabs } from './room-show/tabs';
                             queuePipWindow = window.open('', 'queuePipFallback', 'width=420,height=640,resizable=yes');
                         }
                     } catch (error) {
-                        console.error('Cannot open picture-in-picture window', error);
+                        roomLogger.error('Cannot open picture-in-picture window', error);
                         return;
                     }
 
@@ -4449,11 +4450,11 @@ import { setupChatTabs as createChatTabs } from './room-show/tabs';
                     const actionAttr = (form.getAttribute('action') || '').trim();
                     const actionUrl = actionAttr ? new URL(actionAttr, window.location.href) : null;
                     if (!actionUrl) {
-                        console.warn('Remote form skipped: missing action');
+                        roomLogger.warn('Remote form skipped: missing action');
                         return false;
                     }
                     if (actionUrl.pathname === window.location.pathname || /\/r\/[^/]+/.test(actionUrl.pathname)) {
-                        console.warn('Remote form skipped: action points to room page', actionUrl.pathname);
+                        roomLogger.warn('Remote form skipped: action points to room page', actionUrl.pathname);
                         return false;
                     }
 
@@ -4472,7 +4473,7 @@ import { setupChatTabs as createChatTabs } from './room-show/tabs';
                             if (response.status === 403) {
                                 handleGuestAccessRevoked();
                             }
-                            console.error('Remote form failed', response.status);
+                            roomLogger.error('Remote form failed', response.status);
                             return false;
                         }
                         if (typeof onDone === 'function') {
@@ -4480,7 +4481,7 @@ import { setupChatTabs as createChatTabs } from './room-show/tabs';
                         }
                         return true;
                     } catch (err) {
-                        console.error('Remote form error', err);
+                        roomLogger.error('Remote form error', err);
                         return false;
                     }
                 };
@@ -4850,7 +4851,7 @@ import { setupChatTabs as createChatTabs } from './room-show/tabs';
                             queueNeedsNew = false;
                         }
                     } catch (e) {
-                        console.error('Refresh questions panel error', e);
+                        roomLogger.error('Refresh questions panel error', e);
                     } finally {
                         questionsReloadInFlight = false;
                         lastQuestionsReloadAt = Date.now();
@@ -4895,7 +4896,7 @@ import { setupChatTabs as createChatTabs } from './room-show/tabs';
                                 handleGuestAccessRevoked();
                                 return;
                             }
-                            console.error('Failed to refresh my questions panel', response.status);
+                            roomLogger.error('Failed to refresh my questions panel', response.status);
                             return;
                         }
 
@@ -4905,7 +4906,7 @@ import { setupChatTabs as createChatTabs } from './room-show/tabs';
                             window.refreshLucideIcons();
                         }
                     } catch (e) {
-                        console.error('Refresh my questions panel error', e);
+                        roomLogger.error('Refresh my questions panel error', e);
                     }
                 }
 
@@ -5315,7 +5316,7 @@ import { setupChatTabs as createChatTabs } from './room-show/tabs';
 
                             if (!response.ok) {
                                 if (optimisticEl) optimisticEl.remove();
-                                console.error('Send message failed', response.status);
+                                roomLogger.error('Send message failed', response.status);
                                 return;
                             }
 
@@ -5356,7 +5357,7 @@ import { setupChatTabs as createChatTabs } from './room-show/tabs';
                             }
                         } catch (e) {
                             if (optimisticEl) optimisticEl.remove();
-                            console.error('Send message error', e);
+                            roomLogger.error('Send message error', e);
                         } finally {
                             removeEmptyMessageState();
                             const textarea = chatForm.querySelector('textarea[name="content"]');

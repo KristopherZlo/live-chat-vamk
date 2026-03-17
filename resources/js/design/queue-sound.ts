@@ -1,3 +1,5 @@
+import { createRoomLogger } from '../room-show/logger';
+
 const QUEUE_SOUND_KEY = 'lc-queue-sound';
 const QUEUE_SOUND_SOURCE_KEY = 'lc-queue-sound-src';
 const QUEUE_SOUND_DEBUG_KEY = 'lc-queue-sound-debug';
@@ -21,10 +23,12 @@ function isQueueSoundDebugEnabled(): boolean {
 }
 
 function logQueueSound(...args: unknown[]): void {
-  if (!isQueueSoundDebugEnabled()) return;
-  // eslint-disable-next-line no-console
-  console.debug(...args);
+  queueSoundLogger.debug(...args);
 }
+
+const queueSoundLogger = createRoomLogger({
+  debugEnabled: isQueueSoundDebugEnabled,
+});
 
 function readQueueSoundSource(): string | null {
   try {
