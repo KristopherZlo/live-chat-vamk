@@ -4,6 +4,7 @@ import { resolveQueueSoundUrl } from './design/queue-sound';
 import { onRoomPageReady } from './room-show/config';
 import { createGuestAccessController, createMyQuestionsPanelController, submitRemoteForm as submitRoomRemoteForm } from './room-show/guest-panel';
 import { roomLogger } from './room-show/logger';
+import { initRoomRealtime } from './room-show/realtime';
 import { setupChatTabs as createChatTabs } from './room-show/tabs';
 
             onRoomPageReady((roomPageConfig) => {
@@ -5043,69 +5044,45 @@ import { setupChatTabs as createChatTabs } from './room-show/tabs';
                     }
                 };
 
-                const initRealtime = () => {
-                    startMyQuestionsPolling();
-                    if (!window.Echo) {
-                        startQuestionsPolling();
-                        return;
-                    }
-
-                    const channelName = 'room.' + roomSlug;
-                    window.Echo.channel(channelName)
-                        .listen('MessageSent', (e) => {
-                            enqueueIncomingMessage(e);
-                        })
-                        .listen('ReactionUpdated', (payload) => {
-                            updateReactionsFromEvent(payload.message_id, payload.reactions, payload);
-                        })
-                        .listen('PollUpdated', (payload) => {
-                            if (payload?.message_id && payload?.poll) {
-                                updatePollFromEvent(payload.message_id, payload.poll, payload);
-                            }
-                        })
-                        .listen('MessageDeleted', (payload) => {
-                            handleMessageDeleted(payload.id);
-                        })
-                        .error(() => {
-                            startQuestionsPolling();
-                        });
-
-                    const canUseHostRealtime = Boolean((questionsPanel || bansPanel) && (isOwnerUser || isDevUser));
-                    if (!canUseHostRealtime) {
-                        if (questionsPanel) {
-                            startQuestionsPolling();
+                initRoomRealtime({
+                    roomSlug,
+                    isOwnerUser,
+                    isDevUser,
+                    hasQuestionsPanel: Boolean(questionsPanel),
+                    hasBansPanel: Boolean(bansPanel),
+                    startMyQuestionsPolling,
+                    startQuestionsPolling,
+                    onMessageSent: (payload) => {
+                        enqueueIncomingMessage(payload);
+                    },
+                    onReactionUpdated: (payload) => {
+                        updateReactionsFromEvent(payload.message_id, payload.reactions, payload);
+                    },
+                    onPollUpdated: (payload) => {
+                        if (payload?.message_id && payload?.poll) {
+                            updatePollFromEvent(payload.message_id, payload.poll, payload);
                         }
-                        return;
-                    }
-
-                    window.Echo.private(`room.host.${roomSlug}`)
-                        .listen('ParticipantBanned', (payload) => {
-                            applyBanUpdate(payload);
-                        })
-                        .listen('ParticipantUnbanned', (payload) => {
-                            applyUnbanUpdate(payload);
-                        })
-                        .listen('QuestionCreated', (payload) => {
-                            if (questionsPanel && payload?.id) {
-                                upsertQueueItem(payload.id);
-                            }
-                        })
-                        .listen('QuestionUpdated', (payload) => {
-                            if (questionsPanel && payload?.id) {
-                                upsertQueueItem(payload.id);
-                            }
-                        })
-                        .error(() => {
-                            startQuestionsPolling();
-                        });
-                };
-
-                const echoReady = window.__echoReady;
-                if (echoReady && typeof echoReady.then === 'function') {
-                    echoReady.then(initRealtime).catch(initRealtime);
-                } else {
-                    initRealtime();
-                }
+                    },
+                    onMessageDeleted: (payload) => {
+                        handleMessageDeleted(payload.id);
+                    },
+                    onParticipantBanned: (payload) => {
+                        applyBanUpdate(payload);
+                    },
+                    onParticipantUnbanned: (payload) => {
+                        applyUnbanUpdate(payload);
+                    },
+                    onQuestionCreated: (payload) => {
+                        if (questionsPanel && payload?.id) {
+                            upsertQueueItem(payload.id);
+                        }
+                    },
+                    onQuestionUpdated: (payload) => {
+                        if (questionsPanel && payload?.id) {
+                            upsertQueueItem(payload.id);
+                        }
+                    },
+                });
 
                 const chatForm = document.getElementById('chat-form');
                 const setSendingState = (isSending) => {
