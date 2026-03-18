@@ -2,6 +2,7 @@ import 'emoji-picker-element';
 import emojiDataUrl from 'emoji-picker-element-data/en/emojibase/data.json?url';
 import { resolveQueueSoundUrl } from './design/queue-sound';
 import { onRoomPageReady } from './room-show/config';
+import { createGuestAccessController, createMyQuestionsPanelController, submitRemoteForm as submitRoomRemoteForm } from './room-show/guest-panel';
 import { roomLogger } from './room-show/logger';
 import { setupChatTabs as createChatTabs } from './room-show/tabs';
 
@@ -585,7 +586,6 @@ import { setupChatTabs as createChatTabs } from './room-show/tabs';
                 };
                 let queueNeedsNew = false;
                 let questionsPollTimer = null;
-                let myQuestionsPollTimer = null;
                 let queueHasMore = false;
                 let queueFullyLoaded = false;
                 let queueOffset = 0;
@@ -2890,20 +2890,11 @@ import { setupChatTabs as createChatTabs } from './room-show/tabs';
                     updateSendButtonState();
                 };
 
-                const showBanState = (messageText = 'Access to this room was revoked. Reloading...') => {
-                    if (!chatInputWrapper) return;
-                    chatInputWrapper.innerHTML = `
-                        <div class="flash flash-danger">
-                            <span>${escapeHtml(messageText)}</span>
-                        </div>
-                    `;
-                };
-                const handleGuestAccessRevoked = (messageText = 'Access to this room was revoked. Reloading...') => {
-                    if (isOwnerUser) return false;
-                    showBanState(messageText);
-                    window.setTimeout(() => window.location.reload(), 150);
-                    return true;
-                };
+                const { showBanState, handleGuestAccessRevoked } = createGuestAccessController({
+                    isOwnerUser,
+                    chatInputWrapper,
+                    escapeHtml,
+                });
 
                 const getBanList = () => bansPanel?.querySelector('[data-ban-list]') || null;
                 const getBanEmpty = () => bansPanel?.querySelector('[data-ban-empty]') || null;
@@ -3140,6 +3131,14 @@ import { setupChatTabs as createChatTabs } from './room-show/tabs';
 
                     return { open };
                 })();
+
+                const buildFormData = (form) => {
+                    const view = form?.ownerDocument?.defaultView;
+                    if (view && typeof view.FormData === 'function') {
+                        return new view.FormData(form);
+                    }
+                    return new FormData(form);
+                };
 
                 const requestBanAction = async (form) => {
                     const formData = buildFormData(form);
@@ -4431,60 +4430,13 @@ import { setupChatTabs as createChatTabs } from './room-show/tabs';
 
                 attachQueuePipButton();
 
-                const buildFormData = (form) => {
-                    const view = form?.ownerDocument?.defaultView;
-                    if (view && typeof view.FormData === 'function') {
-                        return new view.FormData(form);
-                    }
-                    return new FormData(form);
-                };
-
-                const submitRemoteForm = async (form, onDone) => {
-                    const formData = buildFormData(form);
-                    let method = (form.getAttribute('method') || 'POST').toUpperCase();
-                    const override = formData.get('_method');
-                    if (override) {
-                        method = override.toString().toUpperCase();
-                    }
-                    const token = formData.get('_token') || csrfMeta?.getAttribute('content') || '';
-                    const actionAttr = (form.getAttribute('action') || '').trim();
-                    const actionUrl = actionAttr ? new URL(actionAttr, window.location.href) : null;
-                    if (!actionUrl) {
-                        roomLogger.warn('Remote form skipped: missing action');
-                        return false;
-                    }
-                    if (actionUrl.pathname === window.location.pathname || /\/r\/[^/]+/.test(actionUrl.pathname)) {
-                        roomLogger.warn('Remote form skipped: action points to room page', actionUrl.pathname);
-                        return false;
-                    }
-
-                    try {
-                        const response = await fetch(actionUrl.toString(), {
-                            method,
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest',
-                                'X-CSRF-TOKEN': token,
-                            },
-                            credentials: 'same-origin', // include session cookie for CSRF validation
-                            body: formData,
-                        });
-                        const ok = response.status >= 200 && response.status < 400;
-                        if (!ok) {
-                            if (response.status === 403) {
-                                handleGuestAccessRevoked();
-                            }
-                            roomLogger.error('Remote form failed', response.status);
-                            return false;
-                        }
-                        if (typeof onDone === 'function') {
-                            onDone();
-                        }
-                        return true;
-                    } catch (err) {
-                        roomLogger.error('Remote form error', err);
-                        return false;
-                    }
-                };
+                const submitRemoteForm = (form, onDone) => submitRoomRemoteForm({
+                    form,
+                    onDone,
+                    csrfToken,
+                    handleGuestAccessRevoked,
+                    logger: roomLogger,
+                });
 
                 const getQueueFormAction = (form) => {
                     const rawAction = (form.getAttribute('action') || '').trim();
@@ -4880,59 +4832,20 @@ import { setupChatTabs as createChatTabs } from './room-show/tabs';
                     });
                 }
 
-                async function reloadMyQuestionsPanel() {
-                    if (!myQuestionsPanel || !myQuestionsPanelUrl) return;
-
-                    try {
-                        const response = await fetch(myQuestionsPanelUrl, {
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest',
-                            },
-                            credentials: 'same-origin',
-                        });
-
-                        if (!response.ok) {
-                            if (response.status === 403) {
-                                handleGuestAccessRevoked();
-                                return;
-                            }
-                            roomLogger.error('Failed to refresh my questions panel', response.status);
-                            return;
-                        }
-
-                        const html = await response.text();
-                        myQuestionsPanel.innerHTML = html;
-                        if (typeof window.refreshLucideIcons === 'function') {
-                            window.refreshLucideIcons();
-                        }
-                    } catch (e) {
-                        roomLogger.error('Refresh my questions panel error', e);
-                    }
-                }
-
-                function startMyQuestionsPolling() {
-                    if (!myQuestionsPanel || myQuestionsPollTimer) return;
-                    myQuestionsPollTimer = setInterval(reloadMyQuestionsPanel, 6000);
-                }
-
-                if (myQuestionsPanel) {
-                    myQuestionsPanel.addEventListener('submit', async (event) => {
-                        const target = event.target;
-                        if (!(target instanceof HTMLFormElement)) return;
-                        if (target.dataset.remote !== 'my-questions-panel') return;
-                        event.preventDefault();
-                        const methodAttr = (target.getAttribute('method') || 'POST').toUpperCase();
-                        const methodOverride = (target.querySelector('input[name="_method"]')?.value || '').toUpperCase();
-                        const effectiveMethod = methodOverride || methodAttr;
-                        const isDeleteAction = effectiveMethod === 'DELETE';
-                        const isQuestionDelete = isDeleteAction || target.dataset.questionDelete === '1';
-                        if (isQuestionDelete) {
-                            const confirmed = await questionDeleteModal.open();
-                            if (!confirmed) return;
-                        }
-                        submitRemoteForm(target, reloadMyQuestionsPanel);
-                    });
-                }
+                const myQuestionsController = createMyQuestionsPanelController({
+                    panel: myQuestionsPanel,
+                    panelUrl: myQuestionsPanelUrl,
+                    logger: roomLogger,
+                    handleGuestAccessRevoked,
+                    refreshIcons: typeof window.refreshLucideIcons === 'function'
+                        ? () => window.refreshLucideIcons?.()
+                        : null,
+                    confirmQuestionDelete: () => questionDeleteModal.open(),
+                    submitRemoteForm,
+                });
+                const reloadMyQuestionsPanel = myQuestionsController.reload;
+                const startMyQuestionsPolling = myQuestionsController.startPolling;
+                myQuestionsController.bind();
 
                 if (chatContainer) {
                     chatContainer.addEventListener('click', (event) => {
