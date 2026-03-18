@@ -12,6 +12,7 @@ use App\Models\Participant;
 use App\Models\Question;
 use App\Models\Room;
 use App\Models\User;
+use App\Support\Rooms\RoomMessageQuery;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
@@ -334,8 +335,8 @@ class RoomController extends Controller
             abort(403);
         }
 
-        $messagesQuery = $this->applyBannedMessageFilter(
-            $this->baseMessagesQuery($room),
+        $messagesQuery = RoomMessageQuery::excludeBannedParticipants(
+            RoomMessageQuery::forRoom($room),
             $room,
             $participant
         );
@@ -771,8 +772,8 @@ class RoomController extends Controller
             abort(403);
         }
 
-        $query = $this->applyBannedMessageFilter(
-            $this->baseMessagesQuery($room),
+        $query = RoomMessageQuery::excludeBannedParticipants(
+            RoomMessageQuery::forRoom($room),
             $room,
             $participant
         );
@@ -809,48 +810,6 @@ class RoomController extends Controller
             'has_more' => $hasMore,
             'next_before_id' => $messages->first()?->id,
         ]);
-    }
-
-    protected function baseMessagesQuery(Room $room)
-    {
-        return $room->messages()
-            ->with([
-                'participant:id,display_name',
-                'user:id,name,is_dev',
-                'replyTo' => fn ($query) => $query->select('id', 'user_id', 'participant_id', 'content', 'deleted_at'),
-                'replyTo.user:id,name',
-                'replyTo.participant:id,display_name',
-            ])
-            ->withExists(['question as has_question'])
-            ->orderByDesc('created_at')
-            ->orderByDesc('id');
-    }
-
-    protected function applyBannedMessageFilter(Builder|Relation $query, Room $room, ?Participant $participant = null): Builder|Relation
-    {
-        $bannedIds = $room->bans()
-            ->pluck('participant_id')
-            ->filter()
-            ->map(fn ($id) => (int) $id)
-            ->values();
-
-        if ($bannedIds->isEmpty()) {
-            return $query;
-        }
-
-        if ($participant && $participant->id) {
-            $viewerId = (int) $participant->id;
-            $bannedIds = $bannedIds->reject(fn ($id) => $id === $viewerId)->values();
-        }
-
-        if ($bannedIds->isEmpty()) {
-            return $query;
-        }
-
-        return $query->where(function ($query) use ($bannedIds) {
-            $query->whereNull('participant_id')
-                ->orWhereNotIn('participant_id', $bannedIds);
-        });
     }
 
     protected function baseQueueQuery(Room $room)
