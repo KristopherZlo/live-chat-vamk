@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Services\Auth\EmailVerificationDeliveryException;
 use App\Services\Auth\EmailVerificationCodeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -38,7 +39,14 @@ class EmailVerificationNotificationController extends Controller
                 ->withInput();
         }
 
-        $user->sendEmailVerificationNotification();
+        try {
+            $user->sendEmailVerificationNotification();
+        } catch (EmailVerificationDeliveryException $e) {
+            return back()
+                ->with('verification_mail_failed', true)
+                ->withErrors(['code' => [$e->getMessage()]])
+                ->withInput();
+        }
 
         return back()->with('status', 'verification-code-sent');
     }

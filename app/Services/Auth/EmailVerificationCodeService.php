@@ -5,7 +5,9 @@ namespace App\Services\Auth;
 use App\Models\EmailVerificationCode;
 use App\Models\User;
 use App\Notifications\Auth\VerifyEmailCodeNotification;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 class EmailVerificationCodeService
 {
@@ -15,6 +17,10 @@ class EmailVerificationCodeService
     {
         $code = $this->generateCode();
         $now = now();
+        $existingRecord = EmailVerificationCode::query()
+            ->where('user_id', $user->id)
+            ->first();
+        $previousState = $existingRecord?->getAttributes();
 
         EmailVerificationCode::query()->upsert(
             [[
@@ -28,7 +34,14 @@ class EmailVerificationCodeService
             ['code_hash', 'expires_at', 'updated_at'],
         );
 
-        $user->notify(new VerifyEmailCodeNotification($code, $this->ttlMinutes()));
+        try {
+            $user->notify(new VerifyEmailCodeNotification($code, $this->ttlMinutes()));
+        } catch (TransportExceptionInterface $e) {
+            $this->restorePreviousCodeState($user, $previousState);
+            report($e);
+
+            throw EmailVerificationDeliveryException::fromTransport($e);
+        }
 
         return $code;
     }
@@ -87,5 +100,31 @@ class EmailVerificationCodeService
     private function resendCooldownSeconds(): int
     {
         return max(1, (int) config('ghostroom.auth.verification_resend_cooldown_seconds', 60));
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $previousState
+     */
+    private function restorePreviousCodeState(User $user, ?array $previousState): void
+    {
+        $table = (new EmailVerificationCode)->getTable();
+
+        if ($previousState === null) {
+            DB::table($table)
+                ->where('user_id', $user->id)
+                ->delete();
+
+            return;
+        }
+
+        DB::table($table)->updateOrInsert(
+            ['user_id' => $user->id],
+            [
+                'code_hash' => $previousState['code_hash'],
+                'expires_at' => $previousState['expires_at'],
+                'created_at' => $previousState['created_at'] ?? now(),
+                'updated_at' => $previousState['updated_at'] ?? now(),
+            ],
+        );
     }
 }

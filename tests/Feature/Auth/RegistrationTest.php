@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Contracts\Notifications\Dispatcher;
+use Symfony\Component\Mailer\Exception\TransportException;
 
 test('registration screen can be rendered', function () {
     $response = $this->get('/register');
@@ -108,4 +110,28 @@ test('registration endpoint is throttled per ip', function () {
         ->post('/register', []);
 
     $secondResponse->assertStatus(429);
+});
+
+test('registration still completes when verification email delivery fails', function () {
+    $this->mock(Dispatcher::class, function ($mock) {
+        $mock->shouldReceive('send')
+            ->andThrow(new TransportException('SMTP auth failed'));
+    });
+
+    $response = $this->post('/register', [
+        'name' => 'Mail Retry User',
+        'email' => 'mail-retry@example.com',
+        'password' => 'password',
+        'password_confirmation' => 'password',
+        'website' => '',
+        'form_started_at' => now()->subSeconds(3)->timestamp,
+    ]);
+
+    $this->assertAuthenticated();
+    $response->assertRedirect(route('verification.notice'));
+    $response->assertSessionHasErrors('code');
+
+    $user = User::where('email', 'mail-retry@example.com')->first();
+    expect($user)->not->toBeNull();
+    expect($user?->hasVerifiedEmail())->toBeFalse();
 });

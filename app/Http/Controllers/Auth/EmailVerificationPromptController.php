@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\Auth\EmailVerificationDeliveryException;
 use App\Services\Auth\EmailVerificationCodeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -26,15 +27,22 @@ class EmailVerificationPromptController extends Controller
             return redirect()->to(route('home'));
         }
 
+        $mailDeliveryError = null;
+        $skipAutoSend = (bool) $request->session()->pull('verification_mail_failed', false);
         $currentCode = $user->emailVerificationCode()->first();
-        if (! $currentCode || $currentCode->isExpired()) {
-            $verificationCodes->send($user);
+        if ((! $currentCode || $currentCode->isExpired()) && ! $skipAutoSend) {
+            try {
+                $verificationCodes->send($user);
+            } catch (EmailVerificationDeliveryException $e) {
+                $mailDeliveryError = $e->getMessage();
+            }
         }
 
         $resendToken = Str::random(64);
         $request->session()->put('verification_resend_token', $resendToken);
 
         return view('auth.verify-email', [
+            'mailDeliveryError' => $mailDeliveryError,
             'resendCooldownSeconds' => $verificationCodes->resendCooldownRemaining($user),
             'resendToken' => $resendToken,
         ]);

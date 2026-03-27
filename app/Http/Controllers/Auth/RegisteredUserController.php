@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\Auth\EmailVerificationDeliveryException;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -59,7 +60,13 @@ class RegisteredUserController extends Controller
             'registration_ip' => $registrationIp,
         ]);
 
-        event(new Registered($user));
+        $mailDeliveryError = null;
+        try {
+            event(new Registered($user));
+        } catch (EmailVerificationDeliveryException $e) {
+            $mailDeliveryError = $e->getMessage();
+            $request->session()->flash('verification_mail_failed', true);
+        }
 
         Auth::login($user);
 
@@ -69,11 +76,18 @@ class RegisteredUserController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
+                'mail_error' => $mailDeliveryError,
                 'redirect' => $redirectTo,
             ]);
         }
 
-        return redirect($redirectTo);
+        $response = redirect($redirectTo);
+
+        if ($mailDeliveryError !== null) {
+            $response->withErrors(['code' => [$mailDeliveryError]]);
+        }
+
+        return $response;
     }
 
     private function ensureHoneypotIsValid(int $startedAt): void

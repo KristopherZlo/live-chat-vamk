@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Models\User;
+use App\Services\Auth\EmailVerificationDeliveryException;
 use App\Services\Auth\EmailVerificationCodeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -34,7 +35,14 @@ class AuthenticatedSessionController extends Controller
         if ($user instanceof User && ! $user->hasVerifiedEmail()) {
             $currentCode = $user->emailVerificationCode()->first();
             if (! $currentCode || $currentCode->isExpired() || $verificationCodes->resendCooldownRemaining($user) === 0) {
-                $user->sendEmailVerificationNotification();
+                try {
+                    $user->sendEmailVerificationNotification();
+                } catch (EmailVerificationDeliveryException $e) {
+                    return redirect()
+                        ->route('verification.notice')
+                        ->with('verification_mail_failed', true)
+                        ->withErrors(['code' => [$e->getMessage()]]);
+                }
             }
 
             return redirect()->route('verification.notice');

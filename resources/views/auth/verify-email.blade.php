@@ -1,5 +1,11 @@
 @php
     $email = (string) optional(auth()->user())->email;
+    $mailDeliveryError = isset($mailDeliveryError) ? trim((string) $mailDeliveryError) : '';
+    $verificationMessages = $errors->get('code');
+    if ($mailDeliveryError !== '') {
+        array_unshift($verificationMessages, $mailDeliveryError);
+        $verificationMessages = array_values(array_unique($verificationMessages));
+    }
     $resendSeconds = max(0, (int) ($resendCooldownSeconds ?? 0));
     $resendToken = (string) ($resendToken ?? '');
     $atPos = strpos($email, '@');
@@ -58,7 +64,9 @@
                             @endfor
                         </div>
 
-                        <x-input-error :messages="$errors->get('code')" class="auth-input-error auth-input-error--code" />
+                        <div class="auth-code-errors" data-verification-code-errors>
+                            <x-input-error :messages="$verificationMessages" class="auth-input-error auth-input-error--code" />
+                        </div>
 
                         <button class="auth-submit" type="submit">Verify code</button>
                     </form>

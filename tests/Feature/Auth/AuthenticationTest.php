@@ -2,7 +2,9 @@
 
 use App\Models\User;
 use App\Notifications\Auth\VerifyEmailCodeNotification;
+use Illuminate\Contracts\Notifications\Dispatcher;
 use Illuminate\Support\Facades\Notification;
+use Symfony\Component\Mailer\Exception\TransportException;
 
 test('login screen can be rendered', function () {
     $response = $this->get('/login');
@@ -63,4 +65,24 @@ test('users can logout', function () {
 
     $this->assertGuest();
     $response->assertRedirect('/');
+});
+
+test('unverified login shows a friendly error when verification email delivery fails', function () {
+    $user = User::factory()->unverified()->create();
+
+    $this->mock(Dispatcher::class, function ($mock) {
+        $mock->shouldReceive('send')
+            ->andThrow(new TransportException('SMTP auth failed'));
+    });
+
+    $response = $this->post('/login', [
+        'email' => $user->email,
+        'password' => 'password',
+        'website' => '',
+        'form_started_at' => now()->subSeconds(3)->timestamp,
+    ]);
+
+    $this->assertAuthenticated();
+    $response->assertRedirect(route('verification.notice'));
+    $response->assertSessionHasErrors('code');
 });

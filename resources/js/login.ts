@@ -13,6 +13,22 @@
         form.querySelectorAll('.auth-input-error--js').forEach((node) => node.remove());
     };
 
+    const renderVerificationError = (message: string): void => {
+        const container = document.querySelector<HTMLElement>('[data-verification-code-errors]');
+        if (!container || !message.trim()) {
+            return;
+        }
+
+        const list = document.createElement('ul');
+        list.className = 'auth-input-error auth-input-error--js';
+
+        const item = document.createElement('li');
+        item.textContent = message;
+        list.appendChild(item);
+
+        container.appendChild(list);
+    };
+
     const renderClientErrors = (form: HTMLFormElement, errors: Record<string, string[]>): void => {
         Object.entries(errors).forEach(([field, messages]) => {
             const input = form.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(`[name="${field}"]`);
@@ -295,9 +311,13 @@
                     return;
                 }
 
-                const payload = await response.json() as { redirect?: string };
+                const payload = await response.json() as { mail_error?: string; redirect?: string };
                 const target = payload.redirect ?? '/verify-email';
                 const swapped = await swapAuthPage(target, true);
+
+                if (swapped && payload.mail_error) {
+                    renderVerificationError(payload.mail_error);
+                }
 
                 if (!swapped) {
                     window.location.href = target;

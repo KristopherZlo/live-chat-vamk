@@ -5,9 +5,11 @@ use App\Models\User;
 use App\Notifications\Auth\VerifyEmailCodeNotification;
 use App\Services\Auth\EmailVerificationCodeService;
 use Illuminate\Auth\Events\Verified;
+use Illuminate\Contracts\Notifications\Dispatcher;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\URL;
+use Symfony\Component\Mailer\Exception\TransportException;
 
 test('email verification screen can be rendered', function () {
     $user = User::factory()->unverified()->create();
@@ -145,4 +147,47 @@ test('verification code resend is rejected with invalid resend token', function 
     $response->assertRedirect(route('verification.notice'));
     $response->assertSessionHasErrors('code');
     Notification::assertNothingSent();
+});
+
+test('verification prompt shows a friendly error when code delivery fails', function () {
+    $user = User::factory()->unverified()->create();
+
+    $this->mock(Dispatcher::class, function ($mock) {
+        $mock->shouldReceive('send')
+            ->andThrow(new TransportException('SMTP auth failed'));
+    });
+
+    $response = $this->actingAs($user)->get('/verify-email');
+
+    $response->assertOk();
+    $response->assertSee('We could not send the verification email right now. Please try again in a moment.');
+    expect(EmailVerificationCode::where('user_id', $user->id)->exists())->toBeFalse();
+});
+
+test('failed resend preserves the previous verification code', function () {
+    $user = User::factory()->unverified()->create();
+    $service = app(EmailVerificationCodeService::class);
+    $existingCode = $service->send($user);
+
+    config()->set('ghostroom.auth.verification_resend_cooldown_seconds', 60);
+    $this->travel(61)->seconds();
+
+    $this->mock(Dispatcher::class, function ($mock) {
+        $mock->shouldReceive('send')
+            ->andThrow(new TransportException('SMTP auth failed'));
+    });
+
+    $resendToken = str_repeat('e', 64);
+
+    $response = $this
+        ->actingAs($user)
+        ->withSession(['verification_resend_token' => $resendToken])
+        ->from(route('verification.notice'))
+        ->post(route('verification.send'), [
+            'resend_token' => $resendToken,
+        ]);
+
+    $response->assertRedirect(route('verification.notice'));
+    $response->assertSessionHasErrors('code');
+    expect($service->verify($user->fresh(), $existingCode))->toBeTrue();
 });
