@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\User;
+use App\Services\Auth\UnverifiedUserCleanupService;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -21,12 +21,7 @@ app()->booted(function () {
         ->withoutOverlapping();
 
     $schedule->call(function (): void {
-        $ttlHours = max(1, (int) config('ghostroom.auth.unverified_user_ttl_hours', 24));
-
-        User::query()
-            ->whereNull('email_verified_at')
-            ->where('created_at', '<', now()->subHours($ttlHours))
-            ->delete();
+        app(UnverifiedUserCleanupService::class)->pruneStaleUsers();
     })->hourly()
         ->name('auth:prune-unverified-users')
         ->withoutOverlapping();

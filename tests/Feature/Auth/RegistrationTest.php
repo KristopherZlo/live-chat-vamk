@@ -72,12 +72,14 @@ test('registration is blocked when too many unverified accounts exist for one ip
 
 test('stale unverified users are pruned before registration', function () {
     config()->set('ghostroom.auth.max_pending_unverified_per_ip', 1);
-    config()->set('ghostroom.auth.unverified_user_ttl_hours', 24);
+    config()->set('ghostroom.auth.unverified_user_ttl_hours', 2);
+
+    $this->travelTo(now()->startOfDay()->addHours(15));
 
     $staleUser = User::factory()->unverified()->create([
         'registration_ip' => '127.0.0.1',
-        'created_at' => now()->subHours(25),
-        'updated_at' => now()->subHours(25),
+        'created_at' => now()->subHours(3),
+        'updated_at' => now()->subHours(3),
     ]);
 
     $response = $this->post('/register', [
@@ -92,6 +94,36 @@ test('stale unverified users are pruned before registration', function () {
     $response->assertRedirect(route('verification.notice'));
     expect(User::query()->whereKey($staleUser->id)->exists())->toBeFalse();
     $this->assertAuthenticated();
+
+    $this->travelBack();
+});
+
+test('legacy unverified users created before today are preserved and ignored by pending limit', function () {
+    config()->set('ghostroom.auth.max_pending_unverified_per_ip', 1);
+    config()->set('ghostroom.auth.unverified_user_ttl_hours', 2);
+
+    $this->travelTo(now()->startOfDay()->addHours(15));
+
+    $legacyUser = User::factory()->unverified()->create([
+        'registration_ip' => '127.0.0.1',
+        'created_at' => now()->copy()->subDay()->addHour(),
+        'updated_at' => now()->copy()->subDay()->addHour(),
+    ]);
+
+    $response = $this->post('/register', [
+        'name' => 'Legacy Safe User',
+        'email' => 'legacy-safe@example.com',
+        'password' => 'password',
+        'password_confirmation' => 'password',
+        'website' => '',
+        'form_started_at' => now()->subSeconds(3)->timestamp,
+    ]);
+
+    $response->assertRedirect(route('verification.notice'));
+    expect(User::query()->whereKey($legacyUser->id)->exists())->toBeTrue();
+    $this->assertAuthenticated();
+
+    $this->travelBack();
 });
 
 test('registration endpoint is throttled per ip', function () {

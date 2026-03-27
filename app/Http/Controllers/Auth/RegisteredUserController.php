@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Auth\EmailVerificationDeliveryException;
+use App\Services\Auth\UnverifiedUserCleanupService;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -30,9 +31,9 @@ class RegisteredUserController extends Controller
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    public function store(Request $request): RedirectResponse|JsonResponse
+    public function store(Request $request, UnverifiedUserCleanupService $unverifiedUserCleanup): RedirectResponse|JsonResponse
     {
-        $this->pruneStaleUnverifiedUsers();
+        $unverifiedUserCleanup->pruneStaleUsers();
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:'.config('ghostroom.limits.user.name_max', 255)],
@@ -51,7 +52,7 @@ class RegisteredUserController extends Controller
 
         $this->ensureHoneypotIsValid((int) $validated['form_started_at']);
         $registrationIp = $this->resolveClientIp($request);
-        $this->ensurePendingUnverifiedLimitNotReached($registrationIp);
+        $this->ensurePendingUnverifiedLimitNotReached($registrationIp, $unverifiedUserCleanup);
 
         $user = User::create([
             'name' => $validated['name'],
@@ -101,27 +102,16 @@ class RegisteredUserController extends Controller
         }
     }
 
-    private function pruneStaleUnverifiedUsers(): void
-    {
-        $ttlHours = max(1, (int) config('ghostroom.auth.unverified_user_ttl_hours', 24));
-
-        User::query()
-            ->whereNull('email_verified_at')
-            ->where('created_at', '<', now()->subHours($ttlHours))
-            ->delete();
-    }
-
     /**
      * @throws \Illuminate\Validation\ValidationException
      */
-    private function ensurePendingUnverifiedLimitNotReached(string $registrationIp): void
+    private function ensurePendingUnverifiedLimitNotReached(
+        string $registrationIp,
+        UnverifiedUserCleanupService $unverifiedUserCleanup
+    ): void
     {
         $maxPending = max(1, (int) config('ghostroom.auth.max_pending_unverified_per_ip', 3));
-
-        $pendingCount = User::query()
-            ->whereNull('email_verified_at')
-            ->where('registration_ip', $registrationIp)
-            ->count();
+        $pendingCount = $unverifiedUserCleanup->countPendingUsersForIp($registrationIp);
 
         if ($pendingCount >= $maxPending) {
             throw ValidationException::withMessages([

@@ -18,7 +18,7 @@ return [
         'email_verification_code_ttl' => 15, // Minutes before a verification code expires.
         'verification_resend_cooldown_seconds' => 60, // Seconds before user can request another code.
         'max_pending_unverified_per_ip' => 3, // Max unverified accounts allowed from one IP.
-        'unverified_user_ttl_hours' => 24, // Auto-remove unverified accounts older than this.
+        'unverified_user_ttl_hours' => 24, // Auto-remove only same-day unverified accounts older than this.
     ],
     'limits' => [
         'auth' => [
