@@ -11,7 +11,7 @@
     <link rel="shortcut icon" href="{{ asset($seasonalLogoAssets['favicon'] ?? 'icons/logo_white.svg') }}">
 
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
-    <script nonce="{{ $cspNonce }}">
+    <script @if(!empty($cspNonce)) nonce="{{ $cspNonce }}" @endif>
         (() => {
             const KEY = 'lc-theme';
             let theme = 'light';
@@ -35,7 +35,7 @@
         })();
     </script>
     @vite(['resources/css/app.css', 'resources/css/design.css', 'resources/js/lucide.ts'])
-    <script nonce="{{ $cspNonce }}">
+    <script @if(!empty($cspNonce)) nonce="{{ $cspNonce }}" @endif>
         document.addEventListener('DOMContentLoaded', () => {
             if (window.lucide?.createIcons && window.lucide?.icons) {
                 window.lucide.createIcons({ icons: window.lucide.icons });
