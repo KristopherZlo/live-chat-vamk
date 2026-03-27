@@ -779,7 +779,7 @@
                                         @csrf
                                         <div class="admin-field">
                                             <label class="admin-label" for="appVersion">Set version</label>
-                                            <input class="admin-input" id="appVersion" name="version" type="text" value="{{ old('version', $appVersion) }}" placeholder="e.g. 1.3.0">
+                                            <input class="admin-input" id="appVersion" name="version" type="text" value="{{ old('version', $appVersion) }}" placeholder="e.g. 1.3.1">
                                         </div>
                                         <div class="admin-field" style="align-self: end;">
                                             <button class="admin-btn admin-btn--primary" type="submit">Update version</button>
@@ -818,7 +818,7 @@
                                             </div>
                                             <div class="admin-field">
                                                 <label class="admin-label" for="releaseVersion">Version</label>
-                                                <input class="admin-input" id="releaseVersion" name="version" type="text" value="{{ old('version', $editingRelease->version ?? '') }}" required placeholder="1.3.0">
+                                                <input class="admin-input" id="releaseVersion" name="version" type="text" value="{{ old('version', $editingRelease->version ?? '') }}" required placeholder="1.3.1">
                                             </div>
                                             <div class="admin-field">
                                                 <label class="admin-label" for="releasePublishedAt">Publish at</label>

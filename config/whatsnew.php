@@ -2,6 +2,44 @@
 
 return [
     'releases' => [
+        '1.3.1' => [
+            'date' => '2026-03-27',
+            'image' => 'whats-new/130notapr.png',
+            'image_alt' => 'Preview of the 1.3.1 classroom polish update',
+            'excerpt' => 'One smoother login flow, 6-digit email codes, color-coded rooms, stronger moderation, and calmer room management make the whole thing feel less beta and more ready.',
+            'sections' => [
+                [
+                    'title' => '🔐 Login and sign-up stopped arguing',
+                    'items' => [
+                        'Login and registration now live together, and email verification uses a simple 6-digit code. Less inbox archaeology, more getting in.',
+                    ],
+                ],
+                [
+                    'title' => '🎨 Rooms got color and order',
+                    'items' => [
+                        'You can color-code your rooms and keep them in your own order. No more dashboard roulette every time you come back.',
+                    ],
+                ],
+                [
+                    'title' => '🛡️ Bans mean banned now',
+                    'items' => [
+                        'If someone gets kicked out, they stay out. Hosts get fewer loopholes, fewer surprises, and fewer repeat offenders sneaking back in.',
+                    ],
+                ],
+                [
+                    'title' => '🧭 Room management feels calmer',
+                    'items' => [
+                        'Queue controls, admin screens, and room tools got cleaned up, so running a session feels more like teaching and less like babysitting buttons.',
+                    ],
+                ],
+                [
+                    'title' => '✨ Small polish, less chaos',
+                    'items' => [
+                        'Friendlier greetings, tidier pages, nicer button behavior, and a bunch of tiny bug fixes quietly make the whole app feel more grown-up.',
+                    ],
+                ],
+            ],
+        ],
         '1.3.0' => [
             'date' => '2025-12-25',
             'image' => 'whats-new/130.png',
