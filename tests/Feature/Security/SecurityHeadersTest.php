@@ -23,7 +23,10 @@ test('security headers are applied to web responses', function () {
     expect($csp)->toContain("base-uri 'self'");
     expect($csp)->toContain("frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com");
     expect($csp)->toContain("form-action 'self'");
-    expect($csp)->not->toContain("'unsafe-inline'");
+    expect($csp)->toContain("style-src 'self' 'unsafe-inline' https://fonts.googleapis.com");
+    expect($csp)->toContain("script-src 'self'");
+    expect($csp)->toMatch("/script-src 'self' 'nonce-[^']+'/");
+    expect($csp)->not->toContain("script-src 'self' 'unsafe-inline'");
     expect($csp)->not->toContain('cdn.jsdelivr.net');
 });
 
@@ -78,5 +81,6 @@ test('room page csp keeps realtime origins but no runtime cdn allowances', funct
 
     expect($csp)->toContain("connect-src 'self'");
     expect($csp)->toContain('script-src \'self\'');
+    expect($csp)->toMatch("/script-src 'self' 'nonce-[^']+'/");
     expect($csp)->not->toContain('cdn.jsdelivr.net');
 });

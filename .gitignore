@@ -67,3 +67,4 @@ __pycache__/
 
 # Local security tooling (python pentest helpers)
 /scripts/*.py
+/scripts/send-test-email.php

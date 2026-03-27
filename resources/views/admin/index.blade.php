@@ -1171,7 +1171,7 @@
         </div>
     </div>
 
-    <script>
+    <script nonce="{{ $cspNonce }}">
         document.addEventListener('DOMContentLoaded', () => {
             const sections = document.querySelectorAll('[data-section]');
             const navButtons = document.querySelectorAll('[data-section-target]');

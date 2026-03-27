@@ -182,7 +182,7 @@
         </div>
     </div>
 
-    <script>
+    <script nonce="{{ $cspNonce }}">
         document.addEventListener('DOMContentLoaded', () => {
             const modal = document.querySelector('[data-update-modal]');
             const modalTitle = modal?.querySelector('#updateModalTitle');

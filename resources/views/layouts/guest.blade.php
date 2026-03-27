@@ -69,7 +69,7 @@
         </div>
     </div>
 @endif
-<script>
+<script nonce="{{ $cspNonce }}">
 (() => {
     const style = 'color: red; font-size: 24px; font-weight: 900;';
     const warn = () => {

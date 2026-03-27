@@ -42,7 +42,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
-    <script>
+    <script nonce="{{ $cspNonce }}">
         (() => {
             const KEY = 'lc-theme';
             let theme = 'light';
@@ -75,7 +75,7 @@
         $reverbPort = $reverbOptions['port'] ?? 443;
         $reverbScheme = $reverbOptions['scheme'] ?? 'https';
     @endphp
-    <script>
+    <script nonce="{{ $cspNonce }}">
         window.__reverbConfig = {
             enabled: @json($reverbEnabled),
             key: @json($reverbKey),
@@ -84,7 +84,7 @@
             scheme: @json($reverbScheme),
         };
     </script>
-    <script>
+    <script nonce="{{ $cspNonce }}">
         window.queueSoundUrl = window.queueSoundUrl || @json(asset('audio/new-question-sound.mp3'));
     </script>
     @php
@@ -313,7 +313,7 @@
         </div>
     </div>
 </div>
-<script>
+<script nonce="{{ $cspNonce }}">
 (() => {
     const modal = document.querySelector('[data-welcome-modal]');
     if (!modal) return;
@@ -448,7 +448,7 @@
     'resources/js/design.ts'
 ])
 @stack('scripts')
-<script>
+<script nonce="{{ $cspNonce }}">
 (() => {
     const style = 'color: red; font-size: 24px; font-weight: 900;';
     const warn = () => {

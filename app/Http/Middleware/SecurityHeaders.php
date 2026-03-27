@@ -13,6 +13,10 @@ class SecurityHeaders
      */
     public function handle(Request $request, Closure $next): Response
     {
+        $nonce = base64_encode(random_bytes(16));
+        $request->attributes->set('csp_nonce', $nonce);
+        view()->share('cspNonce', $nonce);
+
         /** @var \Symfony\Component\HttpFoundation\Response $response */
         $response = $next($request);
 
@@ -25,7 +29,7 @@ class SecurityHeaders
             'Cross-Origin-Resource-Policy' => 'same-origin',
         ];
 
-        $headers['Content-Security-Policy'] = $this->buildContentSecurityPolicy($request);
+        $headers['Content-Security-Policy'] = $this->buildContentSecurityPolicy($request, $nonce);
 
         // HSTS only for HTTPS requests; browsers will cache this for 180 days.
         if ($this->isSecureRequest($request)) {
@@ -61,15 +65,15 @@ class SecurityHeaders
     }
 
     /**
-     * Build the Content Security Policy header. Defaults are strict for production,
-     * but allow inline scripts and Vite dev server origins when running locally.
+     * Build the Content Security Policy header. Scripts stay nonce-based in non-local
+     * environments, while styles allow inline mutations used by the interactive UI.
      */
-    protected function buildContentSecurityPolicy(Request $request): string
+    protected function buildContentSecurityPolicy(Request $request, string $nonce): string
     {
         $defaultSrc = ["'self'"];
         $imgSrc = ["'self'", 'data:'];
-        $styleSrc = ["'self'", 'https://fonts.googleapis.com'];
-        $scriptSrc = ["'self'"];
+        $styleSrc = ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'];
+        $scriptSrc = ["'self'", "'nonce-{$nonce}'"];
         $fontSrc = ["'self'", 'data:', 'https://fonts.gstatic.com'];
         $connectSrc = ["'self'"];
         $frameSrc = ["'self'", 'https://www.youtube.com', 'https://www.youtube-nocookie.com'];
