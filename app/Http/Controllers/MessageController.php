@@ -16,6 +16,7 @@ use App\Models\Room;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class MessageController extends Controller
@@ -210,7 +211,15 @@ class MessageController extends Controller
                 $message->setRelation('replyTo', $replyMessage);
             }
 
-            event(new QuestionCreated($question));
+            $this->dispatchBroadcastSafely(
+                new QuestionCreated($question),
+                'Question create broadcast failed',
+                [
+                    'room_id' => $room->id,
+                    'question_id' => $question->id,
+                    'message_id' => $message->id,
+                ]
+            );
         }
 
         if ($replyMessage && ! $message->relationLoaded('replyTo')) {
@@ -221,7 +230,14 @@ class MessageController extends Controller
             $message->setRelation('poll', $poll->loadMissing('options'));
         }
 
-        event(new MessageSent($message));
+        $this->dispatchBroadcastSafely(
+            new MessageSent($message),
+            'Message broadcast failed',
+            [
+                'room_id' => $room->id,
+                'message_id' => $message->id,
+            ]
+        );
 
         if ($request->expectsJson()) {
             $pollPayload = null;
@@ -325,17 +341,32 @@ class MessageController extends Controller
                     $message->question->deleted_by_participant_at = now();
                 }
                 $message->question->save();
-                event(new QuestionUpdated($message->question));
+                $this->dispatchBroadcastSafely(
+                    new QuestionUpdated($message->question),
+                    'Question update broadcast failed',
+                    [
+                        'room_id' => $message->room_id,
+                        'question_id' => $message->question->id,
+                        'message_id' => $message->id,
+                    ]
+                );
             }
         });
 
-        event(new MessageDeleted(
-            $message->id,
-            $room->id,
-            $room->slug,
-            $deletedByUserId,
-            $deletedByParticipantId
-        ));
+        $this->dispatchBroadcastSafely(
+            new MessageDeleted(
+                $message->id,
+                $room->id,
+                $room->slug,
+                $deletedByUserId,
+                $deletedByParticipantId
+            ),
+            'Message delete broadcast failed',
+            [
+                'room_id' => $room->id,
+                'message_id' => $message->id,
+            ]
+        );
 
         AuditLog::record($request, 'message.delete', [
             'actor_user_id' => $deletedByUserId,
@@ -354,5 +385,16 @@ class MessageController extends Controller
         }
 
         return back()->with('status', 'Message removed.');
+    }
+
+    protected function dispatchBroadcastSafely(object $event, string $message, array $context = []): void
+    {
+        try {
+            event($event);
+        } catch (\Throwable $e) {
+            Log::warning($message, array_merge($context, [
+                'error' => $e->getMessage(),
+            ]));
+        }
     }
 }

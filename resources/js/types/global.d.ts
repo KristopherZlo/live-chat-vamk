@@ -5,6 +5,7 @@ import type Pusher from 'pusher-js';
 import type { createIcons, icons } from 'lucide';
 
 type ReverbConfig = {
+    enabled?: boolean;
     key?: string;
     host?: string;
     port?: number | string;

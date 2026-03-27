@@ -5,7 +5,45 @@ use App\Models\Participant;
 use App\Models\Room;
 use App\Models\RoomBan;
 use App\Models\User;
+use Illuminate\Broadcasting\Broadcasters\Broadcaster;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Str;
+
+function useFailingBroadcastDriver(): void
+{
+    static $registered = false;
+
+    if (! $registered) {
+        Broadcast::extend('failing', function () {
+            return new class extends Broadcaster
+            {
+                public function auth($request): bool
+                {
+                    return true;
+                }
+
+                public function validAuthenticationResponse($request, $result): mixed
+                {
+                    return $result;
+                }
+
+                public function broadcast(array $channels, $event, array $payload = []): void
+                {
+                    throw new RuntimeException('Broadcast transport unavailable');
+                }
+            };
+        });
+
+        $registered = true;
+    }
+
+    config([
+        'broadcasting.default' => 'failing',
+        'broadcasting.connections.failing' => ['driver' => 'failing'],
+    ]);
+
+    Broadcast::getFacadeRoot()?->setDefaultDriver('failing');
+}
 
 test('owner can send a plain message', function () {
     $owner = User::factory()->create();
@@ -23,6 +61,28 @@ test('owner can send a plain message', function () {
     $this->assertDatabaseHas('messages', [
         'room_id' => $room->id,
         'content' => 'Hello students',
+        'user_id' => $owner->id,
+    ]);
+});
+
+test('owner can send a plain message when broadcast transport is unavailable', function () {
+    useFailingBroadcastDriver();
+
+    $owner = User::factory()->create();
+    $room = Room::create([
+        'user_id' => $owner->id,
+        'title' => 'Offline broadcast room',
+        'slug' => Str::random(8),
+    ]);
+
+    $response = $this->actingAs($owner)->postJson(route('rooms.messages.store', $room), [
+        'content' => 'Still delivered',
+    ]);
+
+    $response->assertStatus(201);
+    $this->assertDatabaseHas('messages', [
+        'room_id' => $room->id,
+        'content' => 'Still delivered',
         'user_id' => $owner->id,
     ]);
 });
@@ -54,6 +114,39 @@ test('participant can send a question message', function () {
     $this->assertDatabaseHas('questions', [
         'room_id' => $room->id,
         'content' => 'Can you repeat that?',
+        'participant_id' => $participant->id,
+    ]);
+});
+
+test('participant can send a question when broadcast transport is unavailable', function () {
+    useFailingBroadcastDriver();
+
+    $owner = User::factory()->create();
+    $room = Room::create([
+        'user_id' => $owner->id,
+        'title' => 'Offline question room',
+        'slug' => Str::random(8),
+    ]);
+
+    $participant = Participant::create([
+        'room_id' => $room->id,
+        'session_token' => (string) Str::uuid(),
+        'display_name' => 'Guest',
+    ]);
+
+    $sessionKey = 'room_participant_'.$room->id;
+
+    $response = $this
+        ->withSession([$sessionKey => $participant->id])
+        ->postJson(route('rooms.messages.store', $room), [
+            'content' => 'Still queued as a question',
+            'as_question' => 1,
+        ]);
+
+    $response->assertStatus(201)->assertJsonPath('as_question', true);
+    $this->assertDatabaseHas('questions', [
+        'room_id' => $room->id,
+        'content' => 'Still queued as a question',
         'participant_id' => $participant->id,
     ]);
 });

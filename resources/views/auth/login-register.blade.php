@@ -27,14 +27,6 @@
                     <h1 class="auth-title">{{ $title }}</h1>
                     <p class="auth-subtitle">{{ $subtitle }}</p>
 
-                    @if($isLogin)
-                        <button class="auth-google" type="button" aria-disabled="true" disabled>
-                            <span class="auth-google-mark" aria-hidden="true">G</span>
-                            <span>Continue with Google</span>
-                        </button>
-                        <p class="auth-divider"><span>or sign in with email</span></p>
-                    @endif
-
                     <x-auth-session-status class="auth-status" :status="session('status')" />
 
                     @if($isLogin)

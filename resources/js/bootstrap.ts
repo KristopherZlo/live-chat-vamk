@@ -1,7 +1,96 @@
 import axios from 'axios';
-import Alpine from 'alpinejs';
+import Alpine from '@alpinejs/csp';
 window.axios = axios;
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+
+Alpine.data('grWelcomeModal', () => ({
+    open: false,
+    init() {
+        const storageKey = 'gr_welcome_seen';
+
+        try {
+            this.open = !window.localStorage.getItem(storageKey);
+        } catch {
+            this.open = true;
+        }
+    },
+    close() {
+        this.open = false;
+
+        try {
+            window.localStorage.setItem('gr_welcome_seen', '1');
+        } catch {
+            // Ignore storage failures in restricted contexts.
+        }
+    },
+}));
+
+Alpine.data('grDropdown', () => ({
+    open: false,
+    toggle() {
+        this.open = !this.open;
+    },
+    close() {
+        this.open = false;
+    },
+}));
+
+Alpine.data('grModal', () => ({
+    show: false,
+    focusOnOpen: false,
+    init() {
+        this.show = this.$el.dataset.modalInitialShow === '1';
+        this.focusOnOpen = this.$el.dataset.modalFocusable === '1';
+
+        this.$watch('show', (value: boolean) => {
+            document.body.classList.toggle('overflow-y-hidden', value);
+
+            if (value && this.focusOnOpen) {
+                window.setTimeout(() => {
+                    this.firstFocusable()?.focus();
+                }, 100);
+            }
+        });
+    },
+    focusables() {
+        const selector = 'a, button, input:not([type="hidden"]), textarea, select, details, [tabindex]:not([tabindex="-1"])';
+
+        return Array.from(this.$el.querySelectorAll<HTMLElement>(selector))
+            .filter((element) => !element.hasAttribute('disabled'));
+    },
+    firstFocusable() {
+        return this.focusables()[0];
+    },
+    lastFocusable() {
+        return this.focusables().slice(-1)[0];
+    },
+    nextFocusable() {
+        return this.focusables()[this.nextFocusableIndex()] || this.firstFocusable();
+    },
+    prevFocusable() {
+        return this.focusables()[this.prevFocusableIndex()] || this.lastFocusable();
+    },
+    nextFocusableIndex() {
+        return (this.focusables().indexOf(document.activeElement as HTMLElement) + 1) % (this.focusables().length + 1);
+    },
+    prevFocusableIndex() {
+        return Math.max(0, this.focusables().indexOf(document.activeElement as HTMLElement)) - 1;
+    },
+    open() {
+        this.show = true;
+    },
+    close() {
+        this.show = false;
+    },
+    focusNext() {
+        this.nextFocusable()?.focus();
+    },
+    focusPrevious() {
+        this.prevFocusable()?.focus();
+    },
+}));
+
+Alpine.data('grEmptyState', () => ({}));
 
 window.Alpine = Alpine;
 Alpine.start();
@@ -17,6 +106,7 @@ Alpine.start();
 
 type Pickable = string | number | undefined | null;
 const providedReverbConfig = window.__reverbConfig ?? {};
+const reverbEnabled = Boolean(providedReverbConfig.enabled);
 const env = typeof import.meta !== 'undefined' && import.meta?.env ? import.meta.env : {};
 const pickFirst = (...values: Pickable[]): Pickable => {
     for (const value of values) {
@@ -29,6 +119,10 @@ const pickFirst = (...values: Pickable[]): Pickable => {
 };
 
 const shouldInitEcho = () => {
+    if (!reverbEnabled) {
+        return false;
+    }
+
     const routeName = document.body?.dataset?.routeName || '';
     if (routeName === 'rooms.public') {
         return true;

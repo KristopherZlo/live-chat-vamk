@@ -67,6 +67,8 @@
     </script>
     @php
         $reverbConnection = config('broadcasting.connections.reverb', []);
+        $reverbClientEnabled = filter_var(env('REVERB_CLIENT_ENABLED', app()->environment('production')), FILTER_VALIDATE_BOOL);
+        $reverbEnabled = config('broadcasting.default') === 'reverb' && $reverbClientEnabled;
         $reverbOptions = $reverbConnection['options'] ?? [];
         $reverbKey = $reverbConnection['key'] ?? '';
         $reverbHost = $reverbOptions['host'] ?? request()->getHost();
@@ -75,6 +77,7 @@
     @endphp
     <script>
         window.__reverbConfig = {
+            enabled: @json($reverbEnabled),
             key: @json($reverbKey),
             host: @json($reverbHost),
             port: @json($reverbPort),
@@ -280,25 +283,7 @@
 </div>
 
 <div
-    x-data="{
-        open: false,
-        init() {
-            const KEY = 'gr_welcome_seen';
-            try {
-                const seen = localStorage.getItem(KEY);
-                this.open = !seen;
-            } catch (e) {
-                this.open = true;
-            }
-        },
-        close() {
-            this.open = false;
-            try {
-                localStorage.setItem('gr_welcome_seen', '1');
-            } catch (e) {}
-        }
-    }"
-    x-init="init()"
+    x-data="grWelcomeModal"
     x-show="open"
     x-cloak
     class="modal-overlay"

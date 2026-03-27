@@ -10,7 +10,7 @@
         <button
             type="button"
             class="btn btn-danger"
-            x-data=""
+            x-data="grEmptyState"
             x-on:click.prevent="$dispatch('open-modal', 'confirm-user-deletion')"
         >
             {{ __('Delete Account') }}
